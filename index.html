@@ -21,6 +21,7 @@
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Tooltip Styles */
         .tooltip-trigger:hover .tooltip-content { visibility: visible; opacity: 1; }
         .tooltip-content { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
         details > summary { list-style: none; }
@@ -117,6 +118,26 @@
                         </div>
                     </div>
 
+                    <!-- Supporter Status Card -->
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-stone-900 text-sm">GanjaRelease Supporter</h3>
+                            <span id="dash-supporter-badge" class="px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold">Inactive</span>
+                        </div>
+                        
+                        <div id="dash-supporter-active" class="hidden">
+                            <p class="text-xs text-green-600 mb-2 font-medium"><i class="fas fa-check-circle mr-1"></i> Supporter Access Enabled</p>
+                            <p class="text-xs text-stone-500 mb-2">You have enhanced EPG for:</p>
+                            <div id="dash-supporter-list" class="h-32 overflow-y-auto bg-stone-50 rounded border border-stone-100 p-2 text-[10px] font-mono text-stone-600 leading-tight">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                        <div id="dash-supporter-inactive" class="text-xs text-stone-500">
+                            <p class="mb-2">Support the creator (+$20) to unlock premium EPG updates for PPV, Sports, and specific categories.</p>
+                            <button onclick="switchView('config')" class="text-blue-600 hover:underline">Request Upgrade &rarr;</button>
+                        </div>
+                    </div>
+
                     <!-- Support Card -->
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
                         <h3 class="font-bold text-stone-900 mb-4 flex items-center gap-2"><i class="fas fa-life-ring text-stone-400"></i> Support</h3>
@@ -151,9 +172,9 @@
                                 <i class="fas fa-star"></i>
                             </div>
                             <div class="flex-1">
-                                <h3 class="font-bold text-blue-900 mb-1">Recommended Setup: EPGenius</h3>
+                                <h3 class="font-bold text-blue-900 mb-1">Recommended Setup: EPGenius (GanjaRelease #6)</h3>
                                 <p class="text-sm text-blue-800/80 mb-4 leading-relaxed">
-                                    Use this link for the best experience. It is a smart <strong>M3U Playlist URL</strong> that includes a custom Electronic Program Guide (EPG) automatically.
+                                    Use this link for the best experience. It is a smart <strong>M3U Playlist URL</strong> (different from the raw connection below) that includes a custom Electronic Program Guide (EPG) automatically.
                                 </p>
                                 <div class="flex bg-white rounded-lg border border-blue-200 p-1">
                                     <input id="dash-epgenius" type="text" readonly class="flex-1 px-3 py-2 text-sm font-mono text-stone-600 outline-none bg-transparent" value="Loading...">
@@ -255,18 +276,54 @@
                     <h3 class="font-serif text-2xl text-stone-900 mb-4">Preferences</h3>
                     
                     <div class="mb-6">
-                        <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Concurrent Connections</label>
-                        <select id="user-config-screens" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
+                        <label class="text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider flex items-center gap-2">
+                            Concurrent Connections
+                            <div class="relative tooltip-trigger cursor-help">
+                                <i class="fas fa-info-circle text-stone-400"></i>
+                                <div class="tooltip-content absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-stone-800 text-stone-100 text-xs rounded-lg shadow-xl z-10 text-center normal-case font-normal">
+                                    Number of devices watching at the exact same time. 1 License = 1 Connection.
+                                </div>
+                            </div>
+                        </label>
+                        <select id="user-config-screens" onchange="toggleScreenWarning()" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
                             <option value="1">1 Device at a time</option>
                             <option value="2">2 Devices simultaneously</option>
                             <option value="3">3 Devices simultaneously</option>
                             <option value="4">4 Devices simultaneously</option>
                         </select>
-                        <p class="text-xs text-stone-400 mt-2 italic flex items-center gap-1">
-                            <i class="fas fa-info-circle"></i> Using more than 1 device simultaneously requires purchasing an additional license.
+                        <p id="screens-warning" class="hidden text-xs text-amber-600 mt-2 font-medium">
+                            <i class="fas fa-exclamation-triangle mr-1"></i> For each concurrent connection, an additional license is required (only one connection is allowed per license at a time, unfortunately).
                         </p>
                     </div>
 
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider flex items-center gap-2">
+                                Bouquet Package
+                                <div class="relative tooltip-trigger cursor-help">
+                                    <i class="fas fa-info-circle text-stone-400"></i>
+                                    <div class="tooltip-content absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-stone-800 text-stone-100 text-xs rounded-lg shadow-xl z-10 text-center normal-case font-normal">
+                                        Think of channels as flowers. Categories (Sports, Movies) are the flower types. A 'Bouquet' is how we arrange and tie them together for you.
+                                    </div>
+                                </div>
+                            </label>
+                            <select id="user-config-bouquet" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
+                                <option selected>Standard (US/UK/CA + Sports)</option>
+                                <option>Everything</option>
+                                <option>Sports Only</option>
+                                <option>Minimalist</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Recording (PVR) Needs</label>
+                            <select id="user-config-pvr" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
+                                <option>No, I don't need to record.</option>
+                                <option>Yes, I use TiviMate Premium (Self-setup).</option>
+                                <option>Yes, but I need guidance.</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Live TV Bouquet Requests</label>
@@ -275,6 +332,15 @@
                         <div>
                             <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">VOD Bouquet Requests</label>
                             <textarea id="user-config-vod" rows="3" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Add latest Action movies, Netflix series. Remove Horror category."></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Supporter Request -->
+                    <div class="mt-6 flex items-center gap-3 bg-green-50 p-4 rounded-lg border border-green-100">
+                        <input type="checkbox" id="user-config-supporter-req" class="w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
+                        <div>
+                            <label for="user-config-supporter-req" class="text-sm font-bold text-green-900 block">I am interested in GanjaRelease Supporter Status (+$20)</label>
+                            <p class="text-xs text-green-800">Unlocks premium EPG updates for PPV, Sports, and specialized categories.</p>
                         </div>
                     </div>
                 </div>
@@ -347,7 +413,7 @@
                         <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
                     </summary>
                     <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
-                        EPGenius is a smart M3U Playlist link. Unlike the raw link from the server, EPGenius automatically organizes channels better and includes a high-quality Electronic Program Guide (EPG) built-in. Always use this link in your player if possible.
+                        EPGenius (GanjaRelease #6) is a smart M3U Playlist link. Unlike the raw link from the server, EPGenius automatically organizes channels better and includes a high-quality Electronic Program Guide (EPG) built-in. Always use this link in your player if possible.
                     </div>
                 </details>
             </div>
@@ -498,6 +564,16 @@
                         <div><label class="text-xs font-bold uppercase text-stone-500">Date Paid</label><input id="edit-paydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-xs"></div>
                     </div>
                 </div>
+                
+                <!-- Supporter Admin Toggle -->
+                <div class="mb-6 flex items-center gap-3 bg-green-50 p-4 rounded-lg border border-green-100">
+                    <input type="checkbox" id="edit-is-supporter" class="w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
+                    <div>
+                        <label for="edit-is-supporter" class="text-sm font-bold text-green-900 block">GanjaRelease Supporter Status</label>
+                        <p class="text-xs text-green-800">Enable to show enhanced EPG categories on client dashboard.</p>
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label class="text-xs font-bold uppercase text-stone-500 mb-1">Server URL</label>
                     <select id="edit-server" class="w-full px-3 py-2 border rounded bg-white"><option value="http://cf.taty.website">http://cf.taty.website (Cloudflare)</option><option value="http://taty.website">http://taty.website (Backup)</option></select>
@@ -528,6 +604,8 @@
                         <p id="edit-pref-live-note" class="mb-1 italic">---</p>
                         <span class="block text-stone-400">VOD Request:</span>
                         <p id="edit-pref-vod-note" class="italic">---</p>
+                        <span class="block text-stone-400 mt-1">Supporter Interest:</span>
+                        <p id="edit-pref-supporter-interest" class="italic font-bold text-green-700">---</p>
                     </div>
                 </div>
 
@@ -583,6 +661,32 @@
         const ADMIN_EMAIL = "e.chinerman@gmail.com"; 
         const INVITE_CODE = "FAMILY8K"; 
         const FB_LINK = "https://m.me/rds.ca"; 
+
+        const SUPPORTER_CATEGORIES = [
+            "✅CA| SPORTSNET+ PPV", "✅CA| WHL PPV", "✅CA| FUBO PPV ᴿᴬᵂ", "✅CA| TSN+ PPV", "✅CA| PRIME PPV",
+            "❌FOX Network", "✅CA| QMJHL PPV", "❌CW Network", "✅CA| CANADA WEST PPV", "✅CA| CFL PPV",
+            "❌News Networks", "✅CA| SPORTSNET PPV", "✅NBA League Pass", "✅WNBA League Pass", "❌Entertainment Channels",
+            "✅NFL Sunday Ticket", "✅PPV Event", "✅CA| CBC PPV", "❌ABC Network", "✅CA| PRIME PPV ᴿᴬᵂ",
+            "❌NBC Network", "❌Sport Networks", "❌24/7 Channels", "❌Kids Channels", "❌CBS Network",
+            "✅CA| OHL PPV", "❌Sports 60fps", "❌Music Videos", "✅Peacock PPV", "✅Paramount+ PPV",
+            "✅HBO Max PPV", "❌Telemundo", "✅CA| DAZN PPV ⱽᴵᴾ", "❌Movie Networks", "✅CA| DAZN PPV",
+            "✅FIFA+", "✅Flo Sports VIP", "✅B1G+", "✅Flo College", "✅College Basketball", "✅DAZN",
+            "✅MLS", "✅MLB", "✅ESPN Play", "✅The Masters", "✅Golf", "✅B/R Max Sports", "✅Flo Sports",
+            "✅Matchroom", "✅UEFA", "✅Dirtvision", "✅College Football", "✅MILB", "✅ESPN+", "✅Tennis",
+            "✅UFC Fight Pass", "✅CA| VICTORY+ PPV", "✅FLO ⱽᴵᴾ", "✅NHL Center Ice", "✅High School Sports",
+            "✅ESPN+ ⱽᴵᴾ", "✅UK| TRILLER TV PPV", "✅AU| STAN PPV", "✅UK| MONO MAX PPV", "✅UK| LIVE FOOTBALL PPV",
+            "✅UK| SKY SPORT+ PPV", "✅UK| VIDIO EPL PPV", "✅UK| FORMULA 1 PPV", "✅UK| SUPER LEAGUE PLUS PPV",
+            "✅AU| ESPN PLAY PPV", "✅UK| CHAMPIONSHIP PPV", "✅UK| FA PLAYER PPV", "✅UK| TT RACES PPV",
+            "✅UK| SPFL/SCOTTISH PPV", "✅UK| LEAGUE TWO PPV", "✅UK| VISION+", "✅UK| LIGUE 1 PPV",
+            "✅UK| VOLLEY BALL WORLD PPV", "✅IE| GAAGO PPV", "✅IE| GAAGO++ PPV", "✅UK| MXGP PPV", "✅UK| VIAPLAY PPV",
+            "✅IE| SETANTA PPV", "✅UK| AMAZON PRIME PPV", "✅IE| LOI PPV", "✅UK| PEACOCK PPV", "✅UK| LA LIGA TEAM PPV",
+            "✅UK| LEAGUE ONE PPV", "✅UK| DAZN PPV ⱽᴵᴾ", "✅UK| SCOTTISH CUP PPV", "✅UK| NATIONAL LEAGUE PPV",
+            "✅IE| ULSTER GAA PPV", "✅UK| DISCOVERY+ PPV", "✅UK| UEFA PPV", "✅IE| TYRONE GAA PPV", "✅UK| UFC PPV",
+            "✅AU| PRIME PPV ᴿᴬᵂ", "✅IE| NIFL PREMIERSHIP PPV", "✅UK| ULTIMATE POOL PPV", "✅UK| RALLY PPV",
+            "✅IE| CLUBBER PPV", "✅UK| PRIME PPV ᴿᴬᵂ", "✅UK| ESPN+ PPV", "✅UK| PRIME PPV", "✅AU| PRIME PPV",
+            "✅UK| FLORUGBY PPV", "✅UK| PDC BOARD PPV", "✅UK| EPL PREMIER LEAGUE PPV ⱽᴵᴾ ᴿᴬᵂ", "✅UK| EU GAME PASS PPV",
+            "✅UK| DAZN PPV VIP", "✅UK| RUGBY"
+        ];
 
         const PRODUCTS = {
             'Demo':     { credits: 0,  price: 0 },
@@ -679,27 +783,48 @@
                         document.getElementById('dash-product').innerText = data.product || 'Standard License';
                         document.getElementById('dash-expiry').innerText = data.expiry || '---';
                         
+                        // Device Button Logic
                         const devices = data.devices || [{type: 'firestick'}];
                         const device = devices[0].type;
                         const guideBtn = document.getElementById('btn-device-guide');
                         guideBtn.innerHTML = `<span>Setup Guide for ${getDeviceName(device)}</span><i class="fas fa-book text-stone-400"></i>`;
                         guideBtn.onclick = () => { switchView('guides'); showGuide(getDeviceGuideId(device)); };
                         
+                        // Badge
                         const badge = document.getElementById('dash-device-badge');
                         if(data.devicePreference || (data.devices && data.devices.length > 0)) {
                             badge.innerText = getDeviceName(data.devicePreference || data.devices[0].type);
                             badge.classList.remove('hidden');
                         }
 
+                        // Supporter Logic
+                        if (data.isSupporter) {
+                            document.getElementById('dash-supporter-badge').innerText = "Active";
+                            document.getElementById('dash-supporter-badge').className = "px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-bold";
+                            document.getElementById('dash-supporter-active').classList.remove('hidden');
+                            document.getElementById('dash-supporter-inactive').classList.add('hidden');
+                            // Populate list
+                            const list = document.getElementById('dash-supporter-list');
+                            list.innerHTML = SUPPORTER_CATEGORIES.map(c => `<div>${c}</div>`).join('');
+                        } else {
+                            document.getElementById('dash-supporter-badge').innerText = "Inactive";
+                            document.getElementById('dash-supporter-badge').className = "px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold";
+                            document.getElementById('dash-supporter-active').classList.add('hidden');
+                            document.getElementById('dash-supporter-inactive').classList.remove('hidden');
+                        }
+
+                        // Connections
                         document.getElementById('dash-server').innerText = data.serverUrl || '---';
                         document.getElementById('dash-user').innerText = data.username || '---';
                         document.getElementById('dash-pass').innerText = data.password || '---';
                         document.getElementById('dash-epgenius').value = data.epgeniusM3u || '';
                         document.getElementById('dash-m3u').value = data.m3uUrl || '';
                         
+                        // Setup Facebook Link
                         const btnContact = document.getElementById('btn-contact-elliot');
                         if(btnContact) btnContact.onclick = () => window.open(FB_LINK, '_blank');
 
+                        // Pre-fill config form
                         renderDeviceList(data.devices || []);
                         document.getElementById('user-config-screens').value = data.screenPreference || '1';
                         document.getElementById('user-config-bouquet').value = data.bouquetPreference || 'Standard';
@@ -707,6 +832,7 @@
                         // New fields
                         document.getElementById('user-config-live').value = data.liveBouquet || '';
                         document.getElementById('user-config-vod').value = data.vodBouquet || '';
+                        document.getElementById('user-config-supporter-req').checked = data.supporterRequest || false;
                     }
                 }
             } catch (e) { console.error(e); }
@@ -734,12 +860,6 @@
         }
 
         window.addDeviceFromFamily = (family) => {
-            // Simplified: Add specific common device based on family button click
-            // For full dropdown capability, you'd show a modal. 
-            // Here we just add a generic item or could implement a small select.
-            // Let's implement a quick prompt or just add a generic family item for now.
-            // BETTER: Just add a dropdown row but pre-select based on family.
-            
             const container = document.getElementById('device-list-container');
             const row = document.createElement('div');
             row.className = "flex gap-2 mb-2 device-row";
@@ -758,11 +878,16 @@
             container.appendChild(row);
         };
 
+        window.toggleScreenWarning = () => {
+            const val = document.getElementById('user-config-screens').value;
+            const warning = document.getElementById('screens-warning');
+            if (val !== '1') warning.classList.remove('hidden');
+            else warning.classList.add('hidden');
+        };
+
         window.handleUserConfigSave = async (e) => {
             e.preventDefault();
-            // Gather devices from select dropdowns if any exist (added via buttons)
-            // Note: renderDeviceList uses a hidden input for existing ones, addDevice uses select.
-            // We need to support both.
+            // Gather devices
             const rows = document.querySelectorAll('.device-row');
             const devices = Array.from(rows).map(row => {
                 const select = row.querySelector('select');
@@ -772,16 +897,17 @@
 
             const updates = {
                 devices: devices,
+                pvrPreference: document.getElementById('user-config-pvr').value,
                 screenPreference: document.getElementById('user-config-screens').value,
                 bouquetPreference: document.getElementById('user-config-bouquet').value,
                 liveBouquet: document.getElementById('user-config-live').value,
-                vodBouquet: document.getElementById('user-config-vod').value
+                vodBouquet: document.getElementById('user-config-vod').value,
+                supporterRequest: document.getElementById('user-config-supporter-req').checked
             };
             
             try {
                 await updateDoc(doc(db, "users", auth.currentUser.uid), updates);
                 alert("Preferences saved!");
-                // Show notify button
                 const btn = document.getElementById('btn-notify-elliot');
                 btn.classList.remove('hidden');
                 btn.onclick = () => window.open(FB_LINK, '_blank');
@@ -930,6 +1056,13 @@
                 document.getElementById('edit-pref-bouquet').innerText = data.bouquetPreference || '---';
                 document.getElementById('edit-pref-live-note').innerText = data.liveBouquet || '---';
                 document.getElementById('edit-pref-vod-note').innerText = data.vodBouquet || '---';
+                // Show supporter interest
+                const isInterested = data.supporterRequest ? "Yes, Requested" : "No";
+                const interestColor = data.supporterRequest ? "text-green-600 font-bold" : "text-stone-400";
+                document.getElementById('edit-pref-supporter-interest').innerHTML = `<span class="${interestColor}">${isInterested}</span>`;
+                
+                // Load supporter toggle
+                document.getElementById('edit-is-supporter').checked = data.isSupporter || false;
 
             } else {
                 document.getElementById('modal-edit-title').innerText = "Add Manual Client";
@@ -939,12 +1072,14 @@
                 document.getElementById('edit-product').value = '1 Month';
                 document.getElementById('edit-server').value = 'http://cf.taty.website';
                 document.getElementById('edit-email').readOnly = false; // Unlock for new
+                document.getElementById('edit-is-supporter').checked = false;
                 
                 document.getElementById('edit-pref-devices').innerHTML = '---';
                 document.getElementById('edit-pref-pvr').innerText = '---';
                 document.getElementById('edit-pref-bouquet').innerText = '---';
                 document.getElementById('edit-pref-live-note').innerText = '---';
                 document.getElementById('edit-pref-vod-note').innerText = '---';
+                document.getElementById('edit-pref-supporter-interest').innerText = '---';
             }
             openModal('edit');
         };
@@ -972,6 +1107,7 @@
                 password: document.getElementById('edit-pass').value,
                 epgeniusM3u: document.getElementById('edit-epgenius').value,
                 m3uUrl: document.getElementById('edit-m3u').value,
+                isSupporter: document.getElementById('edit-is-supporter').checked
             };
             
             // Only update email if it's a new manual entry to avoid breaking auth mapping
@@ -1089,6 +1225,9 @@
             navigator.clipboard.writeText(text).then(() => alert('Copied!')).catch(() => alert('Failed to copy')); 
         };
         document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
+
+        // --- AUTH & REGISTER HANDLERS FOR NEW USERS ---
+        // (Existing handleRegister and handleGoogleLogin already included above)
     </script>
 </body>
 </html>
