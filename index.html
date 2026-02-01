@@ -26,6 +26,19 @@
         .tooltip-content { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
         details > summary { list-style: none; }
         details > summary::-webkit-details-marker { display: none; }
+        
+        /* Toast Notification */
+        #toast-container {
+            visibility: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease-in-out;
+        }
+        #toast-container.show {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="font-sans text-stone-800 antialiased bg-stone-50">
@@ -46,6 +59,17 @@
             <div id="mobile-nav" class="space-y-2"></div>
         </div>
     </nav>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[100] max-w-sm w-full">
+        <div class="bg-stone-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
+            <div class="text-green-400 text-xl"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <h4 class="font-bold text-sm">Changes Saved</h4>
+                <p class="text-xs text-stone-400">Your configuration has been updated.</p>
+            </div>
+        </div>
+    </div>
 
     <!-- VIEW: HOME -->
     <main id="view-home" class="view-section active">
@@ -246,8 +270,8 @@
             <form onsubmit="handleUserConfigSave(event)" class="text-left bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
                 <!-- Device Families -->
                 <div class="mb-10">
-                    <h3 class="font-serif text-2xl text-stone-900 mb-4">Device Roster</h3>
-                    <p class="text-sm text-stone-500 mb-4">Select a category to add a device.</p>
+                    <h3 class="font-serif text-2xl text-stone-900 mb-2">Device Roster</h3>
+                    <div id="device-counter" class="text-sm font-bold text-blue-600 mb-4 bg-blue-50 inline-block px-3 py-1 rounded-full">Active Devices: 0</div>
                     
                     <div class="grid grid-cols-3 gap-4 mb-6">
                         <button type="button" onclick="addDeviceFromFamily('tv')" class="p-4 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-2 group">
@@ -264,7 +288,8 @@
                         </button>
                     </div>
 
-                    <div id="device-list-container" class="space-y-3 mb-2">
+                    <div id="device-list-container" class="space-y-3 mb-2 p-4 bg-stone-50 rounded-xl min-h-[50px]">
+                        <p class="text-xs text-stone-400 text-center italic" id="empty-device-msg">No devices added. Select a category above.</p>
                         <!-- Dynamic devices injected here -->
                     </div>
                 </div>
@@ -273,9 +298,9 @@
                 
                 <!-- Bouquet & Usage -->
                 <div class="mb-10">
-                    <h3 class="font-serif text-2xl text-stone-900 mb-4">Preferences</h3>
+                    <h3 class="font-serif text-2xl text-stone-900 mb-6">Preferences</h3>
                     
-                    <div class="mb-6">
+                    <div class="mb-8">
                         <label class="text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider flex items-center gap-2">
                             Concurrent Connections
                             <div class="relative tooltip-trigger cursor-help">
@@ -286,55 +311,58 @@
                             </div>
                         </label>
                         <select id="user-config-screens" onchange="toggleScreenWarning()" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
-                            <option value="1">1 Device at a time</option>
-                            <option value="2">2 Devices simultaneously</option>
-                            <option value="3">3 Devices simultaneously</option>
-                            <option value="4">4 Devices simultaneously</option>
+                            <option value="1" selected>1 Connection (Included)</option>
+                            <option value="2">2 Connections</option>
+                            <option value="3">3 Connections</option>
+                            <option value="4">4 Connections</option>
                         </select>
-                        <p id="screens-warning" class="hidden text-xs text-amber-600 mt-2 font-medium">
+                        <p id="screens-warning" class="hidden text-xs text-amber-600 mt-2 font-medium bg-amber-50 p-2 rounded border border-amber-100">
                             <i class="fas fa-exclamation-triangle mr-1"></i> For each concurrent connection, an additional license is required (only one connection is allowed per license at a time, unfortunately).
                         </p>
                     </div>
+                    
+                    <!-- NEW: BOUQUET BUTTONS -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        
+                        <!-- LIVE TV -->
+                        <div>
+                            <label class="text-xs font-bold text-stone-500 mb-3 uppercase tracking-wider block">Live TV Bouquet Requests</label>
+                            <div class="flex flex-wrap gap-2 mb-3" id="live-tags">
+                                <button type="button" onclick="toggleTag(this, 'live', 'All English')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">All English</button>
+                                <button type="button" onclick="toggleTag(this, 'live', 'All French')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">All French</button>
+                                <button type="button" onclick="toggleTag(this, 'live', 'Sports')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">Sports</button>
+                                <button type="button" onclick="toggleTag(this, 'live', 'News')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">News</button>
+                                <button type="button" onclick="toggleTag(this, 'live', 'Kids')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">Kids</button>
+                                <button type="button" onclick="toggleOther('live')" class="px-3 py-1.5 border border-blue-200 text-blue-600 rounded-full text-xs font-medium hover:bg-blue-50 transition" id="btn-live-other">Other / Specific</button>
+                            </div>
+                            <textarea id="user-config-live-other" rows="2" class="hidden w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Only UK Sports, remove International..."></textarea>
+                        </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <!-- VOD -->
                         <div>
-                            <label class="text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider flex items-center gap-2">
-                                Bouquet Package
-                                <div class="relative tooltip-trigger cursor-help">
-                                    <i class="fas fa-info-circle text-stone-400"></i>
-                                    <div class="tooltip-content absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-stone-800 text-stone-100 text-xs rounded-lg shadow-xl z-10 text-center normal-case font-normal">
-                                        Think of channels as flowers. Categories (Sports, Movies) are the flower types. A 'Bouquet' is how we arrange and tie them together for you.
-                                    </div>
-                                </div>
-                            </label>
-                            <select id="user-config-bouquet" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
-                                <option selected>Standard (US/UK/CA + Sports)</option>
-                                <option>Everything</option>
-                                <option>Sports Only</option>
-                                <option>Minimalist</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Recording (PVR) Needs</label>
-                            <select id="user-config-pvr" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
-                                <option>No, I don't need to record.</option>
-                                <option>Yes, I use TiviMate Premium (Self-setup).</option>
-                                <option>Yes, but I need guidance.</option>
-                            </select>
+                            <label class="text-xs font-bold text-stone-500 mb-3 uppercase tracking-wider block">VOD Bouquet Requests</label>
+                            <div class="flex flex-wrap gap-2 mb-3" id="vod-tags">
+                                <button type="button" onclick="toggleTag(this, 'vod', 'All Movies')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">All Movies</button>
+                                <button type="button" onclick="toggleTag(this, 'vod', 'All Series')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">All Series</button>
+                                <button type="button" onclick="toggleTag(this, 'vod', 'English Only')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">English Only</button>
+                                <button type="button" onclick="toggleTag(this, 'vod', 'French Only')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">French Only</button>
+                                <button type="button" onclick="toggleTag(this, 'vod', 'No Horror')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">No Horror</button>
+                                <button type="button" onclick="toggleOther('vod')" class="px-3 py-1.5 border border-blue-200 text-blue-600 rounded-full text-xs font-medium hover:bg-blue-50 transition" id="btn-vod-other">Other / Specific</button>
+                            </div>
+                            <textarea id="user-config-vod-other" rows="2" class="hidden w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Add latest Action movies..."></textarea>
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Live TV Bouquet Requests</label>
-                            <textarea id="user-config-live" rows="3" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Only Sports, UK, and Kids channels. Remove all international."></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">VOD Bouquet Requests</label>
-                            <textarea id="user-config-vod" rows="3" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Add latest Action movies, Netflix series. Remove Horror category."></textarea>
-                        </div>
+                    <!-- PVR -->
+                     <div class="mb-6 mt-6">
+                        <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Recording (PVR) Needs</label>
+                        <select id="user-config-pvr" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
+                            <option>No, I don't need to record.</option>
+                            <option>Yes, I use TiviMate Premium (Self-setup).</option>
+                            <option>Yes, but I need guidance.</option>
+                        </select>
                     </div>
-                    
+
                     <!-- Supporter Request -->
                     <div class="mt-6 flex items-center gap-3 bg-green-50 p-4 rounded-lg border border-green-100">
                         <input type="checkbox" id="user-config-supporter-req" class="w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
@@ -436,13 +464,49 @@
             </div>
             <!-- Guides Content -->
             <div id="guide-android" class="guide-content bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
-                <h2 class="text-2xl font-bold text-stone-900 mb-4">TiviMate Premium (Recommended)</h2>
-                <ol class="list-decimal pl-5 space-y-3 marker:text-stone-900 marker:font-bold">
-                    <li>Install <strong>Downloader</strong> from the App Store.</li>
-                    <li>Enter code: <strong>[Your Code]</strong> to download TiviMate.</li>
-                    <li>Open TiviMate > Add Playlist > <strong>Xtream Codes</strong>.</li>
-                    <li>Enter the Server URL, Username, and Password found in your <a href="#" onclick="switchView('dashboard')" class="text-blue-600 underline">Dashboard</a>.</li>
-                </ol>
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white text-xl"><i class="fas fa-tv"></i></div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-stone-900">TiviMate Premium Guide</h2>
+                        <p class="text-sm text-stone-500">The gold standard for Firestick & Android TV.</p>
+                    </div>
+                </div>
+                
+                <div class="prose prose-stone max-w-none text-sm">
+                    <h3 class="font-bold mb-2">Step 1: Install TiviMate</h3>
+                    <ol class="list-decimal pl-5 space-y-2 mb-6">
+                        <li>Install the <strong>Downloader</strong> app from the Amazon App Store (search "Downloader").</li>
+                        <li>Open Downloader and enter this code in the URL box: <strong>278077</strong> (Official TiviMate).</li>
+                        <li>Follow the prompts to download and install.</li>
+                    </ol>
+
+                    <h3 class="font-bold mb-2">Step 2: Unlock Premium</h3>
+                    <ul class="list-disc pl-5 space-y-2 mb-6">
+                        <li>Open TiviMate. Go to Settings > Unlock Premium.</li>
+                        <li>You must buy the license (approx $30/yr or $80 lifetime) via the <strong>TiviMate Companion App</strong> on an Android phone, or directly on the Firestick if it allows Google Pay.</li>
+                        <li><em>Note: Premium is required for the dual-playlist setup below.</em></li>
+                    </ul>
+
+                    <h3 class="font-bold mb-2 text-blue-600">Step 3: Add Live TV (EPGenius)</h3>
+                    <ol class="list-decimal pl-5 space-y-2 mb-6">
+                        <li>In TiviMate, go to <strong>Settings > Playlists > Add Playlist</strong>.</li>
+                        <li>Select <strong>M3U Playlist</strong> (Not Xtream Codes).</li>
+                        <li>Enter your <strong>EPGenius M3U URL</strong> from the Dashboard.</li>
+                        <li>Name it "Live TV".</li>
+                        <li><strong>IMPORTANT:</strong> Click on the new playlist > Manage groups > Toggle <strong>OFF</strong> all VOD groups (Movies/Series). Keep only Live TV groups on.</li>
+                    </ol>
+
+                    <h3 class="font-bold mb-2 text-indigo-600">Step 4: Add VOD (Xtream Codes)</h3>
+                    <ol class="list-decimal pl-5 space-y-2">
+                        <li>Go back to <strong>Add Playlist</strong>.</li>
+                        <li>Select <strong>Xtream Codes</strong>.</li>
+                        <li>Enter the Server URL, Username, and Password from the Dashboard.</li>
+                        <li>Check "Include VOD". Name it "Movies & Series".</li>
+                        <li><strong>IMPORTANT:</strong> Click on this playlist > Manage groups > Toggle <strong>OFF</strong> all Live TV groups. Keep only Movies/Series on.</li>
+                    </ol>
+                    
+                    <p class="mt-4 bg-stone-100 p-3 rounded italic">Result: You now have the fast EPGenius list for TV and the rich Xtream list for Movies, perfectly blended!</p>
+                </div>
             </div>
             <div id="guide-ios" class="guide-content hidden bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
                 <h2 class="text-xl font-bold text-stone-900 mb-4">UHF (Paid) or Chillio</h2>
@@ -464,6 +528,7 @@
 
     <!-- VIEW: ADMIN DASHBOARD (Unchanged layout, hidden for client) -->
     <main id="view-admin" class="view-section pt-32 pb-24 min-h-screen bg-stone-100">
+        <!-- (Same Admin Code as before) -->
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between items-center mb-8">
                 <h1 class="font-serif text-3xl text-stone-900">Admin Console</h1>
@@ -546,8 +611,6 @@
             <h2 id="modal-edit-title" class="text-xl font-serif font-bold mb-6">Edit User & License</h2>
             <form onsubmit="saveUserChanges(event)">
                 <input type="hidden" id="edit-uid">
-                
-                <!-- Identity -->
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div><label class="text-xs font-bold uppercase text-stone-500">Real Name</label><input id="edit-realname" type="text" placeholder="e.g. Uncle Bob" class="w-full px-3 py-2 border rounded bg-stone-50"></div>
                     <div><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" readonly class="w-full px-3 py-2 border rounded bg-stone-100 text-stone-500 cursor-not-allowed"></div>
@@ -595,7 +658,6 @@
                         </div>
                         <div>
                             <span class="block text-stone-400">PVR:</span> <span id="edit-pref-pvr" class="font-mono">---</span><br>
-                            <span class="block text-stone-400 mt-1">Bouquet:</span> <span id="edit-pref-bouquet" class="font-mono">---</span>
                         </div>
                     </div>
                     <!-- Added Bouquet Request Text Areas -->
@@ -827,12 +889,11 @@
                         // Pre-fill config form
                         renderDeviceList(data.devices || []);
                         document.getElementById('user-config-screens').value = data.screenPreference || '1';
-                        document.getElementById('user-config-bouquet').value = data.bouquetPreference || 'Standard';
-                        
-                        // New fields
-                        document.getElementById('user-config-live').value = data.liveBouquet || '';
-                        document.getElementById('user-config-vod').value = data.vodBouquet || '';
+                        // Handle Bouquet Smart Tags
+                        renderBouquetTags(data.liveBouquet || '', 'live');
+                        renderBouquetTags(data.vodBouquet || '', 'vod');
                         document.getElementById('user-config-supporter-req').checked = data.supporterRequest || false;
+                        document.getElementById('user-config-pvr').value = data.pvrPreference || 'No';
                     }
                 }
             } catch (e) { console.error(e); }
@@ -841,23 +902,42 @@
         // --- USER CONFIG LOGIC ---
         function renderDeviceList(devices) {
             const container = document.getElementById('device-list-container');
+            const emptyMsg = document.getElementById('empty-device-msg');
             container.innerHTML = '';
-            if(!devices || devices.length === 0) return;
+            
+            // Re-append empty msg (hidden/shown logic)
+            container.appendChild(emptyMsg);
+            
+            if(!devices || devices.length === 0) {
+                emptyMsg.classList.remove('hidden');
+                document.getElementById('device-counter').innerText = "Active Devices: 0";
+                return;
+            }
+            emptyMsg.classList.add('hidden');
+            document.getElementById('device-counter').innerText = `Active Devices: ${devices.length}`;
             
             devices.forEach(dev => {
                 const row = document.createElement('div');
                 row.className = "flex gap-2 mb-2 device-row items-center";
                 row.innerHTML = `
-                    <div class="flex-1 bg-stone-50 border border-stone-200 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+                    <div class="flex-1 bg-white border border-stone-200 px-3 py-2 rounded-lg text-sm flex items-center gap-2 shadow-sm">
                         <i class="fas fa-${getDeviceIcon(dev.type)} text-stone-400"></i>
-                        <span>${getDeviceName(dev.type)}</span>
+                        <span class="font-medium">${getDeviceName(dev.type)}</span>
                         <input type="hidden" value="${dev.type}" class="device-type-value">
                     </div>
-                    <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>
+                    <button type="button" onclick="this.parentElement.remove(); updateDeviceCount();" class="text-red-400 hover:text-red-600 px-2 transition"><i class="fas fa-trash"></i></button>
                 `;
                 container.appendChild(row);
             });
         }
+        
+        window.updateDeviceCount = () => {
+            const count = document.querySelectorAll('.device-row').length;
+            const emptyMsg = document.getElementById('empty-device-msg');
+            document.getElementById('device-counter').innerText = `Active Devices: ${count}`;
+            if(count === 0) emptyMsg.classList.remove('hidden');
+            else emptyMsg.classList.add('hidden');
+        };
 
         window.addDeviceFromFamily = (family) => {
             const container = document.getElementById('device-list-container');
@@ -873,9 +953,13 @@
                 <select class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm device-type-select">
                     ${options}
                 </select>
-                <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>
+                <button type="button" onclick="this.parentElement.remove(); updateDeviceCount();" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>
             `;
             container.appendChild(row);
+            
+            // Hide empty message
+            document.getElementById('empty-device-msg').classList.add('hidden');
+            updateDeviceCount();
         };
 
         window.toggleScreenWarning = () => {
@@ -884,34 +968,105 @@
             if (val !== '1') warning.classList.remove('hidden');
             else warning.classList.add('hidden');
         };
+        
+        // --- BOUQUET SMART TAGS LOGIC ---
+        window.toggleTag = (btn, type, tag) => {
+            btn.classList.toggle('bg-stone-900');
+            btn.classList.toggle('text-white');
+            btn.classList.toggle('border-transparent');
+            // Toggle off hover if active
+            if(btn.classList.contains('bg-stone-900')) {
+                btn.classList.remove('hover:bg-stone-100');
+            } else {
+                btn.classList.add('hover:bg-stone-100');
+            }
+        };
+        
+        window.toggleOther = (type) => {
+            const textarea = document.getElementById(`user-config-${type}-other`);
+            const btn = document.getElementById(`btn-${type}-other`);
+            
+            textarea.classList.toggle('hidden');
+            if(!textarea.classList.contains('hidden')) {
+                btn.classList.add('bg-blue-100', 'border-blue-300');
+                textarea.focus();
+            } else {
+                btn.classList.remove('bg-blue-100', 'border-blue-300');
+            }
+        };
+        
+        // Render tags from saved string
+        function renderBouquetTags(savedString, type) {
+            // Reset all
+            const container = document.getElementById(`${type}-tags`);
+            const btns = container.querySelectorAll('button');
+            btns.forEach(b => {
+                b.classList.remove('bg-stone-900', 'text-white', 'border-transparent');
+                b.classList.add('hover:bg-stone-100');
+            });
+            
+            if(!savedString) return;
+            
+            // Check for tags
+            btns.forEach(b => {
+                if(savedString.includes(b.innerText)) {
+                    toggleTag(b, type, b.innerText); // Re-activate visually
+                }
+            });
+            
+            // Check for "Other" content (text after "Notes: ")
+            const noteSplit = savedString.split('Notes: ');
+            if(noteSplit.length > 1 && noteSplit[1].trim() !== '') {
+                const textarea = document.getElementById(`user-config-${type}-other`);
+                textarea.value = noteSplit[1];
+                toggleOther(type);
+            }
+        }
+        
+        // Compile tags for saving
+        function getBouquetString(type) {
+            const container = document.getElementById(`${type}-tags`);
+            const activeBtns = Array.from(container.querySelectorAll('.bg-stone-900')).map(b => b.innerText);
+            
+            const textarea = document.getElementById(`user-config-${type}-other`);
+            const notes = (!textarea.classList.contains('hidden') && textarea.value) ? ` Notes: ${textarea.value}` : '';
+            
+            return activeBtns.join(', ') + notes;
+        }
 
         window.handleUserConfigSave = async (e) => {
             e.preventDefault();
             // Gather devices
             const rows = document.querySelectorAll('.device-row');
+            // Check both select dropdowns (newly added) and hidden inputs (loaded from db)
             const devices = Array.from(rows).map(row => {
                 const select = row.querySelector('select');
                 const hidden = row.querySelector('input.device-type-value');
-                return { type: select ? select.value : hidden.value };
+                return { type: select ? select.value : (hidden ? hidden.value : 'firestick') };
             });
 
             const updates = {
                 devices: devices,
                 pvrPreference: document.getElementById('user-config-pvr').value,
                 screenPreference: document.getElementById('user-config-screens').value,
-                bouquetPreference: document.getElementById('user-config-bouquet').value,
-                liveBouquet: document.getElementById('user-config-live').value,
-                vodBouquet: document.getElementById('user-config-vod').value,
+                liveBouquet: getBouquetString('live'),
+                vodBouquet: getBouquetString('vod'),
                 supporterRequest: document.getElementById('user-config-supporter-req').checked
             };
             
             try {
                 await updateDoc(doc(db, "users", auth.currentUser.uid), updates);
-                alert("Preferences saved!");
+                showToast(); // NEW TOAST
                 const btn = document.getElementById('btn-notify-elliot');
                 btn.classList.remove('hidden');
                 btn.onclick = () => window.open(FB_LINK, '_blank');
             } catch(err) { alert("Error saving: " + err.message); }
+        };
+        
+        window.showToast = () => {
+            const toast = document.getElementById('toast-container');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
         };
         
         window.notifyElliot = () => window.open(FB_LINK, '_blank');
