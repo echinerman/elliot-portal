@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elliot.vip | Private Portal</title>
+    <title>goelliot.vip | Private Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -36,7 +36,7 @@
             <div class="flex justify-between h-20 items-center">
                 <div class="flex items-center gap-3 cursor-pointer" onclick="switchView('home')">
                     <div class="w-10 h-10 border border-stone-800 rounded-full flex items-center justify-center text-stone-800"><i class="fas fa-tv"></i></div>
-                    <span class="font-serif font-semibold text-2xl text-stone-900">Elliot.vip</span>
+                    <span class="font-serif font-semibold text-2xl text-stone-900">goelliot.vip</span>
                 </div>
                 <div class="hidden md:flex space-x-8 items-center" id="desktop-nav"></div>
                 <button id="mobile-menu-btn" class="md:hidden text-stone-800 p-2"><i class="fas fa-bars text-xl"></i></button>
@@ -142,6 +142,7 @@
                 <div class="bg-white p-8 rounded-3xl shadow-sm border border-stone-200 lg:col-span-2">
                     <div class="flex items-center justify-between mb-8">
                         <h2 class="font-bold text-2xl font-serif text-stone-900">Connection Details</h2>
+                        <span id="dash-device-badge" class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider hidden">Firestick 4K</span>
                     </div>
 
                     <!-- Recommendation Banner -->
@@ -168,7 +169,7 @@
                         <h3 class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">Strong 8K Credentials</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="text-xs text-stone-500 block mb-1">Server URL</label>
+                                <label class="text-xs text-stone-500 block mb-1">Server URL (Cloudflare Optimized)</label>
                                 <div class="flex bg-stone-50 rounded-lg border border-stone-200">
                                     <code id="dash-server" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code>
                                     <button onclick="copyToClipboardText('dash-server')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button>
@@ -453,7 +454,7 @@
                 <!-- Identity -->
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div><label class="text-xs font-bold uppercase text-stone-500">Real Name</label><input id="edit-realname" type="text" placeholder="e.g. Uncle Bob" class="w-full px-3 py-2 border rounded bg-stone-50"></div>
-                    <div><label class="text-xs font-bold uppercase text-stone-500">Email</label><input id="edit-email" type="text" placeholder="user@gmail.com" class="w-full px-3 py-2 border rounded bg-white"></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" placeholder="user@gmail.com" class="w-full px-3 py-2 border rounded bg-white"></div>
                 </div>
                 <div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Status</label><select id="edit-status" class="w-full px-3 py-2 border rounded"><option>Pending</option><option>Active</option><option>Expired</option></select></div>
                 <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-6">
