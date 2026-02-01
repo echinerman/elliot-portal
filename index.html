@@ -52,7 +52,7 @@
     <div id="toast-container" class="fixed bottom-6 right-6 z-[100] max-w-sm w-full">
         <div class="bg-stone-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
             <div class="text-green-400 text-xl"><i class="fas fa-check-circle"></i></div>
-            <div><h4 class="font-bold text-sm">Changes Saved</h4><p class="text-xs text-stone-400">Your configuration has been updated.</p></div>
+            <div><h4 class="font-bold text-sm">Changes Saved</h4><p class="text-xs text-stone-400">Configuration updated successfully.</p></div>
         </div>
     </div>
 
@@ -108,33 +108,89 @@
                         <div class="pt-4"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Expires On</p><p id="dash-expiry" class="font-mono text-lg text-white">---</p></div>
                     </div>
 
-                    <!-- Pricing & License -->
+                    <!-- Pricing Calculator -->
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
-                        <h3 class="font-bold text-stone-900 mb-4 text-sm uppercase tracking-wider">Pricing</h3>
-                        <div class="space-y-2 text-sm text-stone-600 mb-4 font-mono text-xs">
-                            <div class="flex justify-between"><span>1 Month</span><span>$10</span></div>
-                            <div class="flex justify-between"><span>3 Months</span><span>$25</span></div>
-                            <div class="flex justify-between"><span>6 Months</span><span>$40</span></div>
-                            <div class="flex justify-between font-bold text-stone-900"><span>1 Year</span><span>$60</span></div>
+                        <h3 class="font-bold text-stone-900 mb-4 text-sm uppercase tracking-wider border-b border-stone-100 pb-2">Plan Calculator</h3>
+                        <div class="space-y-3 text-sm text-stone-600 mb-4" id="pricing-rows">
+                            <!-- Injected JS -->
                         </div>
-                        <button onclick="requestNewLicense()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2">
-                            <i class="fab fa-facebook-messenger"></i> Request New License
+                        <div class="flex justify-between items-center py-2 border-t border-stone-100">
+                            <span class="text-stone-500 text-xs">One-time Fee</span>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <span class="text-xs font-bold text-green-700">Supporter (+$20)</span>
+                                <input type="checkbox" id="calc-supporter" onchange="updateTotal()" class="w-4 h-4 text-green-600 rounded">
+                            </label>
+                        </div>
+                        <div class="bg-stone-50 p-3 rounded-lg flex justify-between items-center mb-4">
+                            <span class="font-bold text-stone-700">Total:</span>
+                            <span id="calc-total" class="font-bold text-xl text-blue-600">$0.00</span>
+                        </div>
+                        
+                        <!-- Payment Method -->
+                        <div class="mb-4">
+                            <label class="text-xs font-bold text-stone-400 uppercase block mb-2">Payment Method</label>
+                            <select id="payment-method" onchange="updatePaymentDetails()" class="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none">
+                                <option value="interac">Interac e-Transfer</option>
+                                <option value="bitcoin">Bitcoin (Lightning/On-Chain)</option>
+                            </select>
+                            
+                            <!-- Dynamic Details -->
+                            <div id="pay-interac" class="mt-3 text-xs bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                <p class="mb-1 text-blue-800 font-medium">Send to:</p>
+                                <div class="flex justify-between items-center bg-white p-1 rounded border border-blue-100 mb-1">
+                                    <span class="pl-2 font-mono text-stone-600">e.chinerman@gmail.com</span>
+                                    <button onclick="copyText('e.chinerman@gmail.com')" class="text-blue-500 hover:text-blue-700 px-2"><i class="fas fa-copy"></i></button>
+                                </div>
+                                <div class="flex justify-between items-center bg-white p-1 rounded border border-blue-100">
+                                    <span class="pl-2 font-mono text-stone-600">514-943-5664</span>
+                                    <button onclick="copyText('514-943-5664')" class="text-blue-500 hover:text-blue-700 px-2"><i class="fas fa-copy"></i></button>
+                                </div>
+                                <p class="mt-2 text-[10px] text-blue-600">Direct Deposit Enabled (No password needed).</p>
+                            </div>
+
+                            <div id="pay-bitcoin" class="mt-3 text-xs bg-orange-50 p-3 rounded-lg border border-orange-100 hidden">
+                                <p class="mb-1 text-orange-800 font-medium">Lightning Address:</p>
+                                <div class="flex justify-between items-center bg-white p-1 rounded border border-orange-100 mb-2">
+                                    <span class="pl-2 font-mono text-stone-600 truncate">gogobonobo@shakepay.me</span>
+                                    <button onclick="copyText('gogobonobo@shakepay.me')" class="text-orange-500 hover:text-orange-700 px-2"><i class="fas fa-copy"></i></button>
+                                </div>
+                                <p class="mb-1 text-orange-800 font-medium">On-Chain (BTC):</p>
+                                <div class="flex justify-between items-center bg-white p-1 rounded border border-orange-100">
+                                    <span class="pl-2 font-mono text-stone-600 truncate text-[10px]">bc1q6fu87a280v4g6wcjgu2kewv8qyuh3vl93deta8v297r4prswu4dqqxx3xw</span>
+                                    <button onclick="copyText('bc1q6fu87a280v4g6wcjgu2kewv8qyuh3vl93deta8v297r4prswu4dqqxx3xw')" class="text-orange-500 hover:text-orange-700 px-2"><i class="fas fa-copy"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="requestNewLicense()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-lg">
+                            <i class="fab fa-facebook-messenger"></i> Request License
                         </button>
-                        <p class="text-[10px] text-stone-400 text-center mt-2">Includes automated setup details</p>
                     </div>
 
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
-                        <h3 class="font-bold text-stone-900 text-sm mb-4">GanjaRelease Supporter</h3>
                         <div class="flex justify-between items-center mb-4">
-                            <span id="dash-supporter-badge" class="px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold">Inactive</span>
+                            <h3 class="font-bold text-stone-900 text-sm">GanjaRelease Supporter</h3>
+                            <span id="dash-supporter-badge" class="px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold">Not Requested</span>
                         </div>
+                        
                         <div id="dash-supporter-active" class="hidden">
-                            <p class="text-xs text-green-600 mb-2 font-medium"><i class="fas fa-check-circle mr-1"></i> Enabled</p>
+                            <p class="text-xs text-green-600 mb-2 font-medium"><i class="fas fa-check-circle mr-1"></i> Supporter Access Enabled</p>
+                            <p class="text-xs text-stone-500 mb-2">You have enhanced EPG for:</p>
                             <div id="dash-supporter-list" class="h-32 overflow-y-auto bg-stone-50 rounded border border-stone-100 p-2 text-[10px] font-mono text-stone-600 leading-tight"></div>
                         </div>
-                        <div id="dash-supporter-inactive" class="text-xs text-stone-500">
-                            <p class="mb-2">Support the creator (+$20) to unlock premium EPG updates.</p>
-                            <a href="#config-section" class="text-blue-600 hover:underline">Request Upgrade below &rarr;</a>
+                        
+                        <div id="dash-supporter-info" class="text-xs text-stone-500">
+                             <p class="mb-3 leading-relaxed">
+                                GanjaRelease is the dedicated curator who maintains the EPG on EPGenius as a passion project.
+                                <br><br>
+                                <span class="font-bold text-stone-700">Supporter Benefit:</span> A one-time $20 fee grants you forever access to premium EPG updates including detailed PPV events, 24/7 channels, and expanded sports metadata.
+                            </p>
+                            <div class="relative inline-block tooltip-trigger">
+                                <span class="text-blue-600 hover:underline cursor-help">View Premium Categories</span>
+                                <div id="supporter-tooltip-list" class="tooltip-content absolute bottom-full left-0 mb-2 w-64 h-48 overflow-y-auto bg-stone-800 text-stone-100 text-[10px] p-3 rounded-lg shadow-xl z-20 font-mono">
+                                    <!-- Injected via JS -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -191,13 +247,24 @@
                             <div class="mb-10">
                                 <h3 class="font-bold text-sm uppercase text-stone-400 tracking-wider mb-4">Device Roster</h3>
                                 <div id="device-counter" class="text-xs font-bold text-blue-600 mb-4 bg-blue-50 inline-block px-2 py-1 rounded">Active: 0</div>
-                                <div class="grid grid-cols-3 gap-4 mb-4">
+                                
+                                <div class="grid grid-cols-3 gap-4 mb-6">
                                     <button type="button" onclick="addDeviceFromFamily('tv')" class="p-3 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-1 group"><i class="fas fa-tv text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500 group-hover:text-stone-800">TV Device</span></button>
                                     <button type="button" onclick="addDeviceFromFamily('mobile')" class="p-3 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-1 group"><i class="fas fa-mobile-alt text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500 group-hover:text-stone-800">Phone/Tablet</span></button>
                                     <button type="button" onclick="addDeviceFromFamily('computer')" class="p-3 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-1 group"><i class="fas fa-laptop text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500 group-hover:text-stone-800">Computer</span></button>
                                 </div>
-                                <div id="device-list-container" class="space-y-3 mb-2 p-4 bg-stone-50 rounded-xl min-h-[50px]"><p class="text-xs text-stone-400 text-center italic" id="empty-device-msg">No devices added.</p></div>
+                                
+                                <!-- Grouped Lists -->
+                                <div class="space-y-4">
+                                    <div id="group-tv" class="hidden"><h4 class="text-xs font-bold text-stone-400 uppercase mb-2">TV Devices</h4><div class="space-y-2 list-content"></div></div>
+                                    <div id="group-mobile" class="hidden"><h4 class="text-xs font-bold text-stone-400 uppercase mb-2">Mobile Devices</h4><div class="space-y-2 list-content"></div></div>
+                                    <div id="group-computer" class="hidden"><h4 class="text-xs font-bold text-stone-400 uppercase mb-2">Computers</h4><div class="space-y-2 list-content"></div></div>
+                                </div>
+                                
+                                <p class="text-xs text-stone-400 text-center italic mt-4" id="empty-device-msg">No devices added.</p>
                             </div>
+                            
+                            <hr class="border-stone-100 mb-8">
                             
                             <div class="mb-10">
                                 <h3 class="font-bold text-sm uppercase text-stone-400 tracking-wider mb-4">Preferences</h3>
@@ -229,7 +296,6 @@
                                     </div>
                                 </div>
                                 <div class="mb-6"><label class="block text-xs font-bold text-stone-500 mb-2 uppercase">Recording (PVR)</label><select id="user-config-pvr" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg text-sm"><option>No</option><option>Yes (Self-setup)</option><option>Yes (Need Guide)</option></select></div>
-                                <div class="flex items-center gap-3 bg-green-50 p-4 rounded-lg border border-green-100"><input type="checkbox" id="user-config-supporter-req" class="w-4 h-4 text-green-600 rounded"><div><label for="user-config-supporter-req" class="text-sm font-bold text-green-900 block">GanjaRelease Supporter (+$20)</label><p class="text-xs text-green-800">Unlocks premium EPG updates.</p></div></div>
                             </div>
                             
                             <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-6 mb-8 flex gap-4">
@@ -269,10 +335,38 @@
                 <button onclick="showGuide('mobile')" id="tab-mobile" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">Android Mobile</button>
                 <button onclick="showGuide('windows')" id="tab-windows" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">Windows / Mac</button>
             </div>
+            
+            <!-- Android Guide Updated -->
             <div id="guide-android" class="guide-content bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
                 <h2 class="text-2xl font-bold text-stone-900 mb-4">TiviMate Premium (Recommended)</h2>
-                <ol class="list-decimal pl-5 space-y-3 marker:text-stone-900 marker:font-bold"><li>Install <strong>Downloader</strong> from the App Store.</li><li>Enter code: <strong>[Your Code]</strong> to download TiviMate.</li><li>Open TiviMate > Add Playlist > <strong>Xtream Codes</strong>.</li><li>Enter the Server URL, Username, and Password found in your <a href="#" onclick="switchView('dashboard')" class="text-blue-600 underline">Dashboard</a>.</li></ol>
+                <div class="prose prose-stone max-w-none text-sm">
+                    <h3 class="font-bold mb-2">Step 1: Install TiviMate</h3>
+                    <ol class="list-decimal pl-5 space-y-2 mb-6">
+                        <li>Install the <strong>Downloader</strong> app from the Amazon App Store.</li>
+                        <li>Enter code: <strong>278077</strong> (Official TiviMate) to download.</li>
+                        <li>Follow prompts to install.</li>
+                    </ol>
+                    <h3 class="font-bold mb-2">Step 2: Premium & Dual Playlist Setup</h3>
+                    <p class="mb-4">To get the best experience (Live TV + VOD), we use two separate lists.</p>
+                    
+                    <h4 class="font-bold text-blue-600 mb-1">List 1: Live TV (EPGenius)</h4>
+                    <ol class="list-decimal pl-5 space-y-2 mb-4">
+                        <li><strong>Settings > Playlists > Add Playlist</strong>. Select <strong>M3U Playlist</strong>.</li>
+                        <li>Enter your <strong>EPGenius M3U URL</strong> (from Dashboard).</li>
+                        <li>Name it "Live TV".</li>
+                        <li><strong>Important:</strong> Manage groups > Hide all VOD groups (Movies/Series).</li>
+                    </ol>
+
+                    <h4 class="font-bold text-indigo-600 mb-1">List 2: VOD (Movies/Series)</h4>
+                    <ol class="list-decimal pl-5 space-y-2">
+                        <li><strong>Add Playlist > Xtream Codes</strong>.</li>
+                        <li>Enter Server, User, Pass from Dashboard. Check "Include VOD".</li>
+                        <li>Name it "VOD".</li>
+                        <li><strong>Important:</strong> Manage groups > Hide all Live TV groups.</li>
+                    </ol>
+                </div>
             </div>
+            
             <div id="guide-ios" class="guide-content hidden bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl"><h2 class="text-xl font-bold text-stone-900 mb-4">UHF (Paid) or Chillio</h2><ul class="list-disc pl-5 space-y-2"><li>Use <strong>Xtream Codes</strong> login from Dashboard.</li><li>Enter Server URL, User, Pass.</li></ul></div>
             <div id="guide-mobile" class="guide-content hidden bg-white p-8 rounded-3xl border border-stone-200 shadow-xl"><h2 class="text-xl font-bold mb-4">Android Mobile</h2><p>Download <strong>IPTV Smarters Pro</strong> or <strong>Televizo</strong>.</p></div>
             <div id="guide-windows" class="guide-content hidden bg-white p-8 rounded-3xl border border-stone-200 shadow-xl"><h2 class="text-xl font-bold mb-4">Windows / Mac</h2><p>We recommend <strong>FredTV</strong> or <strong>OpenTV</strong> (Windows) or <strong>GSE Smart IPTV</strong> (Mac).</p></div>
@@ -281,6 +375,7 @@
 
     <!-- VIEW: ADMIN DASHBOARD -->
     <main id="view-admin" class="view-section pt-32 pb-24 min-h-screen bg-stone-100">
+        <!-- (Same Admin Dashboard Layout) -->
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between items-center mb-8">
                 <h1 class="font-serif text-3xl text-stone-900">Admin Console</h1>
@@ -292,25 +387,27 @@
                     <button onclick="loadAdminData()" class="text-xs bg-white border border-stone-300 px-3 py-2 rounded-lg hover:bg-stone-50"><i class="fas fa-sync-alt"></i></button>
                 </div>
             </div>
-            <!-- Stats & Roster (Same as previous) -->
+            <!-- Stats -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                 <div class="bg-stone-900 text-white p-6 rounded-2xl shadow-lg"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Credits Remaining</p><div class="flex items-end gap-2"><span id="stat-credits-left" class="text-3xl font-bold">---</span><span id="stat-credits-total" class="text-sm text-stone-400 mb-1">/ ---</span></div><div class="w-full bg-stone-800 h-1.5 rounded-full mt-4 overflow-hidden"><div id="stat-bar" class="bg-green-500 h-full rounded-full" style="width: 0%"></div></div></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Total Revenue</p><span id="stat-revenue" class="text-3xl font-bold text-stone-800">$0.00</span></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Net Profit</p><span id="stat-profit" class="text-3xl font-bold text-stone-800">$0.00</span></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Avg Profit / Credit</p><span id="stat-avg" class="text-3xl font-bold text-stone-800">$0.00</span><p id="stat-cost-basis" class="text-xs text-stone-400 mt-1">Cost Basis: $---</p></div>
             </div>
+            <!-- Roster -->
             <div class="bg-white rounded-3xl shadow-sm border border-stone-200 overflow-hidden">
                 <div class="p-4 border-b border-stone-100 bg-stone-50 flex flex-col md:flex-row gap-4 justify-between items-center">
                     <div class="flex items-center gap-2 w-full md:w-auto"><h2 class="font-bold text-lg text-stone-700 mr-2">Roster</h2><input type="text" id="filter-search" onkeyup="renderRoster()" placeholder="Search..." class="pl-3 pr-4 py-2 border rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-stone-200 outline-none"></div>
                     <div class="flex gap-2 w-full md:w-auto"><select id="filter-status" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Pending">Pending</option><option value="Expired">Expired</option></select><select id="filter-sort" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="recent">Recent</option><option value="name">Name</option><option value="expiry_soon">Expires Soon</option></select></div>
                 </div>
-                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 bg-white"><div class="col-span-3">User / Name</div><div class="col-span-2">Product</div><div class="col-span-2">Expiry</div><div class="col-span-2">Payment</div><div class="col-span-3 text-right">Action</div></div>
+                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 bg-white"><div class="col-span-3">User / Name</div><div class="col-span-2">Product</div><div class="col-span-2">Supporter</div><div class="col-span-2">Payment</div><div class="col-span-3 text-right">Action</div></div>
                 <div id="admin-user-list" class="divide-y divide-stone-100 text-sm"><div class="p-8 text-center text-stone-500">Loading roster...</div></div>
             </div>
         </div>
     </main>
 
     <!-- MODALS -->
+    <!-- (Login, Register, Supply, History, Password same as before) -->
     <div id="modal-login" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
             <button onclick="closeModal('login')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
@@ -325,7 +422,7 @@
             <p id="login-error" class="text-red-500 text-center mt-4 text-sm hidden"></p>
         </div>
     </div>
-
+    
     <div id="modal-register" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
             <button onclick="closeModal('register')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
@@ -344,7 +441,7 @@
         </div>
     </div>
 
-    <!-- Admin Edit Modal -->
+    <!-- Admin Edit Modal (Updated) -->
     <div id="modal-edit" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl p-8 max-w-2xl w-full relative my-8">
             <button onclick="closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
@@ -363,7 +460,17 @@
                         <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Expiry Date</label><input id="edit-expiry" type="text" placeholder="Dec 31, 2026" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
                         <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Date Paid</label><input id="edit-paydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-4"><div><label class="text-xs font-bold uppercase text-stone-500">Date Purchased</label><input id="edit-buydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-xs"></div></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="text-xs font-bold uppercase text-stone-500">Date Purchased</label><input id="edit-buydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-xs"></div>
+                        <div><label class="text-xs font-bold uppercase text-stone-500">Supporter Status</label>
+                            <select id="edit-supporter-status" class="w-full px-3 py-2 border rounded bg-white text-xs">
+                                <option value="Not Requested">Not Requested</option>
+                                <option value="Requested - Unpaid">Requested - Unpaid</option>
+                                <option value="Requested - Paid">Requested - Paid</option>
+                                <option value="Enabled">Enabled</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 <div class="grid grid-cols-3 gap-4 mb-4">
                     <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500 mb-1">Server URL</label><select id="edit-server" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="http://cf.taty.website">http://cf.taty.website (Cloudflare)</option><option value="http://taty.website">http://taty.website (Backup)</option></select></div>
@@ -374,10 +481,8 @@
                     <div><label class="text-xs font-bold uppercase text-stone-500">EPGenius M3U URL</label><input id="edit-epgenius" type="text" class="w-full px-3 py-2 border rounded font-mono text-xs"></div>
                     <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K M3U</label><input id="edit-m3u" type="text" class="w-full px-3 py-2 border rounded font-mono text-xs"></div>
                 </div>
-                <div class="mb-6 flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-100">
-                    <input type="checkbox" id="edit-is-supporter" class="w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
-                    <div><label for="edit-is-supporter" class="text-sm font-bold text-green-900 block">GanjaRelease Supporter Status</label><p class="text-xs text-green-800">Enable to show enhanced EPG categories on client dashboard.</p></div>
-                </div>
+                
+                <!-- NEW: Read Only User Preferences -->
                 <div class="mt-4 pt-4 border-t border-stone-100 bg-gray-50 p-4 rounded-lg max-h-32 overflow-y-auto">
                     <h3 class="text-xs font-bold uppercase text-stone-500 mb-2">User's Requested Setup</h3>
                     <div class="grid grid-cols-2 gap-4 text-xs text-stone-700">
@@ -389,7 +494,6 @@
                             <div><span class="block text-stone-400">Live TV Request:</span><p id="edit-pref-live-note" class="italic">---</p></div>
                             <div><span class="block text-stone-400">VOD Request:</span><p id="edit-pref-vod-note" class="italic">---</p></div>
                         </div>
-                        <span class="block text-stone-400 mt-2">Supporter Interest:</span><p id="edit-pref-supporter-interest" class="italic font-bold text-green-700">---</p>
                     </div>
                 </div>
                 <div class="flex gap-3 mt-6 sticky bottom-0 bg-white pt-2 border-t border-stone-100">
@@ -400,7 +504,6 @@
         </div>
     </div>
     
-    <!-- SUPPLY & PASSWORD MODALS (Same as before) -->
     <div id="modal-supply" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="closeModal('supply')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Record New Supply</h2><form onsubmit="saveSupply(event)"><div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Credits</label><input id="supply-credits" type="number" class="w-full px-3 py-2 border rounded" required></div><div class="grid grid-cols-2 gap-4 mb-4"><div><label class="text-xs font-bold uppercase text-stone-500">Cost (CAD)</label><input id="supply-cost" type="number" step="0.01" class="w-full px-3 py-2 border rounded" required></div><div><label class="text-xs font-bold uppercase text-stone-500">BTC</label><input id="supply-btc" type="text" class="w-full px-3 py-2 border rounded"></div></div><div class="mb-6"><label class="text-xs font-bold uppercase text-stone-500">Date</label><input id="supply-date" type="date" class="w-full px-3 py-2 border rounded" required></div><button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Add to Ledger</button></form></div></div>
     <div id="modal-supply-history" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-lg w-full relative"><button onclick="closeModal('supply-history')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Supply History</h2><div id="supply-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div></div></div>
     <div id="password-modal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="closePasswordModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold text-center mb-6">Change Password</h2><form onsubmit="handleChangePasswordSubmit(event)"><div class="mb-6"><label class="block text-xs font-bold text-stone-500 mb-2 uppercase">New Password</label><input type="password" id="new-password" required minlength="6" class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg"></div><button type="submit" id="pass-submit-btn" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg hover:bg-stone-800 transition">Update Password</button></form></div></div>
@@ -468,30 +571,16 @@
             updateNav(user);
             if (user) {
                 closeModal('login'); closeModal('register');
-                
-                // USER MERGE CHECK: Run every time on login to catch pending migrations
                 await ensureUserDoc(user);
-
                 if(document.getElementById('view-home').classList.contains('active')) {
                     if (user.email === ADMIN_EMAIL) switchView('admin'); else switchView('dashboard');
                 }
                 if (user.email === ADMIN_EMAIL && document.getElementById('view-admin').classList.contains('active')) loadAdminData();
                 if (document.getElementById('view-dashboard').classList.contains('active')) loadUserData(user.uid);
-            } else {
-                switchView('home');
-            }
+            } else { switchView('home'); }
         });
 
-        // Handle Title Link Logic
-        window.handleTitleClick = () => {
-            const user = auth.currentUser;
-            if (user) {
-                switchView('dashboard');
-            } else {
-                switchView('home');
-            }
-        };
-
+        window.handleTitleClick = () => { if (auth.currentUser) switchView('dashboard'); else switchView('home'); };
         window.switchView = (view) => {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById('view-' + view).classList.add('active');
@@ -504,26 +593,93 @@
         async function ensureUserDoc(user) {
             const userRef = doc(db, "users", user.uid);
             const userSnap = await getDoc(userRef);
-
             if (!userSnap.exists()) {
                 try {
                     const q = query(collection(db, "users"), where("email", "==", user.email));
                     const querySnapshot = await getDocs(q);
-
                     if (!querySnapshot.empty) {
                         const oldDoc = querySnapshot.docs[0]; 
                         const oldData = oldDoc.data();
                         await setDoc(userRef, { ...oldData, uid: user.uid, mergedAt: new Date().toISOString() });
                         await deleteDoc(oldDoc.ref);
-                        console.log("Account Merged Successfully");
                     } else {
                         await setDoc(userRef, { email: user.email, status: "Pending", created: new Date().toISOString() });
                     }
-                } catch(e) { console.error("Merge logic error", e); }
+                } catch(e) { console.error("Merge error", e); }
             }
         }
 
-        // --- CLIENT DASHBOARD ---
+        // --- CLIENT DASHBOARD & CALCULATOR ---
+        const calcSelection = { '1 Month': 0, '3 Months': 0, '6 Months': 0, '1 Year': 0 };
+
+        function renderPricing() {
+            const container = document.getElementById('pricing-rows');
+            let html = '';
+            for (const [key, val] of Object.entries(PRODUCTS)) {
+                if (key === 'Demo') continue;
+                html += `
+                    <div class="flex justify-between items-center bg-stone-50 p-2 rounded">
+                        <span class="font-medium">${key} ($${val.price})</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="updateCalc('${key}', -1)" class="w-6 h-6 rounded bg-stone-200 hover:bg-stone-300 text-stone-600 font-bold">-</button>
+                            <span class="w-4 text-center font-mono">${calcSelection[key] || 0}</span>
+                            <button onclick="updateCalc('${key}', 1)" class="w-6 h-6 rounded bg-stone-900 text-white font-bold hover:bg-stone-700">+</button>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        window.updateCalc = (plan, delta) => {
+            if (!calcSelection[plan]) calcSelection[plan] = 0;
+            calcSelection[plan] += delta;
+            if (calcSelection[plan] < 0) calcSelection[plan] = 0;
+            renderPricing();
+            updateTotal();
+        };
+
+        window.updateTotal = () => {
+            let total = 0;
+            for (const [key, qty] of Object.entries(calcSelection)) {
+                if(PRODUCTS[key]) total += PRODUCTS[key].price * qty;
+            }
+            if (document.getElementById('calc-supporter').checked) total += 20;
+            document.getElementById('calc-total').innerText = `$${total.toFixed(2)}`;
+        };
+
+        window.updatePaymentDetails = () => {
+            const method = document.getElementById('payment-method').value;
+            if (method === 'interac') {
+                document.getElementById('pay-interac').classList.remove('hidden');
+                document.getElementById('pay-bitcoin').classList.add('hidden');
+            } else {
+                document.getElementById('pay-interac').classList.add('hidden');
+                document.getElementById('pay-bitcoin').classList.remove('hidden');
+            }
+        };
+
+        window.requestNewLicense = () => {
+            const method = document.getElementById('payment-method').value === 'interac' ? "Interac e-Transfer" : "Bitcoin";
+            const total = document.getElementById('calc-total').innerText;
+            const supporter = document.getElementById('calc-supporter').checked ? "YES" : "NO";
+            
+            // Build plan string
+            let plans = [];
+            for (const [key, qty] of Object.entries(calcSelection)) {
+                if (qty > 0) plans.push(`${qty}x ${key}`);
+            }
+            const planStr = plans.length > 0 ? plans.join(', ') : "None selected";
+
+            // Config Data
+            const devices = Array.from(document.querySelectorAll('.device-row input.device-type-value')).map(i => getDeviceName(i.value)).join(', ') || "Not set";
+            const bouquet = document.getElementById('user-config-bouquet').value;
+
+            const msg = `Hi Elliot, I'd like to request a new license:%0A%0A- Plans: ${planStr}%0A- Supporter Add-on: ${supporter}%0A- Total: ${total}%0A- Payment: ${method}%0A%0AConfig Details:%0A- Devices: ${devices}%0A- Bouquet: ${bouquet}`;
+            window.open(`${FB_LINK}?text=${msg}`, '_blank');
+        };
+
+        // --- LOAD USER DATA ---
         async function loadUserData(uid) {
             try {
                 const snap = await getDoc(doc(db, "users", uid));
@@ -546,7 +702,12 @@
                         document.getElementById('dash-product').innerText = data.product || 'Standard License';
                         document.getElementById('dash-expiry').innerText = data.expiry || '---';
                         
-                        // Badge
+                        const devices = data.devices || [{type: 'firestick'}];
+                        const device = devices[0].type;
+                        const guideBtn = document.getElementById('btn-device-guide');
+                        guideBtn.innerHTML = `<span>Setup Guide for ${getDeviceName(device)}</span><i class="fas fa-book text-stone-400"></i>`;
+                        guideBtn.onclick = () => { switchView('guides'); showGuide(getDeviceGuideId(device)); };
+                        
                         const badge = document.getElementById('dash-device-badge');
                         if(data.devices && data.devices.length > 0) {
                             badge.innerText = getDeviceName(data.devices[0].type);
@@ -554,71 +715,56 @@
                         }
 
                         // Supporter Logic
-                        if (data.isSupporter) {
-                            document.getElementById('dash-supporter-badge').innerText = "Active";
-                            document.getElementById('dash-supporter-badge').className = "px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-bold";
-                            document.getElementById('dash-supporter-active').classList.remove('hidden');
-                            document.getElementById('dash-supporter-inactive').classList.add('hidden');
-                            // Populate list
-                            const list = document.getElementById('dash-supporter-list');
-                            list.innerHTML = SUPPORTER_CATEGORIES.map(c => `<div>${c}</div>`).join('');
+                        const sStatus = data.supporterStatus || "Not Requested";
+                        const sBadge = document.getElementById('dash-supporter-badge');
+                        const sActive = document.getElementById('dash-supporter-active');
+                        const sInactive = document.getElementById('dash-supporter-inactive');
+                        const sTooltip = document.getElementById('supporter-tooltip-list');
+                        
+                        // Render tooltip list
+                        sTooltip.innerHTML = SUPPORTER_CATEGORIES.map(c => `<div>${c}</div>`).join('');
+
+                        if (sStatus === "Enabled") {
+                            sBadge.innerText = "Active";
+                            sBadge.className = "px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-bold";
+                            sActive.classList.remove('hidden');
+                            sInactive.classList.add('hidden');
+                            document.getElementById('dash-supporter-list').innerHTML = SUPPORTER_CATEGORIES.map(c => `<div>${c}</div>`).join('');
                         } else {
-                            document.getElementById('dash-supporter-badge').innerText = "Inactive";
-                            document.getElementById('dash-supporter-badge').className = "px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold";
-                            document.getElementById('dash-supporter-active').classList.add('hidden');
-                            document.getElementById('dash-supporter-inactive').classList.remove('hidden');
+                            sBadge.innerText = sStatus === "Not Requested" ? "Inactive" : "Pending";
+                            sBadge.className = "px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold";
+                            sActive.classList.add('hidden');
+                            sInactive.classList.remove('hidden');
                         }
 
-                        // Connections
                         document.getElementById('dash-server').innerText = data.serverUrl || '---';
                         document.getElementById('dash-user').innerText = data.username || '---';
                         document.getElementById('dash-pass').innerText = data.password || '---';
                         document.getElementById('dash-epgenius').value = data.epgeniusM3u || '';
                         document.getElementById('dash-m3u').value = data.m3uUrl || '';
                         
-                        // Setup Facebook Link
                         const btnContact = document.getElementById('btn-contact-elliot');
                         if(btnContact) btnContact.onclick = () => window.open(FB_LINK, '_blank');
 
-                        // Pre-fill config form
                         renderDeviceList(data.devices || []);
                         document.getElementById('user-config-screens').value = data.screenPreference || '1';
                         renderBouquetTags(data.liveBouquet || '', 'live');
                         renderBouquetTags(data.vodBouquet || '', 'vod');
-                        document.getElementById('user-config-supporter-req').checked = data.supporterRequest || false;
+                        document.getElementById('user-config-supporter-req').checked = (sStatus !== "Not Requested");
                         document.getElementById('user-config-pvr').value = data.pvrPreference || 'No';
+
+                        renderPricing(); // Init calculator
+                        updatePaymentDetails();
                     }
                 }
             } catch (e) { console.error(e); }
         }
-        
-        window.requestNewLicense = () => {
-             // Gather all config data to send
-             const screens = document.getElementById('user-config-screens').value;
-             const live = getBouquetString('live');
-             const vod = getBouquetString('vod');
-             const pvr = document.getElementById('user-config-pvr').value;
-             const supporter = document.getElementById('user-config-supporter-req').checked ? "YES" : "NO";
-             
-             // Gather devices text
-             const rows = document.querySelectorAll('.device-row');
-             const devicesText = Array.from(rows).map(row => {
-                 const select = row.querySelector('select');
-                 const hidden = row.querySelector('input.device-type-value');
-                 return getDeviceName(select ? select.value : (hidden ? hidden.value : 'firestick'));
-             }).join(', ');
-
-             const msg = `Hi Elliot, I'd like to request a new license with these settings:%0A%0A- Devices: ${devicesText}%0A- Screens: ${screens}%0A- PVR: ${pvr}%0A- Supporter: ${supporter}%0A- Live TV: ${live}%0A- VOD: ${vod}`;
-             
-             window.open(`${FB_LINK}?text=${msg}`, '_blank');
-        };
 
         // --- USER CONFIG LOGIC ---
         function renderDeviceList(devices) {
             const container = document.getElementById('device-list-container');
             const emptyMsg = document.getElementById('empty-device-msg');
             container.innerHTML = '';
-            
             container.appendChild(emptyMsg);
             
             if(!devices || devices.length === 0) {
@@ -629,19 +775,46 @@
             emptyMsg.classList.add('hidden');
             document.getElementById('device-counter').innerText = `Active: ${devices.length}`;
             
-            devices.forEach(dev => {
-                const row = document.createElement('div');
-                row.className = "flex gap-2 mb-2 device-row items-center";
-                row.innerHTML = `
-                    <div class="flex-1 bg-white border border-stone-200 px-3 py-2 rounded-lg text-sm flex items-center gap-2 shadow-sm">
-                        <i class="fas fa-${getDeviceIcon(dev.type)} text-stone-400"></i>
-                        <span class="font-medium">${getDeviceName(dev.type)}</span>
-                        <input type="hidden" value="${dev.type}" class="device-type-value">
-                    </div>
-                    <button type="button" onclick="this.parentElement.remove(); updateDeviceCount();" class="text-red-400 hover:text-red-600 px-2 transition"><i class="fas fa-trash"></i></button>
-                `;
-                container.appendChild(row);
+            // Render GROUPED
+            const groups = { tv: [], mobile: [], computer: [] };
+            devices.forEach(d => {
+                const guide = getDeviceGuideId(d.type); // rough mapping
+                if(guide === 'android' || guide === 'ios') {
+                   if(d.type.includes('mobile')) groups.mobile.push(d);
+                   else groups.tv.push(d);
+                } else groups.computer.push(d);
             });
+            // Fallback for simple mapping
+            if(devices.length > 0 && groups.tv.length === 0 && groups.mobile.length === 0 && groups.computer.length === 0) {
+                 // Direct loop if mapping fails
+                 devices.forEach(d => createDeviceRow(d, container));
+            } else {
+                 if(groups.tv.length) appendGroup(container, "TV Devices", groups.tv);
+                 if(groups.mobile.length) appendGroup(container, "Mobile", groups.mobile);
+                 if(groups.computer.length) appendGroup(container, "Computers", groups.computer);
+            }
+        }
+        
+        function appendGroup(container, title, items) {
+             const header = document.createElement('div');
+             header.className = "text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-2 mb-1 pl-1";
+             header.innerText = title;
+             container.appendChild(header);
+             items.forEach(d => createDeviceRow(d, container));
+        }
+
+        function createDeviceRow(dev, container) {
+            const row = document.createElement('div');
+            row.className = "flex gap-2 mb-2 device-row items-center";
+            row.innerHTML = `
+                <div class="flex-1 bg-white border border-stone-200 px-3 py-2 rounded-lg text-sm flex items-center gap-2 shadow-sm">
+                    <i class="fas fa-${getDeviceIcon(dev.type)} text-stone-400"></i>
+                    <span class="font-medium">${getDeviceName(dev.type)}</span>
+                    <input type="hidden" value="${dev.type}" class="device-type-value">
+                </div>
+                <button type="button" onclick="this.parentElement.remove(); updateDeviceCount();" class="text-red-400 hover:text-red-600 px-2 transition"><i class="fas fa-trash"></i></button>
+            `;
+            container.appendChild(row);
         }
         
         window.updateDeviceCount = () => {
@@ -656,20 +829,12 @@
             const container = document.getElementById('device-list-container');
             const row = document.createElement('div');
             row.className = "flex gap-2 mb-2 device-row";
-            
             let options = '';
             if(family === 'tv') options = `<option value="firestick">Firestick 4K</option><option value="shield">Nvidia Shield</option><option value="appletv">Apple TV</option><option value="smarttv">Smart TV</option>`;
             if(family === 'mobile') options = `<option value="mobile_ios">iPhone / iPad</option><option value="mobile_android">Android Phone/Tablet</option>`;
             if(family === 'computer') options = `<option value="windows">Windows PC</option><option value="mac">Mac Computer</option>`;
-
-            row.innerHTML = `
-                <select class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm device-type-select">
-                    ${options}
-                </select>
-                <button type="button" onclick="this.parentElement.remove(); updateDeviceCount();" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>
-            `;
+            row.innerHTML = `<select class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm device-type-select">${options}</select><button type="button" onclick="this.parentElement.remove(); updateDeviceCount();" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>`;
             container.appendChild(row);
-            
             document.getElementById('empty-device-msg').classList.add('hidden');
             updateDeviceCount();
         };
@@ -682,9 +847,7 @@
         };
         
         window.toggleTag = (btn, type, tag) => {
-            btn.classList.toggle('bg-stone-900');
-            btn.classList.toggle('text-white');
-            btn.classList.toggle('border-transparent');
+            btn.classList.toggle('bg-stone-900'); btn.classList.toggle('text-white'); btn.classList.toggle('border-transparent');
             if(btn.classList.contains('bg-stone-900')) { btn.classList.remove('hover:bg-stone-100'); } else { btn.classList.add('hover:bg-stone-100'); }
         };
         
@@ -740,8 +903,7 @@
                 await updateDoc(doc(db, "users", auth.currentUser.uid), updates);
                 showToast(); 
                 const btn = document.getElementById('btn-notify-elliot');
-                btn.classList.remove('hidden');
-                btn.onclick = () => window.open(FB_LINK, '_blank');
+                if(btn) { btn.classList.remove('hidden'); btn.onclick = () => window.open(FB_LINK, '_blank'); }
             } catch(err) { alert("Error saving: " + err.message); }
         };
         
@@ -796,11 +958,15 @@
             filtered.forEach(u => {
                 const statusColor = u.status === 'Active' ? 'text-green-600' : 'text-yellow-600';
                 const realName = u.realName ? `<span class="text-stone-900 font-bold">${u.realName}</span>` : `<span class="italic text-stone-400">No Name</span>`;
+                const sStatus = u.supporterStatus || "Not Requested";
+                const sColor = sStatus === "Enabled" ? "text-green-600" : (sStatus === "Not Requested" ? "text-gray-300" : "text-amber-500");
+                const sIcon = sStatus === "Enabled" ? "check-circle" : (sStatus === "Not Requested" ? "circle" : "clock");
+
                 html += `
                     <div class="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-stone-50 border-b border-stone-50 transition md:grid hidden">
                         <div class="col-span-3">${realName}<div class="text-xs text-stone-400 mt-0.5 truncate">${u.email || 'Manual Entry'}</div></div>
                         <div class="col-span-2"><span class="bg-stone-100 text-stone-600 px-2 py-1 rounded text-xs font-medium">${u.product || '---'}</span></div>
-                        <div class="col-span-2 text-stone-500 text-xs">${u.expiry || '---'}</div>
+                        <div class="col-span-2 text-center"><i class="fas fa-${sIcon} ${sColor}"></i><div class="text-[10px] text-stone-400">${sStatus}</div></div>
                         <div class="col-span-2 text-stone-500 text-xs">${u.payDate || '---'}</div>
                         <div class="col-span-3 text-right"><div class="text-xs font-bold ${statusColor} mb-1 uppercase tracking-wider">${u.status || 'Pending'}</div><button onclick="openEditModal('${u.id}')" class="text-xs bg-stone-900 text-white px-3 py-1.5 rounded hover:bg-stone-700 transition shadow-sm">Edit</button></div>
                     </div>
@@ -893,13 +1059,10 @@
                 document.getElementById('edit-pref-bouquet').innerText = data.bouquetPreference || '---';
                 document.getElementById('edit-pref-live-note').innerText = data.liveBouquet || '---';
                 document.getElementById('edit-pref-vod-note').innerText = data.vodBouquet || '---';
-                // Show supporter interest
-                const isInterested = data.supporterRequest ? "Yes, Requested" : "No";
-                const interestColor = data.supporterRequest ? "text-green-600 font-bold" : "text-stone-400";
-                document.getElementById('edit-pref-supporter-interest').innerHTML = `<span class="${interestColor}">${isInterested}</span>`;
+                document.getElementById('edit-pref-supporter-interest').innerHTML = `<span class="${data.supporterRequest ? "text-green-600 font-bold" : "text-stone-400"}">${data.supporterRequest ? "Yes, Requested" : "No"}</span>`;
                 
-                // Load supporter toggle
-                document.getElementById('edit-is-supporter').checked = data.isSupporter || false;
+                // Load supporter status dropdown
+                document.getElementById('edit-supporter-status').value = data.supporterStatus || 'Not Requested';
 
             } else {
                 document.getElementById('modal-edit-title').innerText = "Add Manual Client";
@@ -909,7 +1072,7 @@
                 document.getElementById('edit-product').value = '1 Month';
                 document.getElementById('edit-server').value = 'http://cf.taty.website';
                 document.getElementById('edit-email').readOnly = false; // Unlock for new
-                document.getElementById('edit-is-supporter').checked = false;
+                document.getElementById('edit-supporter-status').value = 'Not Requested';
                 
                 document.getElementById('edit-pref-devices').innerHTML = '---';
                 document.getElementById('edit-pref-pvr').innerText = '---';
@@ -944,15 +1107,27 @@
                 password: document.getElementById('edit-pass').value,
                 epgeniusM3u: document.getElementById('edit-epgenius').value,
                 m3uUrl: document.getElementById('edit-m3u').value,
-                isSupporter: document.getElementById('edit-is-supporter').checked
+                supporterStatus: document.getElementById('edit-supporter-status').value,
+                isSupporter: document.getElementById('edit-supporter-status').value === "Enabled" // Legacy support check
             };
             
             // Only update email if it's a new manual entry to avoid breaking auth mapping
             if(!uid) data.email = document.getElementById('edit-email').value;
 
-            if (uid) await updateDoc(doc(db, "users", uid), data);
-            else await addDoc(collection(db, "users"), { ...data, created: new Date().toISOString() });
+            if (uid) {
+                await updateDoc(doc(db, "users", uid), data);
+                showToast(); // Admin toast
+            } else {
+                await addDoc(collection(db, "users"), { ...data, created: new Date().toISOString() });
+                showToast();
+            }
             closeModal('edit'); loadAdminData(); 
+        };
+
+        window.copyText = (text) => {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Copied: " + text);
+            });
         };
 
         // --- SHARED MODALS ---
@@ -996,17 +1171,19 @@
                 html += `
                     <button onclick="switchView('dashboard')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">Dashboard</button>
                     <button onclick="switchView('guides')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">Guides</button>
+                    <button onclick="switchView('config')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">My Config</button>
                     <button onclick="switchView('faq')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">FAQ</button>
                 `;
                 
                 mobHtml += `
                     <button onclick="switchView('dashboard')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">Dashboard</button>
                     <button onclick="switchView('guides')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">Setup Guides</button>
+                    <button onclick="switchView('config')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">My Config</button>
                     <button onclick="switchView('faq')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">FAQ</button>
                 `;
 
                 html += `
-                    <div class="relative group ml-2">
+                    <div class="relative group ml-2 pt-2">
                         <button class="px-4 py-2 bg-stone-900 text-stone-50 font-medium rounded-full hover:bg-stone-700 transition rustic-shadow text-sm flex items-center gap-2">
                             Account <i class="fas fa-chevron-down text-xs"></i>
                         </button>
