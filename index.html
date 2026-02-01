@@ -1219,6 +1219,9 @@
             document.querySelectorAll('.guide-content').forEach(c => c.classList.add('hidden'));
             document.getElementById('guide-' + os).classList.remove('hidden');
         };
+        window.updateDeviceRecommendation = () => {
+             // Optional logic for dynamic updates if needed
+        };
         window.copyToClipboard = (id) => { document.getElementById(id).select(); document.execCommand('copy'); alert('Copied!'); };
         window.copyToClipboardText = (id) => { 
             const text = document.getElementById(id).innerText; 
