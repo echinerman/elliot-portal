@@ -21,7 +21,6 @@
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Tooltip Styles */
         .tooltip-trigger:hover .tooltip-content { visibility: visible; opacity: 1; }
         .tooltip-content { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
         details > summary { list-style: none; }
@@ -219,53 +218,84 @@
             <div class="text-center mb-12">
                 <h2 class="font-serif text-4xl md:text-5xl mb-6">My Configuration</h2>
                 <p class="text-stone-400 font-light max-w-2xl mx-auto">
-                    Keep your device list up to date so I can optimize your viewing experience.
+                    Manage your devices and viewing preferences to help me optimize your experience.
                 </p>
             </div>
 
             <form onsubmit="handleUserConfigSave(event)" class="text-left bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
-                <div class="mb-8">
+                <!-- Device Families -->
+                <div class="mb-10">
                     <h3 class="font-serif text-2xl text-stone-900 mb-4">Device Roster</h3>
-                    <p class="text-sm text-stone-500 mb-4">List all devices you use for viewing.</p>
+                    <p class="text-sm text-stone-500 mb-4">Select a category to add a device.</p>
                     
-                    <div id="device-list-container" class="space-y-3 mb-4">
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <button type="button" onclick="addDeviceFromFamily('tv')" class="p-4 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-2 group">
+                            <i class="fas fa-tv text-2xl text-stone-400 group-hover:text-stone-800"></i>
+                            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 group-hover:text-stone-800">TV Device</span>
+                        </button>
+                        <button type="button" onclick="addDeviceFromFamily('mobile')" class="p-4 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-2 group">
+                            <i class="fas fa-mobile-alt text-2xl text-stone-400 group-hover:text-stone-800"></i>
+                            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 group-hover:text-stone-800">Phone/Tablet</span>
+                        </button>
+                        <button type="button" onclick="addDeviceFromFamily('computer')" class="p-4 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-2 group">
+                            <i class="fas fa-laptop text-2xl text-stone-400 group-hover:text-stone-800"></i>
+                            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 group-hover:text-stone-800">Computer</span>
+                        </button>
+                    </div>
+
+                    <div id="device-list-container" class="space-y-3 mb-2">
                         <!-- Dynamic devices injected here -->
                     </div>
-                    
-                    <button type="button" onclick="addDeviceRow()" class="text-sm text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1">
-                        <i class="fas fa-plus-circle"></i> Add Another Device
-                    </button>
                 </div>
                 
                 <hr class="border-stone-100 mb-8">
                 
-                <div class="mb-8">
-                    <h3 class="font-serif text-2xl text-stone-900 mb-4">Usage Preferences</h3>
+                <!-- Bouquet & Usage -->
+                <div class="mb-10">
+                    <h3 class="font-serif text-2xl text-stone-900 mb-4">Preferences</h3>
+                    
+                    <div class="mb-6">
+                        <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Concurrent Connections</label>
+                        <select id="user-config-screens" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
+                            <option value="1">1 Device at a time</option>
+                            <option value="2">2 Devices simultaneously</option>
+                            <option value="3">3 Devices simultaneously</option>
+                            <option value="4">4 Devices simultaneously</option>
+                        </select>
+                        <p class="text-xs text-stone-400 mt-2 italic flex items-center gap-1">
+                            <i class="fas fa-info-circle"></i> Using more than 1 device simultaneously requires purchasing an additional license.
+                        </p>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Concurrent Connections</label>
-                            <select id="user-config-screens" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
-                                <option value="1">1 Device at a time</option>
-                                <option value="2">2 Devices simultaneously</option>
-                                <option value="3">3 Devices simultaneously</option>
-                                <option value="4">4 Devices simultaneously</option>
-                            </select>
-                            <p class="text-xs text-stone-400 mt-2 italic">
-                                <i class="fas fa-info-circle"></i> Note: Using more than 1 device simultaneously requires purchasing an additional license.
-                            </p>
+                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Live TV Bouquet Requests</label>
+                            <textarea id="user-config-live" rows="3" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Only Sports, UK, and Kids channels. Remove all international."></textarea>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Bouquet Package</label>
-                            <select id="user-config-bouquet" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
-                                <option selected>Standard (US/UK/CA + Sports)</option>
-                                <option>Everything</option>
-                                <option>Sports Only</option>
-                                <option>Minimalist</option>
-                            </select>
+                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">VOD Bouquet Requests</label>
+                            <textarea id="user-config-vod" rows="3" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Add latest Action movies, Netflix series. Remove Horror category."></textarea>
                         </div>
                     </div>
                 </div>
-                <button type="submit" class="w-full bg-stone-900 text-stone-50 font-bold py-4 rounded-xl hover:bg-stone-700 transition-colors shadow-lg mt-4">Save Configuration</button>
+
+                <!-- TiviMate Tip -->
+                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-6 mb-8 flex gap-4">
+                    <div class="text-indigo-600 text-xl pt-1"><i class="fas fa-layer-group"></i></div>
+                    <div>
+                        <h4 class="font-bold text-indigo-900 text-sm mb-1">Pro Tip: TiviMate Premium Configuration</h4>
+                        <p class="text-xs text-indigo-800/80 leading-relaxed">
+                            For the ultimate experience, configure TiviMate with <strong>two playlists</strong>:
+                            <br>1. <strong>Live TV:</strong> Add the EPGenius URL (enable Live TV only).
+                            <br>2. <strong>VOD:</strong> Add the Xtream Codes login (enable Movies/Series only, disable Live TV).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 items-center">
+                    <button type="submit" class="flex-1 bg-stone-900 text-stone-50 font-bold py-4 rounded-xl hover:bg-stone-700 transition-colors shadow-lg">Save Configuration</button>
+                    <button id="btn-notify-elliot" type="button" onclick="notifyElliot()" class="hidden px-6 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg"><i class="fab fa-facebook-messenger mr-2"></i> Notify Elliot</button>
+                </div>
             </form>
         </div>
     </main>
@@ -454,7 +484,7 @@
                 <!-- Identity -->
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div><label class="text-xs font-bold uppercase text-stone-500">Real Name</label><input id="edit-realname" type="text" placeholder="e.g. Uncle Bob" class="w-full px-3 py-2 border rounded bg-stone-50"></div>
-                    <div><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" placeholder="user@gmail.com" class="w-full px-3 py-2 border rounded bg-white"></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" readonly class="w-full px-3 py-2 border rounded bg-stone-100 text-stone-500 cursor-not-allowed"></div>
                 </div>
                 <div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Status</label><select id="edit-status" class="w-full px-3 py-2 border rounded"><option>Pending</option><option>Active</option><option>Expired</option></select></div>
                 <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-6">
@@ -491,6 +521,13 @@
                             <span class="block text-stone-400">PVR:</span> <span id="edit-pref-pvr" class="font-mono">---</span><br>
                             <span class="block text-stone-400 mt-1">Bouquet:</span> <span id="edit-pref-bouquet" class="font-mono">---</span>
                         </div>
+                    </div>
+                    <!-- Added Bouquet Request Text Areas -->
+                    <div class="mt-2 text-xs text-stone-700">
+                        <span class="block text-stone-400">Live TV Request:</span>
+                        <p id="edit-pref-live-note" class="mb-1 italic">---</p>
+                        <span class="block text-stone-400">VOD Request:</span>
+                        <p id="edit-pref-vod-note" class="italic">---</p>
                     </div>
                 </div>
 
@@ -598,40 +635,22 @@
 
         // --- MERGE LOGIC ---
         async function ensureUserDoc(user) {
-            // 1. Check if doc exists for this UID
             const userRef = doc(db, "users", user.uid);
             const userSnap = await getDoc(userRef);
 
             if (!userSnap.exists()) {
-                // 2. Doc missing. Check if there is a Manual Entry with this email.
-                // We use a query on the "users" collection for email match.
-                // Note: Requires Firestore index? Usually simple queries work fine.
                 try {
                     const q = query(collection(db, "users"), where("email", "==", user.email));
                     const querySnapshot = await getDocs(q);
 
                     if (!querySnapshot.empty) {
-                        // MERGE FOUND: We found a manual entry for this email.
-                        const oldDoc = querySnapshot.docs[0]; // Take the first match
+                        const oldDoc = querySnapshot.docs[0]; 
                         const oldData = oldDoc.data();
-                        
-                        // Copy data to new UID doc
-                        await setDoc(userRef, { 
-                            ...oldData, 
-                            uid: user.uid, // Explicitly set UID
-                            mergedAt: new Date().toISOString() 
-                        });
-                        
-                        // Delete the old manual doc to prevent duplicates
+                        await setDoc(userRef, { ...oldData, uid: user.uid, mergedAt: new Date().toISOString() });
                         await deleteDoc(oldDoc.ref);
                         console.log("Account Merged Successfully");
                     } else {
-                        // NO MANUAL ENTRY FOUND: Create fresh Pending doc
-                        await setDoc(userRef, {
-                            email: user.email,
-                            status: "Pending",
-                            created: new Date().toISOString()
-                        });
+                        await setDoc(userRef, { email: user.email, status: "Pending", created: new Date().toISOString() });
                     }
                 } catch(e) { console.error("Merge logic error", e); }
             }
@@ -660,36 +679,34 @@
                         document.getElementById('dash-product').innerText = data.product || 'Standard License';
                         document.getElementById('dash-expiry').innerText = data.expiry || '---';
                         
-                        // Device Button Logic
                         const devices = data.devices || [{type: 'firestick'}];
                         const device = devices[0].type;
                         const guideBtn = document.getElementById('btn-device-guide');
                         guideBtn.innerHTML = `<span>Setup Guide for ${getDeviceName(device)}</span><i class="fas fa-book text-stone-400"></i>`;
                         guideBtn.onclick = () => { switchView('guides'); showGuide(getDeviceGuideId(device)); };
                         
-                        // Badge
                         const badge = document.getElementById('dash-device-badge');
                         if(data.devicePreference || (data.devices && data.devices.length > 0)) {
                             badge.innerText = getDeviceName(data.devicePreference || data.devices[0].type);
                             badge.classList.remove('hidden');
                         }
 
-                        // Connections
                         document.getElementById('dash-server').innerText = data.serverUrl || '---';
                         document.getElementById('dash-user').innerText = data.username || '---';
                         document.getElementById('dash-pass').innerText = data.password || '---';
                         document.getElementById('dash-epgenius').value = data.epgeniusM3u || '';
                         document.getElementById('dash-m3u').value = data.m3uUrl || '';
                         
-                        // Setup Facebook Link
                         const btnContact = document.getElementById('btn-contact-elliot');
                         if(btnContact) btnContact.onclick = () => window.open(FB_LINK, '_blank');
 
-                        // Pre-fill config form
                         renderDeviceList(data.devices || []);
-                        document.getElementById('user-config-pvr').value = data.pvrPreference || 'No';
                         document.getElementById('user-config-screens').value = data.screenPreference || '1';
                         document.getElementById('user-config-bouquet').value = data.bouquetPreference || 'Standard';
+                        
+                        // New fields
+                        document.getElementById('user-config-live').value = data.liveBouquet || '';
+                        document.getElementById('user-config-vod').value = data.vodBouquet || '';
                     }
                 }
             } catch (e) { console.error(e); }
@@ -699,42 +716,42 @@
         function renderDeviceList(devices) {
             const container = document.getElementById('device-list-container');
             container.innerHTML = '';
-            if(!devices || devices.length === 0) devices = [{type: 'firestick'}]; // Default one row
+            if(!devices || devices.length === 0) return;
             
             devices.forEach(dev => {
                 const row = document.createElement('div');
-                row.className = "flex gap-2 mb-2 device-row";
+                row.className = "flex gap-2 mb-2 device-row items-center";
                 row.innerHTML = `
-                    <select class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm device-type-select">
-                        <option value="firestick" ${dev.type === 'firestick' ? 'selected' : ''}>Firestick 4K / Max</option>
-                        <option value="shield" ${dev.type === 'shield' ? 'selected' : ''}>Nvidia Shield</option>
-                        <option value="appletv" ${dev.type === 'appletv' ? 'selected' : ''}>Apple TV</option>
-                        <option value="mobile_ios" ${dev.type === 'mobile_ios' ? 'selected' : ''}>iPhone / iPad</option>
-                        <option value="mobile_android" ${dev.type === 'mobile_android' ? 'selected' : ''}>Android Phone</option>
-                        <option value="windows" ${dev.type === 'windows' ? 'selected' : ''}>Windows PC</option>
-                        <option value="mac" ${dev.type === 'mac' ? 'selected' : ''}>Mac Computer</option>
-                        <option value="smarttv" ${dev.type === 'smarttv' ? 'selected' : ''}>Smart TV</option>
-                    </select>
+                    <div class="flex-1 bg-stone-50 border border-stone-200 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+                        <i class="fas fa-${getDeviceIcon(dev.type)} text-stone-400"></i>
+                        <span>${getDeviceName(dev.type)}</span>
+                        <input type="hidden" value="${dev.type}" class="device-type-value">
+                    </div>
                     <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>
                 `;
                 container.appendChild(row);
             });
         }
 
-        window.addDeviceRow = () => {
+        window.addDeviceFromFamily = (family) => {
+            // Simplified: Add specific common device based on family button click
+            // For full dropdown capability, you'd show a modal. 
+            // Here we just add a generic item or could implement a small select.
+            // Let's implement a quick prompt or just add a generic family item for now.
+            // BETTER: Just add a dropdown row but pre-select based on family.
+            
             const container = document.getElementById('device-list-container');
             const row = document.createElement('div');
             row.className = "flex gap-2 mb-2 device-row";
+            
+            let options = '';
+            if(family === 'tv') options = `<option value="firestick">Firestick 4K</option><option value="shield">Nvidia Shield</option><option value="appletv">Apple TV</option><option value="smarttv">Smart TV</option>`;
+            if(family === 'mobile') options = `<option value="mobile_ios">iPhone / iPad</option><option value="mobile_android">Android Phone/Tablet</option>`;
+            if(family === 'computer') options = `<option value="windows">Windows PC</option><option value="mac">Mac Computer</option>`;
+
             row.innerHTML = `
                 <select class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm device-type-select">
-                    <option value="firestick">Firestick 4K / Max</option>
-                    <option value="shield">Nvidia Shield</option>
-                    <option value="appletv">Apple TV</option>
-                    <option value="mobile_ios">iPhone / iPad</option>
-                    <option value="mobile_android">Android Phone</option>
-                    <option value="windows">Windows PC</option>
-                    <option value="mac">Mac Computer</option>
-                    <option value="smarttv">Smart TV</option>
+                    ${options}
                 </select>
                 <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>
             `;
@@ -743,23 +760,35 @@
 
         window.handleUserConfigSave = async (e) => {
             e.preventDefault();
-            // Gather devices
-            const deviceRows = document.querySelectorAll('.device-row select');
-            const devices = Array.from(deviceRows).map(select => ({ type: select.value }));
+            // Gather devices from select dropdowns if any exist (added via buttons)
+            // Note: renderDeviceList uses a hidden input for existing ones, addDevice uses select.
+            // We need to support both.
+            const rows = document.querySelectorAll('.device-row');
+            const devices = Array.from(rows).map(row => {
+                const select = row.querySelector('select');
+                const hidden = row.querySelector('input.device-type-value');
+                return { type: select ? select.value : hidden.value };
+            });
 
             const updates = {
                 devices: devices,
-                pvrPreference: document.getElementById('user-config-pvr').value,
                 screenPreference: document.getElementById('user-config-screens').value,
-                bouquetPreference: document.getElementById('user-config-bouquet').value
+                bouquetPreference: document.getElementById('user-config-bouquet').value,
+                liveBouquet: document.getElementById('user-config-live').value,
+                vodBouquet: document.getElementById('user-config-vod').value
             };
             
             try {
                 await updateDoc(doc(db, "users", auth.currentUser.uid), updates);
-                alert("Preferences saved! Elliot has been notified.");
-                switchView('dashboard');
+                alert("Preferences saved!");
+                // Show notify button
+                const btn = document.getElementById('btn-notify-elliot');
+                btn.classList.remove('hidden');
+                btn.onclick = () => window.open(FB_LINK, '_blank');
             } catch(err) { alert("Error saving: " + err.message); }
         };
+        
+        window.notifyElliot = () => window.open(FB_LINK, '_blank');
 
         // --- ADMIN & LOGIC ---
         let allClients = []; let allSupplyBatches = [];
@@ -899,6 +928,8 @@
                 document.getElementById('edit-pref-devices').innerHTML = deviceList;
                 document.getElementById('edit-pref-pvr').innerText = data.pvrPreference || '---';
                 document.getElementById('edit-pref-bouquet').innerText = data.bouquetPreference || '---';
+                document.getElementById('edit-pref-live-note').innerText = data.liveBouquet || '---';
+                document.getElementById('edit-pref-vod-note').innerText = data.vodBouquet || '---';
 
             } else {
                 document.getElementById('modal-edit-title').innerText = "Add Manual Client";
@@ -912,6 +943,8 @@
                 document.getElementById('edit-pref-devices').innerHTML = '---';
                 document.getElementById('edit-pref-pvr').innerText = '---';
                 document.getElementById('edit-pref-bouquet').innerText = '---';
+                document.getElementById('edit-pref-live-note').innerText = '---';
+                document.getElementById('edit-pref-vod-note').innerText = '---';
             }
             openModal('edit');
         };
@@ -1028,6 +1061,10 @@
         }
 
         // --- HELPERS ---
+        window.getDeviceIcon = (code) => {
+            const map = { 'firestick': 'tv', 'shield': 'microchip', 'appletv': 'apple', 'mobile_ios': 'mobile-alt', 'mobile_android': 'robot', 'windows': 'desktop', 'mac': 'laptop', 'smarttv': 'tv' };
+            return map[code] || 'tv';
+        };
         window.getDeviceName = (code) => {
             const map = { 'firestick': 'Firestick 4K', 'shield': 'Nvidia Shield', 'appletv': 'Apple TV', 'mobile_ios': 'iOS Device', 'mobile_android': 'Android Device', 'windows': 'Windows PC', 'mac': 'Mac Computer', 'smarttv': 'Smart TV' };
             return map[code] || 'Device';
@@ -1046,18 +1083,12 @@
             document.querySelectorAll('.guide-content').forEach(c => c.classList.add('hidden'));
             document.getElementById('guide-' + os).classList.remove('hidden');
         };
-        window.updateDeviceRecommendation = () => {
-             // Optional logic for dynamic updates if needed
-        };
         window.copyToClipboard = (id) => { document.getElementById(id).select(); document.execCommand('copy'); alert('Copied!'); };
         window.copyToClipboardText = (id) => { 
             const text = document.getElementById(id).innerText; 
             navigator.clipboard.writeText(text).then(() => alert('Copied!')).catch(() => alert('Failed to copy')); 
         };
         document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
-
-        // --- AUTH & REGISTER HANDLERS FOR NEW USERS ---
-        // (Existing handleRegister and handleGoogleLogin already included above)
     </script>
 </body>
 </html>
