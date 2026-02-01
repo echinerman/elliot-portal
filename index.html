@@ -21,24 +21,12 @@
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Tooltip Styles */
         .tooltip-trigger:hover .tooltip-content { visibility: visible; opacity: 1; }
         .tooltip-content { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
         details > summary { list-style: none; }
         details > summary::-webkit-details-marker { display: none; }
-        
-        /* Toast Notification */
-        #toast-container {
-            visibility: hidden;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.3s ease-in-out;
-        }
-        #toast-container.show {
-            visibility: visible;
-            opacity: 1;
-            transform: translateY(0);
-        }
+        #toast-container { visibility: hidden; opacity: 0; transform: translateY(20px); transition: all 0.3s ease-in-out; }
+        #toast-container.show { visibility: visible; opacity: 1; transform: translateY(0); }
     </style>
 </head>
 <body class="font-sans text-stone-800 antialiased bg-stone-50">
@@ -47,7 +35,7 @@
     <nav class="fixed w-full bg-stone-50/90 backdrop-blur-md border-b border-stone-200 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20 items-center">
-                <div class="flex items-center gap-3 cursor-pointer" onclick="switchView('home')">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="handleTitleClick()">
                     <div class="w-10 h-10 border border-stone-800 rounded-full flex items-center justify-center text-stone-800"><i class="fas fa-tv"></i></div>
                     <span class="font-serif font-semibold text-2xl text-stone-900">goelliot.vip</span>
                 </div>
@@ -64,10 +52,7 @@
     <div id="toast-container" class="fixed bottom-6 right-6 z-[100] max-w-sm w-full">
         <div class="bg-stone-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
             <div class="text-green-400 text-xl"><i class="fas fa-check-circle"></i></div>
-            <div>
-                <h4 class="font-bold text-sm">Changes Saved</h4>
-                <p class="text-xs text-stone-400">Your configuration has been updated.</p>
-            </div>
+            <div><h4 class="font-bold text-sm">Changes Saved</h4><p class="text-xs text-stone-400">Your configuration has been updated.</p></div>
         </div>
     </div>
 
@@ -86,311 +71,178 @@
         </section>
     </main>
 
-    <!-- VIEW: DASHBOARD (User) -->
+    <!-- VIEW: DASHBOARD (Unified) -->
     <main id="view-dashboard" class="view-section pt-32 pb-24 min-h-screen">
         <div class="max-w-6xl mx-auto px-4">
-            <!-- Header -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                 <div>
                     <h1 class="font-serif text-3xl text-stone-900">My Dashboard</h1>
                     <p class="text-stone-500 text-sm mt-1" id="dash-welcome">Welcome back.</p>
                 </div>
-                <div class="flex gap-3">
-                    <button onclick="switchView('config')" class="text-sm bg-white border border-stone-300 px-4 py-2 rounded-lg hover:bg-stone-50 shadow-sm font-medium"><i class="fas fa-sliders-h mr-2"></i> My Configuration</button>
-                    <button onclick="handleLogout()" class="text-sm bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 font-medium">Sign Out</button>
-                </div>
+                <button onclick="handleLogout()" class="text-sm bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 font-medium">Sign Out</button>
             </div>
 
-            <!-- Disabled/Deleted State -->
             <div id="user-disabled" class="hidden bg-red-50 border border-red-200 rounded-2xl p-8 text-center max-w-2xl mx-auto">
                 <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-ban text-2xl"></i></div>
                 <h2 class="text-xl font-bold text-red-800 mb-2">Account Disabled</h2>
                 <p class="text-red-700">This account has been deactivated. Please contact Elliot for assistance.</p>
             </div>
 
-            <!-- Pending State -->
             <div id="user-pending" class="hidden bg-yellow-50 border border-yellow-200 rounded-2xl p-8 text-center max-w-2xl mx-auto">
                 <div class="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-clock text-2xl"></i></div>
                 <h2 class="text-xl font-bold text-yellow-800 mb-2">Account Pending</h2>
                 <p class="text-yellow-700">Your account is being set up. Please check back shortly.</p>
             </div>
 
-            <!-- Active State -->
             <div id="user-active" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
-                <!-- Left Column: Status & Actions -->
+                <!-- Left Column -->
                 <div class="space-y-6">
-                    <!-- Status Card -->
                     <div class="bg-stone-900 text-stone-50 p-8 rounded-3xl shadow-xl relative overflow-hidden">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-stone-800 rounded-full blur-2xl opacity-50 -mr-10 -mt-10"></div>
-                        
                         <div class="flex justify-between items-start mb-6">
-                            <div>
-                                <p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Status</p>
-                                <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div><span class="text-xl font-bold">Active</span></div>
-                            </div>
+                            <div><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Status</p><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div><span class="text-xl font-bold">Active</span></div></div>
                             <div class="bg-stone-800 px-3 py-1 rounded text-xs font-mono text-stone-300">License #1</div>
                         </div>
-
-                        <div class="border-t border-stone-800 pt-4 mt-2">
-                            <p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Current Plan</p>
-                            <p id="dash-product" class="font-serif text-lg text-white">Standard License</p>
-                        </div>
-                        <div class="pt-4">
-                            <p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Expires On</p>
-                            <p id="dash-expiry" class="font-mono text-lg text-white">---</p>
-                        </div>
+                        <div class="border-t border-stone-800 pt-4 mt-2"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Current Plan</p><p id="dash-product" class="font-serif text-lg text-white">Standard License</p></div>
+                        <div class="pt-4"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Expires On</p><p id="dash-expiry" class="font-mono text-lg text-white">---</p></div>
                     </div>
 
-                    <!-- Supporter Status Card -->
+                    <!-- Pricing & License -->
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
+                        <h3 class="font-bold text-stone-900 mb-4 text-sm uppercase tracking-wider">Pricing</h3>
+                        <div class="space-y-2 text-sm text-stone-600 mb-4 font-mono text-xs">
+                            <div class="flex justify-between"><span>1 Month</span><span>$10</span></div>
+                            <div class="flex justify-between"><span>3 Months</span><span>$25</span></div>
+                            <div class="flex justify-between"><span>6 Months</span><span>$40</span></div>
+                            <div class="flex justify-between font-bold text-stone-900"><span>1 Year</span><span>$60</span></div>
+                        </div>
+                        <button onclick="requestNewLicense()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                            <i class="fab fa-facebook-messenger"></i> Request New License
+                        </button>
+                        <p class="text-[10px] text-stone-400 text-center mt-2">Includes automated setup details</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
+                        <h3 class="font-bold text-stone-900 text-sm mb-4">GanjaRelease Supporter</h3>
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-stone-900 text-sm">GanjaRelease Supporter</h3>
                             <span id="dash-supporter-badge" class="px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold">Inactive</span>
                         </div>
-                        
                         <div id="dash-supporter-active" class="hidden">
-                            <p class="text-xs text-green-600 mb-2 font-medium"><i class="fas fa-check-circle mr-1"></i> Supporter Access Enabled</p>
-                            <p class="text-xs text-stone-500 mb-2">You have enhanced EPG for:</p>
-                            <div id="dash-supporter-list" class="h-32 overflow-y-auto bg-stone-50 rounded border border-stone-100 p-2 text-[10px] font-mono text-stone-600 leading-tight">
-                                <!-- Populated by JS -->
-                            </div>
+                            <p class="text-xs text-green-600 mb-2 font-medium"><i class="fas fa-check-circle mr-1"></i> Enabled</p>
+                            <div id="dash-supporter-list" class="h-32 overflow-y-auto bg-stone-50 rounded border border-stone-100 p-2 text-[10px] font-mono text-stone-600 leading-tight"></div>
                         </div>
                         <div id="dash-supporter-inactive" class="text-xs text-stone-500">
-                            <p class="mb-2">Support the creator (+$20) to unlock premium EPG updates for PPV, Sports, and specific categories.</p>
-                            <button onclick="switchView('config')" class="text-blue-600 hover:underline">Request Upgrade &rarr;</button>
-                        </div>
-                    </div>
-
-                    <!-- Support Card -->
-                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
-                        <h3 class="font-bold text-stone-900 mb-4 flex items-center gap-2"><i class="fas fa-life-ring text-stone-400"></i> Support</h3>
-                        <div class="space-y-3">
-                            <button id="btn-device-guide" onclick="showSpecificGuide()" class="w-full text-left px-4 py-3 bg-stone-50 hover:bg-stone-100 rounded-xl text-sm font-medium transition flex justify-between items-center group">
-                                <span>View Setup Guide</span>
-                                <i class="fas fa-book text-stone-400 group-hover:text-stone-600"></i>
-                            </button>
-                            <button onclick="switchView('faq')" class="w-full text-left px-4 py-3 bg-stone-50 hover:bg-stone-100 rounded-xl text-sm font-medium transition flex justify-between items-center group">
-                                <span>FAQ & Troubleshooting</span>
-                                <i class="fas fa-question-circle text-stone-400 group-hover:text-stone-600"></i>
-                            </button>
-                            <button id="btn-contact-elliot" class="w-full text-left px-4 py-3 bg-stone-50 hover:bg-stone-100 rounded-xl text-sm font-medium transition flex justify-between items-center group">
-                                <span>Contact Elliot</span>
-                                <i class="fab fa-facebook-messenger text-blue-500 group-hover:text-blue-600"></i>
-                            </button>
+                            <p class="mb-2">Support the creator (+$20) to unlock premium EPG updates.</p>
+                            <a href="#config-section" class="text-blue-600 hover:underline">Request Upgrade below &rarr;</a>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right Column: Connection Details -->
-                <div class="bg-white p-8 rounded-3xl shadow-sm border border-stone-200 lg:col-span-2">
-                    <div class="flex items-center justify-between mb-8">
-                        <h2 class="font-bold text-2xl font-serif text-stone-900">Connection Details</h2>
-                        <span id="dash-device-badge" class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider hidden">Firestick 4K</span>
-                    </div>
-
-                    <!-- Recommendation Banner -->
-                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 relative">
-                        <div class="flex items-start gap-4">
-                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
-                                <i class="fas fa-star"></i>
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="font-bold text-blue-900 mb-1">Recommended Setup: EPGenius (GanjaRelease #6)</h3>
-                                <p class="text-sm text-blue-800/80 mb-4 leading-relaxed">
-                                    Use this link for the best experience. It is a smart <strong>M3U Playlist URL</strong> (different from the raw connection below) that includes a custom Electronic Program Guide (EPG) automatically.
-                                </p>
-                                <div class="flex bg-white rounded-lg border border-blue-200 p-1">
-                                    <input id="dash-epgenius" type="text" readonly class="flex-1 px-3 py-2 text-sm font-mono text-stone-600 outline-none bg-transparent" value="Loading...">
-                                    <button onclick="copyToClipboard('dash-epgenius')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-md transition font-medium text-sm">Copy Link</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Right Column: Connections + Config -->
+                <div class="lg:col-span-2 space-y-8">
                     
-                    <!-- Credentials Grid -->
-                    <div class="mb-8">
-                        <h3 class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">Strong 8K Credentials</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="text-xs text-stone-500 block mb-1">Server URL (Cloudflare Optimized)</label>
-                                <div class="flex bg-stone-50 rounded-lg border border-stone-200">
-                                    <code id="dash-server" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code>
-                                    <button onclick="copyToClipboardText('dash-server')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="text-xs text-stone-500 block mb-1">Username</label>
-                                <div class="flex bg-stone-50 rounded-lg border border-stone-200">
-                                    <code id="dash-user" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code>
-                                    <button onclick="copyToClipboardText('dash-user')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="text-xs text-stone-500 block mb-1">Password</label>
-                                <div class="flex bg-stone-50 rounded-lg border border-stone-200">
-                                    <code id="dash-pass" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code>
-                                    <button onclick="copyToClipboardText('dash-pass')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button>
+                    <!-- Connections -->
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-stone-200">
+                        <div class="flex items-center justify-between mb-8">
+                            <h2 class="font-bold text-2xl font-serif text-stone-900">Connection Details</h2>
+                            <span id="dash-device-badge" class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider hidden">Firestick 4K</span>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 relative">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0"><i class="fas fa-star"></i></div>
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-blue-900 mb-1">Recommended Setup: EPGenius (GanjaRelease #6)</h3>
+                                    <p class="text-sm text-blue-800/80 mb-4 leading-relaxed">Use this link for the best experience. It is a smart <strong>M3U Playlist URL</strong> (different from the raw connection below) that includes a custom EPG.</p>
+                                    <div class="flex bg-white rounded-lg border border-blue-200 p-1">
+                                        <input id="dash-epgenius" type="text" readonly class="flex-1 px-3 py-2 text-sm font-mono text-stone-600 outline-none bg-transparent" value="Loading...">
+                                        <button onclick="copyToClipboard('dash-epgenius')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-md transition font-medium text-sm">Copy Link</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        <div class="mb-8">
+                            <h3 class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">Strong 8K Credentials</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label class="text-xs text-stone-500 block mb-1">Server URL</label><div class="flex bg-stone-50 rounded-lg border border-stone-200"><code id="dash-server" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button onclick="copyToClipboardText('dash-server')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
+                                <div><label class="text-xs text-stone-500 block mb-1">Username</label><div class="flex bg-stone-50 rounded-lg border border-stone-200"><code id="dash-user" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button onclick="copyToClipboardText('dash-user')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
+                                <div><label class="text-xs text-stone-500 block mb-1">Password</label><div class="flex bg-stone-50 rounded-lg border border-stone-200"><code id="dash-pass" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button onclick="copyToClipboardText('dash-pass')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
+                            </div>
+                        </div>
+                        <div class="pt-6 border-t border-stone-100">
+                            <details class="group">
+                                <summary class="flex items-center gap-2 cursor-pointer text-xs font-bold text-stone-400 uppercase hover:text-stone-600 transition"><i class="fas fa-chevron-right group-open:rotate-90 transition-transform"></i> Backup / Raw M3U (Inferior EPG)</summary>
+                                <div class="mt-4 pl-4 border-l-2 border-stone-100">
+                                    <p class="text-xs text-stone-500 mb-2">Only use this if the EPGenius link fails.</p>
+                                    <div class="flex bg-stone-50 rounded-lg border border-stone-200 p-1"><input id="dash-m3u" type="text" readonly class="flex-1 px-3 py-2 text-xs font-mono text-stone-400 outline-none bg-transparent" value="..."><button onclick="copyToClipboard('dash-m3u')" class="bg-stone-200 hover:bg-stone-300 text-stone-600 px-3 rounded-md transition text-xs">Copy</button></div>
+                                </div>
+                            </details>
+                        </div>
                     </div>
 
-                    <!-- Backup -->
-                    <div class="pt-6 border-t border-stone-100">
-                        <details class="group">
-                            <summary class="flex items-center gap-2 cursor-pointer text-xs font-bold text-stone-400 uppercase hover:text-stone-600 transition">
-                                <i class="fas fa-chevron-right group-open:rotate-90 transition-transform"></i>
-                                Backup / Raw M3U (Inferior EPG)
-                            </summary>
-                            <div class="mt-4 pl-4 border-l-2 border-stone-100">
-                                <p class="text-xs text-stone-500 mb-2">Only use this if the EPGenius link fails.</p>
-                                <div class="flex bg-stone-50 rounded-lg border border-stone-200 p-1">
-                                    <input id="dash-m3u" type="text" readonly class="flex-1 px-3 py-2 text-xs font-mono text-stone-400 outline-none bg-transparent" value="...">
-                                    <button onclick="copyToClipboard('dash-m3u')" class="bg-stone-200 hover:bg-stone-300 text-stone-600 px-3 rounded-md transition text-xs">Copy</button>
+                    <!-- Configuration Section (Merged) -->
+                    <div id="config-section" class="bg-white p-8 rounded-3xl shadow-sm border border-stone-200">
+                        <div class="mb-8">
+                            <h2 class="font-bold text-2xl font-serif text-stone-900 mb-2">My Configuration</h2>
+                            <p class="text-stone-500 text-sm">Keep your preferences updated so I can optimize your service.</p>
+                        </div>
+
+                        <form onsubmit="handleUserConfigSave(event)">
+                            <div class="mb-10">
+                                <h3 class="font-bold text-sm uppercase text-stone-400 tracking-wider mb-4">Device Roster</h3>
+                                <div id="device-counter" class="text-xs font-bold text-blue-600 mb-4 bg-blue-50 inline-block px-2 py-1 rounded">Active: 0</div>
+                                <div class="grid grid-cols-3 gap-4 mb-4">
+                                    <button type="button" onclick="addDeviceFromFamily('tv')" class="p-3 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-1 group"><i class="fas fa-tv text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500 group-hover:text-stone-800">TV Device</span></button>
+                                    <button type="button" onclick="addDeviceFromFamily('mobile')" class="p-3 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-1 group"><i class="fas fa-mobile-alt text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500 group-hover:text-stone-800">Phone/Tablet</span></button>
+                                    <button type="button" onclick="addDeviceFromFamily('computer')" class="p-3 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-1 group"><i class="fas fa-laptop text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500 group-hover:text-stone-800">Computer</span></button>
                                 </div>
+                                <div id="device-list-container" class="space-y-3 mb-2 p-4 bg-stone-50 rounded-xl min-h-[50px]"><p class="text-xs text-stone-400 text-center italic" id="empty-device-msg">No devices added.</p></div>
                             </div>
-                        </details>
+                            
+                            <div class="mb-10">
+                                <h3 class="font-bold text-sm uppercase text-stone-400 tracking-wider mb-4">Preferences</h3>
+                                <div class="mb-6">
+                                    <label class="text-xs font-bold text-stone-500 mb-2 uppercase flex items-center gap-2">Concurrent Connections <i class="fas fa-info-circle text-stone-400 tooltip-trigger relative"><span class="tooltip-content absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-stone-800 text-stone-100 text-xs rounded shadow-xl normal-case font-normal z-10">Number of devices watching at same time.</span></i></label>
+                                    <select id="user-config-screens" onchange="toggleScreenWarning()" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg text-sm"><option value="1" selected>1 Connection</option><option value="2">2 Connections</option><option value="3">3 Connections</option><option value="4">4 Connections</option></select>
+                                    <p id="screens-warning" class="hidden text-xs text-amber-600 mt-2 font-medium bg-amber-50 p-2 rounded border border-amber-100"><i class="fas fa-exclamation-triangle mr-1"></i> Additional license required for concurrent use.</p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                                    <div>
+                                        <label class="text-xs font-bold text-stone-500 mb-3 uppercase block">Live TV Bouquet</label>
+                                        <div class="flex flex-wrap gap-2 mb-3" id="live-tags">
+                                            <button type="button" onclick="toggleTag(this, 'live', 'All English')" class="px-3 py-1 border rounded-full text-xs hover:bg-stone-100">All English</button>
+                                            <button type="button" onclick="toggleTag(this, 'live', 'Sports')" class="px-3 py-1 border rounded-full text-xs hover:bg-stone-100">Sports</button>
+                                            <button type="button" onclick="toggleTag(this, 'live', 'Kids')" class="px-3 py-1 border rounded-full text-xs hover:bg-stone-100">Kids</button>
+                                            <button type="button" onclick="toggleOther('live')" class="px-3 py-1 border text-blue-600 rounded-full text-xs hover:bg-blue-50" id="btn-live-other">Other</button>
+                                        </div>
+                                        <textarea id="user-config-live-other" rows="2" class="hidden w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm" placeholder="Details..."></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold text-stone-500 mb-3 uppercase block">VOD Bouquet</label>
+                                        <div class="flex flex-wrap gap-2 mb-3" id="vod-tags">
+                                            <button type="button" onclick="toggleTag(this, 'vod', 'All Movies')" class="px-3 py-1 border rounded-full text-xs hover:bg-stone-100">All Movies</button>
+                                            <button type="button" onclick="toggleTag(this, 'vod', 'English Only')" class="px-3 py-1 border rounded-full text-xs hover:bg-stone-100">English Only</button>
+                                            <button type="button" onclick="toggleTag(this, 'vod', 'No Horror')" class="px-3 py-1 border rounded-full text-xs hover:bg-stone-100">No Horror</button>
+                                            <button type="button" onclick="toggleOther('vod')" class="px-3 py-1 border text-blue-600 rounded-full text-xs hover:bg-blue-50" id="btn-vod-other">Other</button>
+                                        </div>
+                                        <textarea id="user-config-vod-other" rows="2" class="hidden w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm" placeholder="Details..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="mb-6"><label class="block text-xs font-bold text-stone-500 mb-2 uppercase">Recording (PVR)</label><select id="user-config-pvr" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg text-sm"><option>No</option><option>Yes (Self-setup)</option><option>Yes (Need Guide)</option></select></div>
+                                <div class="flex items-center gap-3 bg-green-50 p-4 rounded-lg border border-green-100"><input type="checkbox" id="user-config-supporter-req" class="w-4 h-4 text-green-600 rounded"><div><label for="user-config-supporter-req" class="text-sm font-bold text-green-900 block">GanjaRelease Supporter (+$20)</label><p class="text-xs text-green-800">Unlocks premium EPG updates.</p></div></div>
+                            </div>
+                            
+                            <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-6 mb-8 flex gap-4">
+                                <div class="text-indigo-600 text-xl pt-1"><i class="fas fa-layer-group"></i></div>
+                                <div><h4 class="font-bold text-indigo-900 text-sm mb-1">Pro Tip: TiviMate Premium</h4><p class="text-xs text-indigo-800/80 leading-relaxed">Configure <strong>two playlists</strong>: <br>1. Live TV (EPGenius URL) <br>2. VOD (Xtream Codes login)</p></div>
+                            </div>
+
+                            <button type="submit" class="w-full bg-stone-900 text-stone-50 font-bold py-4 rounded-xl hover:bg-stone-700 transition-colors shadow-lg">Save Configuration</button>
+                        </form>
                     </div>
+
                 </div>
             </div>
-        </div>
-    </main>
-
-    <!-- VIEW: CONFIGURATION (User Saves Preferences) -->
-    <main id="view-config" class="view-section pt-32 pb-24 min-h-screen">
-        <div class="max-w-4xl mx-auto px-4 relative z-10">
-            <div class="text-center mb-12">
-                <h2 class="font-serif text-4xl md:text-5xl mb-6">My Configuration</h2>
-                <p class="text-stone-400 font-light max-w-2xl mx-auto">
-                    Manage your devices and viewing preferences to help me optimize your experience.
-                </p>
-            </div>
-
-            <form onsubmit="handleUserConfigSave(event)" class="text-left bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
-                <!-- Device Families -->
-                <div class="mb-10">
-                    <h3 class="font-serif text-2xl text-stone-900 mb-2">Device Roster</h3>
-                    <div id="device-counter" class="text-sm font-bold text-blue-600 mb-4 bg-blue-50 inline-block px-3 py-1 rounded-full">Active Devices: 0</div>
-                    
-                    <div class="grid grid-cols-3 gap-4 mb-6">
-                        <button type="button" onclick="addDeviceFromFamily('tv')" class="p-4 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-2 group">
-                            <i class="fas fa-tv text-2xl text-stone-400 group-hover:text-stone-800"></i>
-                            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 group-hover:text-stone-800">TV Device</span>
-                        </button>
-                        <button type="button" onclick="addDeviceFromFamily('mobile')" class="p-4 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-2 group">
-                            <i class="fas fa-mobile-alt text-2xl text-stone-400 group-hover:text-stone-800"></i>
-                            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 group-hover:text-stone-800">Phone/Tablet</span>
-                        </button>
-                        <button type="button" onclick="addDeviceFromFamily('computer')" class="p-4 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-2 group">
-                            <i class="fas fa-laptop text-2xl text-stone-400 group-hover:text-stone-800"></i>
-                            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 group-hover:text-stone-800">Computer</span>
-                        </button>
-                    </div>
-
-                    <div id="device-list-container" class="space-y-3 mb-2 p-4 bg-stone-50 rounded-xl min-h-[50px]">
-                        <p class="text-xs text-stone-400 text-center italic" id="empty-device-msg">No devices added. Select a category above.</p>
-                        <!-- Dynamic devices injected here -->
-                    </div>
-                </div>
-                
-                <hr class="border-stone-100 mb-8">
-                
-                <!-- Bouquet & Usage -->
-                <div class="mb-10">
-                    <h3 class="font-serif text-2xl text-stone-900 mb-6">Preferences</h3>
-                    
-                    <div class="mb-8">
-                        <label class="text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider flex items-center gap-2">
-                            Concurrent Connections
-                            <div class="relative tooltip-trigger cursor-help">
-                                <i class="fas fa-info-circle text-stone-400"></i>
-                                <div class="tooltip-content absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-stone-800 text-stone-100 text-xs rounded-lg shadow-xl z-10 text-center normal-case font-normal">
-                                    Number of devices watching at the exact same time. 1 License = 1 Connection.
-                                </div>
-                            </div>
-                        </label>
-                        <select id="user-config-screens" onchange="toggleScreenWarning()" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
-                            <option value="1" selected>1 Connection (Included)</option>
-                            <option value="2">2 Connections</option>
-                            <option value="3">3 Connections</option>
-                            <option value="4">4 Connections</option>
-                        </select>
-                        <p id="screens-warning" class="hidden text-xs text-amber-600 mt-2 font-medium bg-amber-50 p-2 rounded border border-amber-100">
-                            <i class="fas fa-exclamation-triangle mr-1"></i> For each concurrent connection, an additional license is required (only one connection is allowed per license at a time, unfortunately).
-                        </p>
-                    </div>
-                    
-                    <!-- NEW: BOUQUET BUTTONS -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        
-                        <!-- LIVE TV -->
-                        <div>
-                            <label class="text-xs font-bold text-stone-500 mb-3 uppercase tracking-wider block">Live TV Bouquet Requests</label>
-                            <div class="flex flex-wrap gap-2 mb-3" id="live-tags">
-                                <button type="button" onclick="toggleTag(this, 'live', 'All English')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">All English</button>
-                                <button type="button" onclick="toggleTag(this, 'live', 'All French')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">All French</button>
-                                <button type="button" onclick="toggleTag(this, 'live', 'Sports')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">Sports</button>
-                                <button type="button" onclick="toggleTag(this, 'live', 'News')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">News</button>
-                                <button type="button" onclick="toggleTag(this, 'live', 'Kids')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">Kids</button>
-                                <button type="button" onclick="toggleOther('live')" class="px-3 py-1.5 border border-blue-200 text-blue-600 rounded-full text-xs font-medium hover:bg-blue-50 transition" id="btn-live-other">Other / Specific</button>
-                            </div>
-                            <textarea id="user-config-live-other" rows="2" class="hidden w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Only UK Sports, remove International..."></textarea>
-                        </div>
-
-                        <!-- VOD -->
-                        <div>
-                            <label class="text-xs font-bold text-stone-500 mb-3 uppercase tracking-wider block">VOD Bouquet Requests</label>
-                            <div class="flex flex-wrap gap-2 mb-3" id="vod-tags">
-                                <button type="button" onclick="toggleTag(this, 'vod', 'All Movies')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">All Movies</button>
-                                <button type="button" onclick="toggleTag(this, 'vod', 'All Series')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">All Series</button>
-                                <button type="button" onclick="toggleTag(this, 'vod', 'English Only')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">English Only</button>
-                                <button type="button" onclick="toggleTag(this, 'vod', 'French Only')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">French Only</button>
-                                <button type="button" onclick="toggleTag(this, 'vod', 'No Horror')" class="px-3 py-1.5 border rounded-full text-xs font-medium hover:bg-stone-100 transition">No Horror</button>
-                                <button type="button" onclick="toggleOther('vod')" class="px-3 py-1.5 border border-blue-200 text-blue-600 rounded-full text-xs font-medium hover:bg-blue-50 transition" id="btn-vod-other">Other / Specific</button>
-                            </div>
-                            <textarea id="user-config-vod-other" rows="2" class="hidden w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Add latest Action movies..."></textarea>
-                        </div>
-                    </div>
-                    
-                    <!-- PVR -->
-                     <div class="mb-6 mt-6">
-                        <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Recording (PVR) Needs</label>
-                        <select id="user-config-pvr" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
-                            <option>No, I don't need to record.</option>
-                            <option>Yes, I use TiviMate Premium (Self-setup).</option>
-                            <option>Yes, but I need guidance.</option>
-                        </select>
-                    </div>
-
-                    <!-- Supporter Request -->
-                    <div class="mt-6 flex items-center gap-3 bg-green-50 p-4 rounded-lg border border-green-100">
-                        <input type="checkbox" id="user-config-supporter-req" class="w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
-                        <div>
-                            <label for="user-config-supporter-req" class="text-sm font-bold text-green-900 block">I am interested in GanjaRelease Supporter Status (+$20)</label>
-                            <p class="text-xs text-green-800">Unlocks premium EPG updates for PPV, Sports, and specialized categories.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TiviMate Tip -->
-                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-6 mb-8 flex gap-4">
-                    <div class="text-indigo-600 text-xl pt-1"><i class="fas fa-layer-group"></i></div>
-                    <div>
-                        <h4 class="font-bold text-indigo-900 text-sm mb-1">Pro Tip: TiviMate Premium Configuration</h4>
-                        <p class="text-xs text-indigo-800/80 leading-relaxed">
-                            For the ultimate experience, configure TiviMate with <strong>two playlists</strong>:
-                            <br>1. <strong>Live TV:</strong> Add the EPGenius URL (enable Live TV only).
-                            <br>2. <strong>VOD:</strong> Add the Xtream Codes login (enable Movies/Series only, disable Live TV).
-                        </p>
-                    </div>
-                </div>
-
-                <div class="flex gap-4 items-center">
-                    <button type="submit" class="flex-1 bg-stone-900 text-stone-50 font-bold py-4 rounded-xl hover:bg-stone-700 transition-colors shadow-lg">Save Configuration</button>
-                    <button id="btn-notify-elliot" type="button" onclick="notifyElliot()" class="hidden px-6 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg"><i class="fab fa-facebook-messenger mr-2"></i> Notify Elliot</button>
-                </div>
-            </form>
         </div>
     </main>
 
@@ -398,52 +250,11 @@
     <main id="view-faq" class="view-section pt-32 pb-24 min-h-screen">
         <div class="max-w-3xl mx-auto px-4">
             <h1 class="font-serif text-4xl text-stone-900 mb-10 text-center">Frequently Asked Questions</h1>
-            
             <div class="space-y-4">
-                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
-                        How do I set up my Firestick?
-                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
-                    </summary>
-                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
-                        We recommend using <strong>TiviMate Premium</strong> for Firestick. You can find step-by-step instructions in the <button onclick="switchView('guides')" class="text-blue-600 underline">Setup Guides</button> tab.
-                    </div>
-                </details>
-
-                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
-                        Why is my stream buffering?
-                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
-                    </summary>
-                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
-                        Buffering is usually caused by local internet issues. 
-                        <ul class="list-disc pl-5 mt-2 space-y-1">
-                            <li>Restart your router and device.</li>
-                            <li>Ensure you are using the <strong>Cloudflare Optimized</strong> server URL found in your Dashboard.</li>
-                            <li>If using WiFi, try moving closer to the router or using a hardwired ethernet connection.</li>
-                        </ul>
-                    </div>
-                </details>
-
-                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
-                        Can I watch on multiple TVs at once?
-                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
-                    </summary>
-                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
-                        A standard license allows for <strong>one connection at a time</strong>. If you want to watch on two TVs simultaneously (e.g., Living Room and Bedroom), you will need to purchase an additional license. Please contact Elliot to upgrade.
-                    </div>
-                </details>
-
-                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
-                        What is EPGenius?
-                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
-                    </summary>
-                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
-                        EPGenius (GanjaRelease #6) is a smart M3U Playlist link. Unlike the raw link from the server, EPGenius automatically organizes channels better and includes a high-quality Electronic Program Guide (EPG) built-in. Always use this link in your player if possible.
-                    </div>
-                </details>
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden"><summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">How do I set up my Firestick?<span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span></summary><div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">We recommend using <strong>TiviMate Premium</strong> for Firestick. You can find step-by-step instructions in the <button onclick="switchView('guides')" class="text-blue-600 underline">Setup Guides</button> tab.</div></details>
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden"><summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">Why is my stream buffering?<span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span></summary><div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">Buffering is usually caused by local internet issues. <ul class="list-disc pl-5 mt-2 space-y-1"><li>Restart your router and device.</li><li>Ensure you are using the <strong>Cloudflare Optimized</strong> server URL found in your Dashboard.</li><li>If using WiFi, try moving closer to the router or using a hardwired ethernet connection.</li></ul></div></details>
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden"><summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">Can I watch on multiple TVs at once?<span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span></summary><div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">A standard license allows for <strong>one connection at a time</strong>. If you want to watch on two TVs simultaneously (e.g., Living Room and Bedroom), you will need to purchase an additional license. Please contact Elliot to upgrade.</div></details>
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden"><summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">What is EPGenius?<span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span></summary><div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">EPGenius (GanjaRelease #6) is a smart M3U Playlist link. Unlike the raw link from the server, EPGenius automatically organizes channels better and includes a high-quality Electronic Program Guide (EPG) built-in. Always use this link in your player if possible.</div></details>
             </div>
         </div>
     </main>
@@ -451,84 +262,25 @@
     <!-- VIEW: GUIDES (Private) -->
     <main id="view-guides" class="view-section pt-32 pb-24 min-h-screen">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h1 class="font-serif text-4xl md:text-6xl text-stone-900 mb-6">Setup Documentation</h1>
-                <p class="text-stone-600 text-lg max-w-2xl mx-auto">Follow these guides to connect your device.</p>
-            </div>
-            <!-- OS Tabs -->
+            <div class="text-center mb-16"><h1 class="font-serif text-4xl md:text-6xl text-stone-900 mb-6">Setup Documentation</h1><p class="text-stone-600 text-lg max-w-2xl mx-auto">Follow these guides to connect your device.</p></div>
             <div class="flex justify-center gap-2 mb-12 flex-wrap">
                 <button onclick="showGuide('android')" id="tab-android" class="guide-tab active px-6 py-2 rounded-full border border-stone-300 bg-stone-800 text-white font-medium transition-all">Firestick / Android TV</button>
                 <button onclick="showGuide('ios')" id="tab-ios" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">iOS / Apple TV</button>
                 <button onclick="showGuide('mobile')" id="tab-mobile" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">Android Mobile</button>
                 <button onclick="showGuide('windows')" id="tab-windows" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">Windows / Mac</button>
             </div>
-            <!-- Guides Content -->
             <div id="guide-android" class="guide-content bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
-                <div class="flex items-center gap-4 mb-6">
-                    <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white text-xl"><i class="fas fa-tv"></i></div>
-                    <div>
-                        <h2 class="text-2xl font-bold text-stone-900">TiviMate Premium Guide</h2>
-                        <p class="text-sm text-stone-500">The gold standard for Firestick & Android TV.</p>
-                    </div>
-                </div>
-                
-                <div class="prose prose-stone max-w-none text-sm">
-                    <h3 class="font-bold mb-2">Step 1: Install TiviMate</h3>
-                    <ol class="list-decimal pl-5 space-y-2 mb-6">
-                        <li>Install the <strong>Downloader</strong> app from the Amazon App Store (search "Downloader").</li>
-                        <li>Open Downloader and enter this code in the URL box: <strong>278077</strong> (Official TiviMate).</li>
-                        <li>Follow the prompts to download and install.</li>
-                    </ol>
-
-                    <h3 class="font-bold mb-2">Step 2: Unlock Premium</h3>
-                    <ul class="list-disc pl-5 space-y-2 mb-6">
-                        <li>Open TiviMate. Go to Settings > Unlock Premium.</li>
-                        <li>You must buy the license (approx $30/yr or $80 lifetime) via the <strong>TiviMate Companion App</strong> on an Android phone, or directly on the Firestick if it allows Google Pay.</li>
-                        <li><em>Note: Premium is required for the dual-playlist setup below.</em></li>
-                    </ul>
-
-                    <h3 class="font-bold mb-2 text-blue-600">Step 3: Add Live TV (EPGenius)</h3>
-                    <ol class="list-decimal pl-5 space-y-2 mb-6">
-                        <li>In TiviMate, go to <strong>Settings > Playlists > Add Playlist</strong>.</li>
-                        <li>Select <strong>M3U Playlist</strong> (Not Xtream Codes).</li>
-                        <li>Enter your <strong>EPGenius M3U URL</strong> from the Dashboard.</li>
-                        <li>Name it "Live TV".</li>
-                        <li><strong>IMPORTANT:</strong> Click on the new playlist > Manage groups > Toggle <strong>OFF</strong> all VOD groups (Movies/Series). Keep only Live TV groups on.</li>
-                    </ol>
-
-                    <h3 class="font-bold mb-2 text-indigo-600">Step 4: Add VOD (Xtream Codes)</h3>
-                    <ol class="list-decimal pl-5 space-y-2">
-                        <li>Go back to <strong>Add Playlist</strong>.</li>
-                        <li>Select <strong>Xtream Codes</strong>.</li>
-                        <li>Enter the Server URL, Username, and Password from the Dashboard.</li>
-                        <li>Check "Include VOD". Name it "Movies & Series".</li>
-                        <li><strong>IMPORTANT:</strong> Click on this playlist > Manage groups > Toggle <strong>OFF</strong> all Live TV groups. Keep only Movies/Series on.</li>
-                    </ol>
-                    
-                    <p class="mt-4 bg-stone-100 p-3 rounded italic">Result: You now have the fast EPGenius list for TV and the rich Xtream list for Movies, perfectly blended!</p>
-                </div>
+                <h2 class="text-2xl font-bold text-stone-900 mb-4">TiviMate Premium (Recommended)</h2>
+                <ol class="list-decimal pl-5 space-y-3 marker:text-stone-900 marker:font-bold"><li>Install <strong>Downloader</strong> from the App Store.</li><li>Enter code: <strong>[Your Code]</strong> to download TiviMate.</li><li>Open TiviMate > Add Playlist > <strong>Xtream Codes</strong>.</li><li>Enter the Server URL, Username, and Password found in your <a href="#" onclick="switchView('dashboard')" class="text-blue-600 underline">Dashboard</a>.</li></ol>
             </div>
-            <div id="guide-ios" class="guide-content hidden bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
-                <h2 class="text-xl font-bold text-stone-900 mb-4">UHF (Paid) or Chillio</h2>
-                <ul class="list-disc pl-5 space-y-2">
-                    <li>Use <strong>Xtream Codes</strong> login from Dashboard.</li>
-                    <li>Enter Server URL, User, Pass.</li>
-                </ul>
-            </div>
-            <div id="guide-mobile" class="guide-content hidden bg-white p-8 rounded-3xl border border-stone-200 shadow-xl">
-                <h2 class="text-xl font-bold mb-4">Android Mobile</h2>
-                <p>Download <strong>IPTV Smarters Pro</strong> or <strong>Televizo</strong>.</p>
-            </div>
-            <div id="guide-windows" class="guide-content hidden bg-white p-8 rounded-3xl border border-stone-200 shadow-xl">
-                <h2 class="text-xl font-bold mb-4">Windows / Mac</h2>
-                <p>We recommend <strong>FredTV</strong> or <strong>OpenTV</strong> (Windows) or <strong>GSE Smart IPTV</strong> (Mac).</p>
-            </div>
+            <div id="guide-ios" class="guide-content hidden bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl"><h2 class="text-xl font-bold text-stone-900 mb-4">UHF (Paid) or Chillio</h2><ul class="list-disc pl-5 space-y-2"><li>Use <strong>Xtream Codes</strong> login from Dashboard.</li><li>Enter Server URL, User, Pass.</li></ul></div>
+            <div id="guide-mobile" class="guide-content hidden bg-white p-8 rounded-3xl border border-stone-200 shadow-xl"><h2 class="text-xl font-bold mb-4">Android Mobile</h2><p>Download <strong>IPTV Smarters Pro</strong> or <strong>Televizo</strong>.</p></div>
+            <div id="guide-windows" class="guide-content hidden bg-white p-8 rounded-3xl border border-stone-200 shadow-xl"><h2 class="text-xl font-bold mb-4">Windows / Mac</h2><p>We recommend <strong>FredTV</strong> or <strong>OpenTV</strong> (Windows) or <strong>GSE Smart IPTV</strong> (Mac).</p></div>
         </div>
     </main>
 
-    <!-- VIEW: ADMIN DASHBOARD (Unchanged layout, hidden for client) -->
+    <!-- VIEW: ADMIN DASHBOARD -->
     <main id="view-admin" class="view-section pt-32 pb-24 min-h-screen bg-stone-100">
-        <!-- (Same Admin Code as before) -->
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between items-center mb-8">
                 <h1 class="font-serif text-3xl text-stone-900">Admin Console</h1>
@@ -540,38 +292,25 @@
                     <button onclick="loadAdminData()" class="text-xs bg-white border border-stone-300 px-3 py-2 rounded-lg hover:bg-stone-50"><i class="fas fa-sync-alt"></i></button>
                 </div>
             </div>
-            <!-- Stats -->
+            <!-- Stats & Roster (Same as previous) -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                <div class="bg-stone-900 text-white p-6 rounded-2xl shadow-lg">
-                    <p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Credits Remaining</p>
-                    <div class="flex items-end gap-2"><span id="stat-credits-left" class="text-3xl font-bold">---</span><span id="stat-credits-total" class="text-sm text-stone-400 mb-1">/ ---</span></div>
-                    <div class="w-full bg-stone-800 h-1.5 rounded-full mt-4 overflow-hidden"><div id="stat-bar" class="bg-green-500 h-full rounded-full" style="width: 0%"></div></div>
-                </div>
+                <div class="bg-stone-900 text-white p-6 rounded-2xl shadow-lg"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Credits Remaining</p><div class="flex items-end gap-2"><span id="stat-credits-left" class="text-3xl font-bold">---</span><span id="stat-credits-total" class="text-sm text-stone-400 mb-1">/ ---</span></div><div class="w-full bg-stone-800 h-1.5 rounded-full mt-4 overflow-hidden"><div id="stat-bar" class="bg-green-500 h-full rounded-full" style="width: 0%"></div></div></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Total Revenue</p><span id="stat-revenue" class="text-3xl font-bold text-stone-800">$0.00</span></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Net Profit</p><span id="stat-profit" class="text-3xl font-bold text-stone-800">$0.00</span></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Avg Profit / Credit</p><span id="stat-avg" class="text-3xl font-bold text-stone-800">$0.00</span><p id="stat-cost-basis" class="text-xs text-stone-400 mt-1">Cost Basis: $---</p></div>
             </div>
-            <!-- Roster -->
             <div class="bg-white rounded-3xl shadow-sm border border-stone-200 overflow-hidden">
                 <div class="p-4 border-b border-stone-100 bg-stone-50 flex flex-col md:flex-row gap-4 justify-between items-center">
-                    <div class="flex items-center gap-2 w-full md:w-auto">
-                        <h2 class="font-bold text-lg text-stone-700 mr-2">Roster</h2>
-                        <input type="text" id="filter-search" onkeyup="renderRoster()" placeholder="Search..." class="pl-3 pr-4 py-2 border rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-stone-200 outline-none">
-                    </div>
-                    <div class="flex gap-2 w-full md:w-auto">
-                        <select id="filter-status" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Pending">Pending</option><option value="Expired">Expired</option></select>
-                        <select id="filter-sort" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="recent">Recent</option><option value="name">Name</option><option value="expiry_soon">Expires Soon</option></select>
-                    </div>
+                    <div class="flex items-center gap-2 w-full md:w-auto"><h2 class="font-bold text-lg text-stone-700 mr-2">Roster</h2><input type="text" id="filter-search" onkeyup="renderRoster()" placeholder="Search..." class="pl-3 pr-4 py-2 border rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-stone-200 outline-none"></div>
+                    <div class="flex gap-2 w-full md:w-auto"><select id="filter-status" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Pending">Pending</option><option value="Expired">Expired</option></select><select id="filter-sort" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="recent">Recent</option><option value="name">Name</option><option value="expiry_soon">Expires Soon</option></select></div>
                 </div>
-                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 bg-white">
-                    <div class="col-span-3">User / Name</div><div class="col-span-2">Product</div><div class="col-span-2">Expiry</div><div class="col-span-2">Payment</div><div class="col-span-3 text-right">Action</div>
-                </div>
+                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 bg-white"><div class="col-span-3">User / Name</div><div class="col-span-2">Product</div><div class="col-span-2">Expiry</div><div class="col-span-2">Payment</div><div class="col-span-3 text-right">Action</div></div>
                 <div id="admin-user-list" class="divide-y divide-stone-100 text-sm"><div class="p-8 text-center text-stone-500">Loading roster...</div></div>
             </div>
         </div>
     </main>
 
-    <!-- MODALS (Login, Register, Edit, Supply, History, Password) -->
+    <!-- MODALS -->
     <div id="modal-login" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
             <button onclick="closeModal('login')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
@@ -605,114 +344,66 @@
         </div>
     </div>
 
+    <!-- Admin Edit Modal -->
     <div id="modal-edit" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl p-8 max-w-2xl w-full relative my-8">
             <button onclick="closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
             <h2 id="modal-edit-title" class="text-xl font-serif font-bold mb-6">Edit User & License</h2>
             <form onsubmit="saveUserChanges(event)">
                 <input type="hidden" id="edit-uid">
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div><label class="text-xs font-bold uppercase text-stone-500">Real Name</label><input id="edit-realname" type="text" placeholder="e.g. Uncle Bob" class="w-full px-3 py-2 border rounded bg-stone-50"></div>
-                    <div><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" readonly class="w-full px-3 py-2 border rounded bg-stone-100 text-stone-500 cursor-not-allowed"></div>
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Real Name</label><input id="edit-realname" type="text" placeholder="e.g. Uncle Bob" class="w-full px-3 py-2 border rounded bg-stone-50 text-sm"></div>
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" readonly class="w-full px-3 py-2 border rounded bg-stone-100 text-stone-500 cursor-not-allowed text-sm"></div>
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Status</label><select id="edit-status" class="w-full px-3 py-2 border rounded text-sm"><option>Pending</option><option>Active</option><option>Expired</option></select></div>
                 </div>
-                <div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Status</label><select id="edit-status" class="w-full px-3 py-2 border rounded"><option>Pending</option><option>Active</option><option>Expired</option></select></div>
                 <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-6">
                     <h3 class="text-sm font-bold text-stone-700 mb-3">Product & Billing</h3>
-                    <div class="grid grid-cols-2 gap-4 mb-3">
-                        <div><label class="text-xs font-bold uppercase text-stone-500">Product Purchased</label><select id="edit-product" class="w-full px-3 py-2 border rounded bg-white"><option value="Demo">Demo (1 Day)</option><option value="1 Month">1 Month</option><option value="3 Months">3 Months</option><option value="6 Months">6 Months</option><option value="1 Year">1 Year</option></select></div>
-                        <div><label class="text-xs font-bold uppercase text-stone-500">Expiry Date</label><input id="edit-expiry" type="text" placeholder="Dec 31, 2026" class="w-full px-3 py-2 border rounded bg-white"></div>
+                    <div class="grid grid-cols-3 gap-4 mb-3">
+                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Product</label><select id="edit-product" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="Demo">Demo (1 Day)</option><option value="1 Month">1 Month</option><option value="3 Months">3 Months</option><option value="6 Months">6 Months</option><option value="1 Year">1 Year</option></select></div>
+                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Expiry Date</label><input id="edit-expiry" type="text" placeholder="Dec 31, 2026" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
+                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Date Paid</label><input id="edit-paydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="text-xs font-bold uppercase text-stone-500">Date Purchased</label><input id="edit-buydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-xs"></div>
-                        <div><label class="text-xs font-bold uppercase text-stone-500">Date Paid</label><input id="edit-paydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-xs"></div>
-                    </div>
+                    <div class="grid grid-cols-2 gap-4"><div><label class="text-xs font-bold uppercase text-stone-500">Date Purchased</label><input id="edit-buydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-xs"></div></div>
                 </div>
-                
-                <!-- Supporter Admin Toggle -->
-                <div class="mb-6 flex items-center gap-3 bg-green-50 p-4 rounded-lg border border-green-100">
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500 mb-1">Server URL</label><select id="edit-server" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="http://cf.taty.website">http://cf.taty.website (Cloudflare)</option><option value="http://taty.website">http://taty.website (Backup)</option></select></div>
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Strong 8K User</label><input id="edit-user" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Strong 8K Pass</label><input id="edit-pass" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
+                </div>
+                <div class="grid grid-cols-1 gap-4 mb-4">
+                    <div><label class="text-xs font-bold uppercase text-stone-500">EPGenius M3U URL</label><input id="edit-epgenius" type="text" class="w-full px-3 py-2 border rounded font-mono text-xs"></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K M3U</label><input id="edit-m3u" type="text" class="w-full px-3 py-2 border rounded font-mono text-xs"></div>
+                </div>
+                <div class="mb-6 flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-100">
                     <input type="checkbox" id="edit-is-supporter" class="w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
-                    <div>
-                        <label for="edit-is-supporter" class="text-sm font-bold text-green-900 block">GanjaRelease Supporter Status</label>
-                        <p class="text-xs text-green-800">Enable to show enhanced EPG categories on client dashboard.</p>
-                    </div>
+                    <div><label for="edit-is-supporter" class="text-sm font-bold text-green-900 block">GanjaRelease Supporter Status</label><p class="text-xs text-green-800">Enable to show enhanced EPG categories on client dashboard.</p></div>
                 </div>
-
-                <div class="mb-3">
-                    <label class="text-xs font-bold uppercase text-stone-500 mb-1">Server URL</label>
-                    <select id="edit-server" class="w-full px-3 py-2 border rounded bg-white"><option value="http://cf.taty.website">http://cf.taty.website (Cloudflare)</option><option value="http://taty.website">http://taty.website (Backup)</option></select>
-                </div>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K Username</label><input id="edit-user" type="text" class="w-full px-3 py-2 border rounded"></div>
-                    <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K Password</label><input id="edit-pass" type="text" class="w-full px-3 py-2 border rounded"></div>
-                </div>
-                <label class="text-xs font-bold uppercase text-stone-500">EPGenius M3U URL</label><input id="edit-epgenius" type="text" class="w-full mb-3 px-3 py-2 border rounded font-mono text-xs">
-                <label class="text-xs font-bold uppercase text-stone-500">Strong 8K M3U</label><input id="edit-m3u" type="text" class="w-full mb-6 px-3 py-2 border rounded font-mono text-xs">
-                
-                <!-- NEW: Read Only User Preferences -->
-                <div class="mt-6 pt-4 border-t border-stone-100 bg-gray-50 p-4 rounded-lg">
+                <div class="mt-4 pt-4 border-t border-stone-100 bg-gray-50 p-4 rounded-lg max-h-32 overflow-y-auto">
                     <h3 class="text-xs font-bold uppercase text-stone-500 mb-2">User's Requested Setup</h3>
                     <div class="grid grid-cols-2 gap-4 text-xs text-stone-700">
-                        <div>
-                            <span class="block text-stone-400">Devices:</span>
-                            <ul id="edit-pref-devices" class="list-disc pl-4 mt-1 font-mono"><li>None listed</li></ul>
-                        </div>
-                        <div>
-                            <span class="block text-stone-400">PVR:</span> <span id="edit-pref-pvr" class="font-mono">---</span><br>
-                        </div>
+                        <div><span class="block text-stone-400">Devices:</span><ul id="edit-pref-devices" class="list-disc pl-4 mt-1 font-mono"><li>None listed</li></ul></div>
+                        <div><span class="block text-stone-400">PVR:</span> <span id="edit-pref-pvr" class="font-mono">---</span><br><span class="block text-stone-400 mt-1">Bouquet:</span> <span id="edit-pref-bouquet" class="font-mono">---</span></div>
                     </div>
-                    <!-- Added Bouquet Request Text Areas -->
-                    <div class="mt-2 text-xs text-stone-700">
-                        <span class="block text-stone-400">Live TV Request:</span>
-                        <p id="edit-pref-live-note" class="mb-1 italic">---</p>
-                        <span class="block text-stone-400">VOD Request:</span>
-                        <p id="edit-pref-vod-note" class="italic">---</p>
-                        <span class="block text-stone-400 mt-1">Supporter Interest:</span>
-                        <p id="edit-pref-supporter-interest" class="italic font-bold text-green-700">---</p>
+                    <div class="mt-2 text-xs text-stone-700 border-t border-stone-200 pt-2">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><span class="block text-stone-400">Live TV Request:</span><p id="edit-pref-live-note" class="italic">---</p></div>
+                            <div><span class="block text-stone-400">VOD Request:</span><p id="edit-pref-vod-note" class="italic">---</p></div>
+                        </div>
+                        <span class="block text-stone-400 mt-2">Supporter Interest:</span><p id="edit-pref-supporter-interest" class="italic font-bold text-green-700">---</p>
                     </div>
                 </div>
-
-                <div class="flex gap-3 mt-6">
+                <div class="flex gap-3 mt-6 sticky bottom-0 bg-white pt-2 border-t border-stone-100">
                     <button type="button" onclick="softDeleteUser()" class="flex-1 bg-red-50 text-red-600 font-bold py-3 rounded-lg hover:bg-red-100 transition">Archive</button>
                     <button type="submit" class="flex-[2] bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-lg transition">Save</button>
                 </div>
             </form>
         </div>
     </div>
-
-    <div id="modal-supply" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
-            <button onclick="closeModal('supply')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
-            <h2 class="text-xl font-serif font-bold mb-4">Record New Supply</h2>
-            <form onsubmit="saveSupply(event)">
-                <div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Credits</label><input id="supply-credits" type="number" class="w-full px-3 py-2 border rounded" required></div>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div><label class="text-xs font-bold uppercase text-stone-500">Cost (CAD)</label><input id="supply-cost" type="number" step="0.01" class="w-full px-3 py-2 border rounded" required></div>
-                    <div><label class="text-xs font-bold uppercase text-stone-500">BTC</label><input id="supply-btc" type="text" class="w-full px-3 py-2 border rounded"></div>
-                </div>
-                <div class="mb-6"><label class="text-xs font-bold uppercase text-stone-500">Date</label><input id="supply-date" type="date" class="w-full px-3 py-2 border rounded" required></div>
-                <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Add to Ledger</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="modal-supply-history" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-8 max-w-lg w-full relative">
-            <button onclick="closeModal('supply-history')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
-            <h2 class="text-xl font-serif font-bold mb-4">Supply History</h2>
-            <div id="supply-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
-        </div>
-    </div>
-
-    <div id="password-modal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
-            <button onclick="closePasswordModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
-            <h2 class="text-xl font-serif font-bold text-center mb-6">Change Password</h2>
-            <form onsubmit="handleChangePasswordSubmit(event)">
-                <div class="mb-6"><label class="block text-xs font-bold text-stone-500 mb-2 uppercase">New Password</label><input type="password" id="new-password" required minlength="6" class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg"></div>
-                <button type="submit" id="pass-submit-btn" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg hover:bg-stone-800 transition">Update Password</button>
-            </form>
-        </div>
-    </div>
+    
+    <!-- SUPPLY & PASSWORD MODALS (Same as before) -->
+    <div id="modal-supply" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="closeModal('supply')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Record New Supply</h2><form onsubmit="saveSupply(event)"><div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Credits</label><input id="supply-credits" type="number" class="w-full px-3 py-2 border rounded" required></div><div class="grid grid-cols-2 gap-4 mb-4"><div><label class="text-xs font-bold uppercase text-stone-500">Cost (CAD)</label><input id="supply-cost" type="number" step="0.01" class="w-full px-3 py-2 border rounded" required></div><div><label class="text-xs font-bold uppercase text-stone-500">BTC</label><input id="supply-btc" type="text" class="w-full px-3 py-2 border rounded"></div></div><div class="mb-6"><label class="text-xs font-bold uppercase text-stone-500">Date</label><input id="supply-date" type="date" class="w-full px-3 py-2 border rounded" required></div><button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Add to Ledger</button></form></div></div>
+    <div id="modal-supply-history" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-lg w-full relative"><button onclick="closeModal('supply-history')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Supply History</h2><div id="supply-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div></div></div>
+    <div id="password-modal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="closePasswordModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold text-center mb-6">Change Password</h2><form onsubmit="handleChangePasswordSubmit(event)"><div class="mb-6"><label class="block text-xs font-bold text-stone-500 mb-2 uppercase">New Password</label><input type="password" id="new-password" required minlength="6" class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg"></div><button type="submit" id="pass-submit-btn" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg hover:bg-stone-800 transition">Update Password</button></form></div></div>
 
     <!-- JAVASCRIPT -->
     <script type="module">
@@ -791,6 +482,16 @@
             }
         });
 
+        // Handle Title Link Logic
+        window.handleTitleClick = () => {
+            const user = auth.currentUser;
+            if (user) {
+                switchView('dashboard');
+            } else {
+                switchView('home');
+            }
+        };
+
         window.switchView = (view) => {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById('view-' + view).classList.add('active');
@@ -845,17 +546,10 @@
                         document.getElementById('dash-product').innerText = data.product || 'Standard License';
                         document.getElementById('dash-expiry').innerText = data.expiry || '---';
                         
-                        // Device Button Logic
-                        const devices = data.devices || [{type: 'firestick'}];
-                        const device = devices[0].type;
-                        const guideBtn = document.getElementById('btn-device-guide');
-                        guideBtn.innerHTML = `<span>Setup Guide for ${getDeviceName(device)}</span><i class="fas fa-book text-stone-400"></i>`;
-                        guideBtn.onclick = () => { switchView('guides'); showGuide(getDeviceGuideId(device)); };
-                        
                         // Badge
                         const badge = document.getElementById('dash-device-badge');
-                        if(data.devicePreference || (data.devices && data.devices.length > 0)) {
-                            badge.innerText = getDeviceName(data.devicePreference || data.devices[0].type);
+                        if(data.devices && data.devices.length > 0) {
+                            badge.innerText = getDeviceName(data.devices[0].type);
                             badge.classList.remove('hidden');
                         }
 
@@ -889,7 +583,6 @@
                         // Pre-fill config form
                         renderDeviceList(data.devices || []);
                         document.getElementById('user-config-screens').value = data.screenPreference || '1';
-                        // Handle Bouquet Smart Tags
                         renderBouquetTags(data.liveBouquet || '', 'live');
                         renderBouquetTags(data.vodBouquet || '', 'vod');
                         document.getElementById('user-config-supporter-req').checked = data.supporterRequest || false;
@@ -898,6 +591,27 @@
                 }
             } catch (e) { console.error(e); }
         }
+        
+        window.requestNewLicense = () => {
+             // Gather all config data to send
+             const screens = document.getElementById('user-config-screens').value;
+             const live = getBouquetString('live');
+             const vod = getBouquetString('vod');
+             const pvr = document.getElementById('user-config-pvr').value;
+             const supporter = document.getElementById('user-config-supporter-req').checked ? "YES" : "NO";
+             
+             // Gather devices text
+             const rows = document.querySelectorAll('.device-row');
+             const devicesText = Array.from(rows).map(row => {
+                 const select = row.querySelector('select');
+                 const hidden = row.querySelector('input.device-type-value');
+                 return getDeviceName(select ? select.value : (hidden ? hidden.value : 'firestick'));
+             }).join(', ');
+
+             const msg = `Hi Elliot, I'd like to request a new license with these settings:%0A%0A- Devices: ${devicesText}%0A- Screens: ${screens}%0A- PVR: ${pvr}%0A- Supporter: ${supporter}%0A- Live TV: ${live}%0A- VOD: ${vod}`;
+             
+             window.open(`${FB_LINK}?text=${msg}`, '_blank');
+        };
 
         // --- USER CONFIG LOGIC ---
         function renderDeviceList(devices) {
@@ -905,16 +619,15 @@
             const emptyMsg = document.getElementById('empty-device-msg');
             container.innerHTML = '';
             
-            // Re-append empty msg (hidden/shown logic)
             container.appendChild(emptyMsg);
             
             if(!devices || devices.length === 0) {
                 emptyMsg.classList.remove('hidden');
-                document.getElementById('device-counter').innerText = "Active Devices: 0";
+                document.getElementById('device-counter').innerText = "Active: 0";
                 return;
             }
             emptyMsg.classList.add('hidden');
-            document.getElementById('device-counter').innerText = `Active Devices: ${devices.length}`;
+            document.getElementById('device-counter').innerText = `Active: ${devices.length}`;
             
             devices.forEach(dev => {
                 const row = document.createElement('div');
@@ -934,7 +647,7 @@
         window.updateDeviceCount = () => {
             const count = document.querySelectorAll('.device-row').length;
             const emptyMsg = document.getElementById('empty-device-msg');
-            document.getElementById('device-counter').innerText = `Active Devices: ${count}`;
+            document.getElementById('device-counter').innerText = `Active: ${count}`;
             if(count === 0) emptyMsg.classList.remove('hidden');
             else emptyMsg.classList.add('hidden');
         };
@@ -957,7 +670,6 @@
             `;
             container.appendChild(row);
             
-            // Hide empty message
             document.getElementById('empty-device-msg').classList.add('hidden');
             updateDeviceCount();
         };
@@ -969,52 +681,27 @@
             else warning.classList.add('hidden');
         };
         
-        // --- BOUQUET SMART TAGS LOGIC ---
         window.toggleTag = (btn, type, tag) => {
             btn.classList.toggle('bg-stone-900');
             btn.classList.toggle('text-white');
             btn.classList.toggle('border-transparent');
-            // Toggle off hover if active
-            if(btn.classList.contains('bg-stone-900')) {
-                btn.classList.remove('hover:bg-stone-100');
-            } else {
-                btn.classList.add('hover:bg-stone-100');
-            }
+            if(btn.classList.contains('bg-stone-900')) { btn.classList.remove('hover:bg-stone-100'); } else { btn.classList.add('hover:bg-stone-100'); }
         };
         
         window.toggleOther = (type) => {
             const textarea = document.getElementById(`user-config-${type}-other`);
             const btn = document.getElementById(`btn-${type}-other`);
-            
             textarea.classList.toggle('hidden');
-            if(!textarea.classList.contains('hidden')) {
-                btn.classList.add('bg-blue-100', 'border-blue-300');
-                textarea.focus();
-            } else {
-                btn.classList.remove('bg-blue-100', 'border-blue-300');
-            }
+            if(!textarea.classList.contains('hidden')) { btn.classList.add('bg-blue-100', 'border-blue-300'); textarea.focus(); } 
+            else { btn.classList.remove('bg-blue-100', 'border-blue-300'); }
         };
         
-        // Render tags from saved string
         function renderBouquetTags(savedString, type) {
-            // Reset all
             const container = document.getElementById(`${type}-tags`);
             const btns = container.querySelectorAll('button');
-            btns.forEach(b => {
-                b.classList.remove('bg-stone-900', 'text-white', 'border-transparent');
-                b.classList.add('hover:bg-stone-100');
-            });
-            
+            btns.forEach(b => { b.classList.remove('bg-stone-900', 'text-white', 'border-transparent'); b.classList.add('hover:bg-stone-100'); });
             if(!savedString) return;
-            
-            // Check for tags
-            btns.forEach(b => {
-                if(savedString.includes(b.innerText)) {
-                    toggleTag(b, type, b.innerText); // Re-activate visually
-                }
-            });
-            
-            // Check for "Other" content (text after "Notes: ")
+            btns.forEach(b => { if(savedString.includes(b.innerText)) { toggleTag(b, type, b.innerText); } });
             const noteSplit = savedString.split('Notes: ');
             if(noteSplit.length > 1 && noteSplit[1].trim() !== '') {
                 const textarea = document.getElementById(`user-config-${type}-other`);
@@ -1023,22 +710,17 @@
             }
         }
         
-        // Compile tags for saving
         function getBouquetString(type) {
             const container = document.getElementById(`${type}-tags`);
             const activeBtns = Array.from(container.querySelectorAll('.bg-stone-900')).map(b => b.innerText);
-            
             const textarea = document.getElementById(`user-config-${type}-other`);
             const notes = (!textarea.classList.contains('hidden') && textarea.value) ? ` Notes: ${textarea.value}` : '';
-            
             return activeBtns.join(', ') + notes;
         }
 
         window.handleUserConfigSave = async (e) => {
             e.preventDefault();
-            // Gather devices
             const rows = document.querySelectorAll('.device-row');
-            // Check both select dropdowns (newly added) and hidden inputs (loaded from db)
             const devices = Array.from(rows).map(row => {
                 const select = row.querySelector('select');
                 const hidden = row.querySelector('input.device-type-value');
@@ -1056,7 +738,7 @@
             
             try {
                 await updateDoc(doc(db, "users", auth.currentUser.uid), updates);
-                showToast(); // NEW TOAST
+                showToast(); 
                 const btn = document.getElementById('btn-notify-elliot');
                 btn.classList.remove('hidden');
                 btn.onclick = () => window.open(FB_LINK, '_blank');
@@ -1314,14 +996,12 @@
                 html += `
                     <button onclick="switchView('dashboard')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">Dashboard</button>
                     <button onclick="switchView('guides')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">Guides</button>
-                    <button onclick="switchView('config')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">My Config</button>
                     <button onclick="switchView('faq')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">FAQ</button>
                 `;
                 
                 mobHtml += `
                     <button onclick="switchView('dashboard')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">Dashboard</button>
                     <button onclick="switchView('guides')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">Setup Guides</button>
-                    <button onclick="switchView('config')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">My Config</button>
                     <button onclick="switchView('faq')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">FAQ</button>
                 `;
 
@@ -1330,9 +1010,11 @@
                         <button class="px-4 py-2 bg-stone-900 text-stone-50 font-medium rounded-full hover:bg-stone-700 transition rustic-shadow text-sm flex items-center gap-2">
                             Account <i class="fas fa-chevron-down text-xs"></i>
                         </button>
-                        <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-stone-100 hidden group-hover:block overflow-hidden z-50">
-                            <button onclick="openChangePasswordModal()" class="block w-full text-left px-4 py-3 text-sm text-stone-600 hover:bg-stone-50 border-b border-stone-50">Change Password</button>
-                            <button onclick="handleLogout()" class="block w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50">Sign Out</button>
+                        <div class="absolute right-0 top-full pt-2 w-48 hidden group-hover:block z-50">
+                            <div class="bg-white rounded-xl shadow-lg border border-stone-100 overflow-hidden">
+                                <button onclick="openChangePasswordModal()" class="block w-full text-left px-4 py-3 text-sm text-stone-600 hover:bg-stone-50 border-b border-stone-50">Change Password</button>
+                                <button onclick="handleLogout()" class="block w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50">Sign Out</button>
+                            </div>
                         </div>
                     </div>
                 `;
