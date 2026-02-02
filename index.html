@@ -18,15 +18,12 @@
         }
     </script>
     <style>
-        /* Reverted to simple display logic for stability */
         .view-section { display: none; }
         .view-section.active { display: block; }
-        
         .toast { visibility: hidden; opacity: 0; transform: translateY(20px); transition: all 0.3s; }
         .toast.show { visibility: visible; opacity: 1; transform: translateY(0); }
         .tooltip-trigger:hover .tooltip-content { visibility: visible; opacity: 1; }
         .tooltip-content { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
-        /* Scrollbar polish */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f5f5f4; }
         ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
@@ -43,7 +40,7 @@
                     <span class="font-serif font-semibold text-2xl text-stone-900">goelliot.vip</span>
                 </div>
                 <div class="hidden md:flex space-x-8 items-center" id="desktop-nav"></div>
-                <button id="mobile-menu-btn" class="md:hidden text-stone-800 p-2"><i class="fas fa-bars text-xl"></i></button>
+                <button type="button" id="mobile-menu-btn" class="md:hidden text-stone-800 p-2"><i class="fas fa-bars text-xl"></i></button>
             </div>
         </div>
         <div id="mobile-menu" class="hidden md:hidden bg-stone-50 border-t border-stone-200 absolute w-full px-4 pt-4 pb-6 space-y-2 shadow-xl"></div>
@@ -63,8 +60,8 @@
                 <h1 class="font-serif text-5xl md:text-7xl text-stone-900 mb-8">Private Viewing Infrastructure</h1>
                 <p class="text-xl text-stone-600 mb-12 max-w-xl mx-auto">A curated 4K experience for friends and family.</p>
                 <div class="flex justify-center gap-4">
-                    <button onclick="UI.openModal('login')" class="px-8 py-3 bg-stone-900 text-white rounded-full hover:bg-stone-700 transition shadow-lg">Log In</button>
-                    <button onclick="UI.openModal('register')" class="px-8 py-3 border border-stone-300 bg-white rounded-full hover:bg-stone-50 transition shadow-sm">Register</button>
+                    <button type="button" onclick="UI.openModal('login')" class="px-8 py-3 bg-stone-900 text-white rounded-full hover:bg-stone-700 transition shadow-lg">Log In</button>
+                    <button type="button" onclick="UI.openModal('register')" class="px-8 py-3 border border-stone-300 bg-white rounded-full hover:bg-stone-50 transition shadow-sm">Register</button>
                 </div>
             </div>
         </section>
@@ -75,7 +72,7 @@
         <div class="max-w-6xl mx-auto px-4">
             <div class="flex justify-between items-end mb-10">
                 <div><h1 class="font-serif text-3xl text-stone-900">My Dashboard</h1><p class="text-stone-500 text-sm mt-1" id="dash-welcome">Welcome back.</p></div>
-                <button onclick="Auth.logout()" class="text-sm text-red-600 hover:text-red-800 font-medium">Sign Out</button>
+                <button type="button" onclick="Auth.logout()" class="text-sm text-red-600 hover:text-red-800 font-medium">Sign Out</button>
             </div>
 
             <!-- STATES -->
@@ -84,9 +81,9 @@
 
             <!-- ACTIVE CONTENT -->
             <div id="state-active" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Col 1: Status & Tools -->
+                <!-- Col 1 -->
                 <div class="space-y-6">
-                    <!-- Status Card -->
+                    <!-- Status -->
                     <div class="bg-stone-900 text-stone-50 p-8 rounded-3xl shadow-xl relative overflow-hidden">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-stone-800 rounded-full blur-2xl opacity-50 -mr-10 -mt-10"></div>
                         <div class="relative z-10">
@@ -117,16 +114,15 @@
                         </select>
                         <div id="pay-details" class="text-xs bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4"></div>
 
-                        <button onclick="Calc.sendRequest()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-lg"><i class="fab fa-facebook-messenger"></i> Request License</button>
+                        <button type="button" onclick="Calc.sendRequest()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-lg"><i class="fab fa-facebook-messenger"></i> Request License</button>
                     </div>
 
-                    <!-- Supporter Status -->
+                    <!-- Supporter -->
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-bold text-stone-900 text-sm">GanjaRelease Supporter</h3>
                             <span id="dash-supporter-badge" class="px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold">Inactive</span>
                         </div>
-                        <div id="supporter-content" class="text-xs text-stone-500"></div>
                         <div id="dash-supporter-active" class="hidden mt-2">
                              <div id="dash-supporter-list" class="h-32 overflow-y-auto bg-stone-50 rounded border border-stone-100 p-2 text-[10px] font-mono text-stone-600 leading-tight"></div>
                         </div>
@@ -136,42 +132,39 @@
                     </div>
                 </div>
 
-                <!-- Col 2&3: Connection & Config -->
+                <!-- Col 2&3 -->
                 <div class="lg:col-span-2 space-y-8">
                     <!-- Connections -->
                     <div class="bg-white p-8 rounded-3xl shadow-sm border border-stone-200">
                         <h2 class="font-bold text-2xl font-serif text-stone-900 mb-6">Connection Details</h2>
                         
-                        <!-- Hero Card -->
-                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8">
-                            <div class="flex gap-4">
+                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 relative">
+                            <div class="flex items-start gap-4">
                                 <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0"><i class="fas fa-star"></i></div>
                                 <div class="flex-1">
                                     <h3 class="font-bold text-blue-900 mb-1">Recommended: EPGenius (GanjaRelease #6)</h3>
                                     <p class="text-sm text-blue-800/80 mb-3">Smart M3U Playlist with built-in EPG.</p>
                                     <div class="flex bg-white rounded-lg border border-blue-200 p-1">
                                         <input id="dash-epgenius" type="text" readonly class="flex-1 px-3 py-2 text-sm font-mono text-stone-600 outline-none bg-transparent" value="...">
-                                        <button onclick="UI.copy('dash-epgenius')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-md text-sm font-medium transition">Copy</button>
+                                        <button type="button" onclick="UI.copy('dash-epgenius')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-md text-sm font-medium transition">Copy</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Strong 8K -->
                         <div class="mb-6">
                             <h3 class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">Strong 8K Credentials</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><label class="text-xs text-stone-500 block mb-1">Server URL</label><div class="flex bg-stone-50 rounded border"><code id="dash-server" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button onclick="UI.copyText('dash-server')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
-                                <div><label class="text-xs text-stone-500 block mb-1">Username</label><div class="flex bg-stone-50 rounded border"><code id="dash-user" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button onclick="UI.copyText('dash-user')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
-                                <div><label class="text-xs text-stone-500 block mb-1">Password</label><div class="flex bg-stone-50 rounded border"><code id="dash-pass" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button onclick="UI.copyText('dash-pass')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
+                                <div><label class="text-xs text-stone-500 block mb-1">Server URL</label><div class="flex bg-stone-50 rounded border"><code id="dash-server" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button type="button" onclick="UI.copyText('dash-server')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
+                                <div><label class="text-xs text-stone-500 block mb-1">Username</label><div class="flex bg-stone-50 rounded border"><code id="dash-user" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button type="button" onclick="UI.copyText('dash-user')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
+                                <div><label class="text-xs text-stone-500 block mb-1">Password</label><div class="flex bg-stone-50 rounded border"><code id="dash-pass" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button type="button" onclick="UI.copyText('dash-pass')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
                             </div>
                         </div>
                         
-                        <!-- Backup -->
                         <div class="pt-4 border-t border-stone-100">
                             <details class="group">
                                 <summary class="flex items-center gap-2 cursor-pointer text-xs font-bold text-stone-400 uppercase hover:text-stone-600 transition"><i class="fas fa-chevron-right group-open:rotate-90 transition-transform"></i> Backup / Raw M3U</summary>
-                                <div class="mt-4 flex bg-stone-50 rounded border p-1"><input id="dash-m3u" readonly class="flex-1 px-3 py-2 text-xs font-mono bg-transparent outline-none text-stone-500" value="..."><button onclick="UI.copy('dash-m3u')" class="text-xs bg-stone-200 px-3 rounded hover:bg-stone-300">Copy</button></div>
+                                <div class="mt-4 flex bg-stone-50 rounded border p-1"><input id="dash-m3u" readonly class="flex-1 px-3 py-2 text-xs font-mono bg-transparent outline-none text-stone-500" value="..."><button type="button" onclick="UI.copy('dash-m3u')" class="text-xs bg-stone-200 px-3 rounded hover:bg-stone-300">Copy</button></div>
                             </details>
                         </div>
                     </div>
@@ -212,7 +205,8 @@
                                     <div>
                                         <label class="text-xs font-bold text-stone-500 mb-2 uppercase block">VOD Bouquet</label>
                                         <div class="flex flex-wrap gap-2 mb-2" id="tags-vod"></div>
-                                        <textarea id="cfg-vod-note" rows="2" class="hidden w-full px-3 py-2 bg-stone-50 border rounded-lg text-sm" placeholder="Details..."></textarea>
+                                        <div class="flex gap-2 mt-2"><button type="button" onclick="AI.suggestVOD()" class="flex-1 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs font-bold rounded-lg hover:shadow-md transition flex items-center justify-center gap-1"><i class="fas fa-magic"></i> Inspire Me</button></div>
+                                        <textarea id="cfg-vod-note" rows="2" class="hidden w-full mt-2 px-3 py-2 bg-stone-50 border rounded-lg text-sm" placeholder="Details..."></textarea>
                                     </div>
                                 </div>
                                 
@@ -231,24 +225,24 @@
         </div>
     </main>
 
-    <!-- VIEW: ADMIN, GUIDES, FAQ (Generated by JS) -->
+    <!-- VIEW: ADMIN, GUIDES, FAQ -->
     <div id="dynamic-views"></div>
 
     <!-- MODALS CONTAINER -->
     <div id="modals">
-        <!-- Modals are now statically included in HTML for stability -->
         <div id="modal-login" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
-                <button onclick="UI.closeModal('login')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+                <button type="button" onclick="UI.closeModal('login')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
                 <h2 class="text-2xl font-serif font-bold text-center mb-6">Log In</h2>
-                <div class="text-center text-stone-400 text-sm mb-4"></div>
+                <button type="button" onclick="Auth.loginGoogle()" class="w-full bg-white border border-stone-300 py-3 rounded-lg mb-4 flex justify-center gap-2 font-bold text-stone-700"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5"> Google</button>
+                <div class="text-center text-stone-400 text-sm mb-4">- OR -</div>
                 <form onsubmit="Auth.loginEmail(event)"><input id="login-email" type="email" placeholder="Email" class="w-full mb-3 px-4 py-3 bg-stone-50 border rounded-lg" required><input id="login-pass" type="password" placeholder="Password" class="w-full mb-6 px-4 py-3 bg-stone-50 border rounded-lg" required><button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Log In</button></form>
             </div>
         </div>
         
         <div id="modal-register" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
-                <button onclick="UI.closeModal('register')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+                <button type="button" onclick="UI.closeModal('register')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
                 <h2 class="text-2xl font-serif font-bold text-center mb-2">New Account</h2>
                 <p class="text-center text-stone-500 text-sm mb-6">Enter the invite code from Elliot.</p>
                 <form onsubmit="Auth.register(event)"><input id="reg-code" type="text" placeholder="Invite Code" class="w-full mb-4 px-4 py-3 bg-stone-50 border rounded-lg uppercase tracking-widest" required><input id="reg-email" type="email" placeholder="Email" class="w-full mb-4 px-4 py-3 bg-stone-50 border rounded-lg" required><input id="reg-pass" type="password" placeholder="Password" class="w-full mb-6 px-4 py-3 bg-stone-50 border rounded-lg" required minlength="6"><button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Create Account</button></form>
@@ -258,7 +252,7 @@
         <!-- Admin Edit Modal -->
         <div id="modal-edit" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 overflow-y-auto">
             <div class="bg-white rounded-2xl p-8 max-w-2xl w-full relative my-8">
-                <button onclick="UI.closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+                <button type="button" onclick="UI.closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
                 <h2 id="modal-edit-title" class="text-xl font-serif font-bold mb-6">Edit User</h2>
                 <form onsubmit="Admin.saveUser(event)">
                     <input type="hidden" id="edit-uid">
@@ -266,8 +260,6 @@
                         <input id="edit-realname" placeholder="Real Name" class="border p-2 rounded">
                         <input id="edit-email" placeholder="Email" class="border p-2 rounded">
                     </div>
-                     <!-- (Simplified for length - in production use full fields from previous versions) -->
-                     <!-- IMPORTANT: Restoring the critical fields needed for the Admin.hydrateEdit logic -->
                      <div class="grid grid-cols-3 gap-4 mb-4">
                         <select id="edit-status" class="border p-2 rounded"><option>Active</option><option>Pending</option></select>
                         <select id="edit-product" class="border p-2 rounded"><option>1 Month</option></select>
@@ -288,7 +280,6 @@
                      
                     <button type="submit" class="bg-blue-600 text-white p-3 rounded w-full">Save</button>
                     
-                    <!-- Read Only User Preferences IN ADMIN -->
                     <div class="mt-4 pt-4 border-t border-stone-100 bg-gray-50 p-4 rounded-lg max-h-32 overflow-y-auto text-xs">
                         <h3 class="font-bold text-stone-500 mb-2">USER REQUESTED SETUP</h3>
                         <div class="grid grid-cols-2 gap-4 text-stone-700">
@@ -307,15 +298,15 @@
             </div>
         </div>
 
-        <div id="modal-supply" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="UI.closeModal('supply')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Record New Supply</h2><form onsubmit="Renderer.saveSupply(event)"><input id="supply-credits" type="number" placeholder="Credits" class="w-full px-3 py-2 border rounded mb-2" required><input id="supply-cost" type="number" step="0.01" placeholder="Cost" class="w-full px-3 py-2 border rounded mb-2" required><input id="supply-btc" placeholder="BTC" class="w-full px-3 py-2 border rounded mb-2"><input id="supply-date" type="date" class="w-full px-3 py-2 border rounded mb-2" required><button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Add</button></form></div></div>
-        <div id="modal-supply-history" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-lg w-full relative"><button onclick="UI.closeModal('supply-history')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Supply History</h2><div id="supply-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div></div></div>
-        <div id="password-modal" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="UI.closePasswordModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold text-center mb-6">Change Password</h2><form onsubmit="UI.handleChangePasswordSubmit(event)"><input type="password" id="new-password" placeholder="New Password" class="w-full mb-6 px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg"><button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Update</button></form></div></div>
+        <div id="modal-supply" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button type="button" onclick="UI.closeModal('supply')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Record New Supply</h2><form onsubmit="Renderer.saveSupply(event)"><input id="supply-credits" type="number" placeholder="Credits" class="w-full px-3 py-2 border rounded mb-2" required><input id="supply-cost" type="number" step="0.01" placeholder="Cost" class="w-full px-3 py-2 border rounded mb-2" required><input id="supply-btc" placeholder="BTC" class="w-full px-3 py-2 border rounded mb-2"><input id="supply-date" type="date" class="w-full px-3 py-2 border rounded mb-2" required><button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Add</button></form></div></div>
+        <div id="modal-supply-history" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-lg w-full relative"><button type="button" onclick="UI.closeModal('supply-history')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Supply History</h2><div id="supply-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div></div></div>
+        <div id="password-modal" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button type="button" onclick="UI.closePasswordModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold text-center mb-6">Change Password</h2><form onsubmit="UI.handleChangePasswordSubmit(event)"><input type="password" id="new-password" placeholder="New Password" class="w-full mb-6 px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg"><button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Update</button></form></div></div>
     </div>
 
     <!-- APP LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, getDocs, query, where, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // --- CONSTANTS ---
@@ -323,23 +314,85 @@
             ADMIN_EMAIL: "e.chinerman@gmail.com",
             INVITE_CODE: "FAMILY8K",
             FB_LINK: "https://m.me/rds.ca",
+            GEMINI_API_KEY: "AIzaSyArqgmwplxIykH9ctwjQeKP_qP44BffeHE", 
             PAY_INTERAC: ["e.chinerman@gmail.com", "514-943-5664"],
             PAY_BTC: { lightning: "gogobonobo@shakepay.me", chain: "bc1q6fu87a280v4g6wcjgu2kewv8qyuh3vl93deta8v297r4prswu4dqqxx3xw" }
         };
 
-        const PRODUCTS = { 'Demo': {c:0,p:0}, '1 Month': {c:1,p:10}, '3 Months': {c:3,p:25}, '6 Months': {c:6,p:40}, '1 Year': {c:12,p:60} };
-        
-        const TAGS = {
-            live: ['All English', 'All French', 'Sports', 'News', 'Kids', 'Other'],
-            vod: ['All Movies', 'All Series', 'English Only', 'French Only', 'No Horror', 'Other']
-        };
-
-        const SUPPORTER_CATS = ["✅CA| SPORTSNET+ PPV", "✅CA| WHL PPV", "✅CA| TSN+ PPV", "✅CA| PRIME PPV", "✅NFL Sunday Ticket", "✅NBA League Pass", "✅UFC Fight Pass", "✅F1 TV", "✅DAZN PPV", "✅Peacock PPV", "✅Flo Sports"]; // Shortened list for UI
+        const SUPPORTER_CATS = ["✅CA| SPORTSNET+ PPV", "✅CA| WHL PPV", "✅CA| TSN+ PPV", "✅CA| PRIME PPV", "✅NFL Sunday Ticket", "✅NBA League Pass", "✅UFC Fight Pass", "✅F1 TV", "✅DAZN PPV", "✅Peacock PPV", "✅Flo Sports"]; 
 
         const firebaseConfig = { apiKey: "AIzaSyAH5CRCJoktmY6baXshDnOVgylHldcPa3E", authDomain: "elliotvip.firebaseapp.com", projectId: "elliotvip", storageBucket: "elliotvip.firebasestorage.app", messagingSenderId: "223494244969", appId: "1:223494244969:web:edcf227f756ac76ba170f8" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // --- CONFIG SERVICE ---
+        window.Config = {
+            data: {
+                PRODUCTS: { 'Demo': {c:0,p:0}, '1 Month': {c:1,p:10}, '3 Months': {c:3,p:25}, '6 Months': {c:6,p:40}, '1 Year': {c:12,p:60} },
+                TAGS: { live: ['All English', 'All French', 'Sports', 'News', 'Kids', 'Other'], vod: ['All Movies', 'All Series', 'English Only', 'French Only', 'No Horror', 'Other'] }
+            },
+            load: async () => {
+                try {
+                    const snap = await getDoc(doc(db, "app_config", "settings"));
+                    if(snap.exists()) window.Config.data = snap.data();
+                } catch(e) { console.warn("Using default config"); }
+                // Re-render dependent UI
+                Renderer.renderPricing();
+                Renderer.renderTags();
+            },
+            seed: async () => {
+                if(!confirm("Initialize DB Config? This overwrites existing config.")) return;
+                await setDoc(doc(db, "app_config", "settings"), window.Config.data);
+                UI.showToast("DB Initialized");
+            }
+        };
+
+        // --- AI SERVICE ---
+        window.AI = {
+            toggle: () => {
+                const w = document.getElementById('ai-window');
+                w.classList.toggle('hidden');
+                if(!w.classList.contains('hidden') && document.getElementById('ai-messages').children.length === 0) {
+                     AI.addMsg("Hi! I'm Elliot's AI Assistant. I can help with TiviMate setup, buffering fixes, or general questions. What's up?", 'ai');
+                }
+            },
+            addMsg: (text, sender) => {
+                const div = document.createElement('div');
+                div.className = sender === 'user' ? "bg-stone-900 text-white p-3 rounded-lg rounded-tr-none self-end max-w-[85%]" : "bg-white p-3 rounded-lg rounded-tl-none shadow-sm border border-stone-100 self-start max-w-[85%]";
+                div.innerText = text;
+                document.getElementById('ai-messages').appendChild(div);
+            },
+            callGemini: async (prompt) => {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
+                try {
+                    const response = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const data = await response.json();
+                    AI.addMsg(data.candidates?.[0]?.content?.parts?.[0]?.text || "Error", 'ai');
+                } catch(e) { AI.addMsg("Connection error.", 'ai'); }
+            },
+            handleChatSubmit: async (e) => {
+                e.preventDefault();
+                const input = document.getElementById('ai-input');
+                const text = input.value.trim();
+                if(!text) return;
+                AI.addMsg(text, 'user');
+                input.value = '';
+                await AI.callGemini(text); 
+            },
+            suggestVOD: async () => {
+                const box = document.getElementById('cfg-vod-note');
+                const userPrefs = box.value || "General movies";
+                box.classList.remove('hidden'); box.value = "Thinking...";
+                const prompt = `Suggest 5 specific movies for someone who likes: ${userPrefs}. Just titles.`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
+                try {
+                    const response = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const data = await response.json();
+                    box.value = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch(e) { box.value = userPrefs; }
+            }
+        };
 
         // --- GLOBAL SERVICES ---
         window.UI = {
@@ -350,23 +403,15 @@
                 target.classList.add('active');
                 document.getElementById('mobile-menu').classList.add('hidden');
                 
-                // Lazy Load Views
                 if(view === 'admin' || view === 'guides' || view === 'faq') Renderer.loadView(view);
-                if(view === 'admin' && auth.currentUser?.email === CONFIG.ADMIN_EMAIL) window.loadAdminData(); // Use global function
+                if(view === 'admin' && auth.currentUser?.email === CONFIG.ADMIN_EMAIL) Admin.loadData();
             },
-            showToast: (msg) => {
-                const t = document.getElementById('toast');
-                document.getElementById('toast-msg').innerText = msg || "Changes saved.";
-                t.classList.add('show');
-                setTimeout(() => t.classList.remove('show'), 3000);
-            },
-            openModal: (id) => { 
-                if(!document.getElementById('modal-' + id)) Renderer.renderModal(id);
-                document.getElementById('modal-' + id).classList.remove('hidden'); 
-            },
+            toggleAiChat: AI.toggle,
+            showToast: (msg) => { const t = document.getElementById('toast'); document.getElementById('toast-msg').innerText = msg || "Saved"; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); },
+            openModal: (id) => { if(!document.getElementById('modal-' + id)) Renderer.renderModal(id); document.getElementById('modal-' + id).classList.remove('hidden'); },
             closeModal: (id) => document.getElementById('modal-' + id).classList.add('hidden'),
             copy: (id) => { document.getElementById(id).select(); document.execCommand('copy'); UI.showToast("Copied!"); },
-            copyText: (text) => { navigator.clipboard.writeText(text).then(() => UI.showToast(`Copied: ${text}`)); },
+            copyText: (text) => { navigator.clipboard.writeText(text).then(() => UI.showToast(`Copied!`)); },
             openChangePasswordModal: () => { document.getElementById('password-modal').classList.remove('hidden'); },
             closePasswordModal: () => document.getElementById('password-modal').classList.add('hidden'),
             handleChangePasswordSubmit: async (e) => { e.preventDefault(); try { await updatePassword(auth.currentUser, document.getElementById('new-password').value); UI.closePasswordModal(); } catch(e){alert(e.message)} }
@@ -374,6 +419,7 @@
 
         window.App = {
             init: () => {
+                Config.load();
                 Renderer.initNav();
                 Renderer.renderPricing();
                 Renderer.renderTags();
@@ -394,14 +440,14 @@
         // --- AUTH SERVICE ---
         window.Auth = {
             loginEmail: async (e) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value); } catch(e){alert(e.message)} },
+            loginGoogle: async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e){alert(e.message)} },
             register: async (e) => { e.preventDefault(); if(document.getElementById('reg-code').value.toUpperCase() !== CONFIG.INVITE_CODE) return alert("Invalid Code"); try { const cred = await createUserWithEmailAndPassword(auth, document.getElementById('reg-email').value, document.getElementById('reg-pass').value); await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, status: "Pending", created: new Date().toISOString() }); } catch(e){alert(e.message)} },
             logout: () => signOut(auth),
             ensureDoc: async (user) => {
                 const ref = doc(db, "users", user.uid);
                 const snap = await getDoc(ref);
                 if (!snap.exists()) {
-                    // Merge Logic
-                    const q = query(collection(db, "users"), where("email", "==", user.email.toLowerCase())); // Normalize
+                    const q = query(collection(db, "users"), where("email", "==", user.email.toLowerCase()));
                     const qSnap = await getDocs(q);
                     if (!qSnap.empty) {
                         const oldDoc = qSnap.docs[0];
@@ -433,7 +479,6 @@
                     document.getElementById(`dash-epgenius`).value = d.epgeniusM3u || '';
                     document.getElementById(`dash-m3u`).value = d.m3uUrl || '';
                     
-                    // Supporter
                     const sStatus = d.supporterStatus || "Not Requested";
                     const sActive = document.getElementById('dash-supporter-active');
                     const sInactive = document.getElementById('dash-supporter-inactive');
@@ -446,7 +491,6 @@
                         sActive.classList.add('hidden'); sInactive.classList.remove('hidden');
                     }
 
-                    // Config Form
                     Client.renderDevices(d.devices || []);
                     document.getElementById('cfg-screens').value = d.screenPreference || '1';
                     Client.renderTagsState(d.liveBouquet || '', 'live');
@@ -454,7 +498,7 @@
                     document.getElementById('user-config-supporter-req').checked = (sStatus !== "Not Requested");
                     document.getElementById('user-config-pvr').value = d.pvrPreference || 'No';
 
-                    renderPricing(); // Init calculator
+                    renderPricing(); 
                     updatePaymentDetails();
                 }
             },
@@ -526,15 +570,15 @@
             },
             total: () => {
                 let t = 0;
-                for(let p in Client.calcState) t += Client.calcState[p] * PRODUCTS[p].p;
+                for(let p in Client.calcState) t += Client.calcState[p] * Config.data.PRODUCTS[p].p;
                 if(document.getElementById('calc-supporter').checked) t += 20;
                 document.getElementById('calc-total').innerText = `$${t.toFixed(2)}`;
             },
             toggleMethod: () => {
                 const m = document.getElementById('pay-method').value;
                 document.getElementById('pay-details').innerHTML = m === 'interac' ? 
-                    `<div class="space-y-1"><p>Send to:</p><div class="flex justify-between bg-white p-1 rounded border"><span class="font-mono">${CONFIG.PAY_INTERAC[0]}</span><button onclick="UI.copyText('${CONFIG.PAY_INTERAC[0]}')"><i class="fas fa-copy"></i></button></div></div>` :
-                    `<div class="space-y-1"><p>Lightning:</p><div class="flex justify-between bg-white p-1 rounded border"><span class="font-mono truncate w-48">${CONFIG.PAY_BTC.lightning}</span><button onclick="UI.copyText('${CONFIG.PAY_BTC.lightning}')"><i class="fas fa-copy"></i></button></div></div>`;
+                    `<div class="space-y-1"><p>Send to:</p><div class="flex justify-between bg-white p-1 rounded border"><span class="font-mono">${CONFIG.PAY_INTERAC[0]}</span><button type="button" onclick="UI.copyText('${CONFIG.PAY_INTERAC[0]}')"><i class="fas fa-copy"></i></button></div></div>` :
+                    `<div class="space-y-1"><p>Lightning:</p><div class="flex justify-between bg-white p-1 rounded border"><span class="font-mono truncate w-48">${CONFIG.PAY_BTC.lightning}</span><button type="button" onclick="UI.copyText('${CONFIG.PAY_BTC.lightning}')"><i class="fas fa-copy"></i></button></div></div>`;
             },
             sendRequest: () => {
                 const total = document.getElementById('calc-total').innerText;
@@ -544,33 +588,30 @@
             }
         };
 
-        // --- ADMIN FUNCTIONS (Top Level) ---
+        // --- ADMIN FUNCTIONS ---
         window.loadAdminData = async () => {
             const list = document.getElementById('admin-user-list');
             list.innerHTML = 'Loading...';
             try {
-                // Fetch Supply
-                let supplyBatches = []; // Removed default coded batch
+                let supplyBatches = [];
                 const supplyDoc = await getDoc(doc(db, "business_data", "supply_ledger"));
                 if(supplyDoc.exists()) supplyBatches = supplyDoc.data().batches || supplyBatches;
                 
-                // Fetch Users
                 const snap = await getDocs(collection(db, "users"));
                 let html = '';
+                // Add "Initialize" Button for Admin convenience
+                document.getElementById('admin-user-list').innerHTML += `<div class="p-4 bg-yellow-50 text-center"><button onclick="Config.seed()" class="text-xs bg-yellow-600 text-white px-3 py-1 rounded">⚠️ Initialize DB Config</button></div>`;
+                
                 snap.forEach(d => {
                      const u = d.data();
                      if(d.id !== 'meta_supply' && !u.deleted) {
                          html += `<div class="p-4 border-b flex justify-between"><div><span class="font-bold">${u.realName || 'No Name'}</span><br><span class="text-xs text-stone-500">${u.email}</span></div><button onclick="UI.openModal('edit'); Admin.hydrateEdit('${d.id}')" class="text-xs bg-stone-900 text-white px-2 py-1 rounded">Edit</button></div>`;
                      }
                 });
-                list.innerHTML = html || 'No users.';
-                
-                // (Note: To restore full stats logic, copy from previous turn or expand this.
-                // For brevity in this fix, I am ensuring the LIST works primarily.)
+                list.innerHTML = html;
             } catch(e) { console.error(e); list.innerHTML = "Error loading admin data"; }
         };
         
-        // Ensure Admin object for hydration is available
         window.Admin = {
              hydrateEdit: async (uid) => {
                  if(uid) {
@@ -650,7 +691,6 @@
         // --- RENDERER (Clean HTML Generation) ---
         window.Renderer = {
             initNav: () => {
-                // Mobile menu logic
                 document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
             },
             updateNav: (user) => {
@@ -658,45 +698,42 @@
                 if(user) {
                     const isAdmin = user.email === CONFIG.ADMIN_EMAIL;
                     nav.innerHTML = `
-                        ${isAdmin ? `<button onclick="UI.switchView('admin')" class="font-bold text-blue-600 mr-4">ADMIN</button>` : ''}
-                        <button onclick="UI.switchView('dashboard')" class="font-medium hover:text-stone-600">Dashboard</button>
-                        <button onclick="UI.switchView('guides')" class="font-medium hover:text-stone-600">Guides</button>
-                        <button onclick="UI.switchView('faq')" class="font-medium hover:text-stone-600">FAQ</button>
+                        ${isAdmin ? `<button type="button" onclick="UI.switchView('admin')" class="font-bold text-blue-600 mr-4">ADMIN</button>` : ''}
+                        <button type="button" onclick="UI.switchView('dashboard')" class="font-medium hover:text-stone-600">Dashboard</button>
+                        <button type="button" onclick="UI.switchView('guides')" class="font-medium hover:text-stone-600">Guides</button>
+                        <button type="button" onclick="UI.switchView('faq')" class="font-medium hover:text-stone-600">FAQ</button>
                     `;
                 } else {
-                    nav.innerHTML = `<button onclick="UI.openModal('login')" class="font-medium">Log In</button>`;
+                    nav.innerHTML = `<button type="button" onclick="UI.openModal('login')" class="font-medium">Log In</button>`;
                 }
             },
             renderPricing: () => {
                 const c = document.getElementById('pricing-rows');
-                if(!c) return; // Safety check
-                c.innerHTML = Object.entries(PRODUCTS).filter(([k])=>k!=='Demo').map(([k,v]) => `
+                if(!c) return; 
+                c.innerHTML = Object.entries(Config.data.PRODUCTS).filter(([k])=>k!=='Demo').map(([k,v]) => `
                     <div class="flex justify-between items-center bg-stone-50 p-2 rounded">
                         <span class="text-xs font-bold">${k} ($${v.p})</span>
                         <div class="flex items-center gap-2">
-                            <button onclick="Calc.update('${k}',-1)" class="w-5 h-5 bg-stone-200 rounded hover:bg-stone-300">-</button>
+                            <button type="button" onclick="Calc.update('${k}',-1)" class="w-5 h-5 bg-stone-200 rounded hover:bg-stone-300">-</button>
                             <span id="qty-${k.replace(' ','')}" class="text-xs w-3 text-center">0</span>
-                            <button onclick="Calc.update('${k}',1)" class="w-5 h-5 bg-stone-800 text-white rounded hover:bg-stone-600">+</button>
+                            <button type="button" onclick="Calc.update('${k}',1)" class="w-5 h-5 bg-stone-800 text-white rounded hover:bg-stone-600">+</button>
                         </div>
                     </div>`).join('');
             },
             renderTags: () => {
                 ['live', 'vod'].forEach(t => {
                     const c = document.getElementById(`tags-${t}`);
-                    if(!c) return; // Safety check
-                    c.innerHTML = TAGS[t].map(tag => {
+                    if(!c) return;
+                    c.innerHTML = Config.data.TAGS[t].map(tag => {
                         const isOther = tag === 'Other';
                         const action = isOther ? `document.getElementById('cfg-${t}-note').classList.toggle('hidden')` : `this.classList.toggle('bg-stone-800'); this.classList.toggle('text-white');`;
                         return `<button type="button" onclick="${action}" class="px-3 py-1 border rounded-full text-xs bg-white text-stone-600 transition hover:bg-stone-50">${tag}</button>`;
                     }).join('');
                 });
             },
-            renderModal: (id) => {
-                // Intentionally left blank as modals are now static HTML in body for robustness
-            },
+            renderModal: (id) => { },
             loadView: (view) => {
                 if(view === 'faq') {
-                    // Populate FAQ
                     document.getElementById('view-faq').innerHTML = `
                         <div class="max-w-3xl mx-auto px-4"><h1 class="text-3xl font-serif mb-8 text-center">FAQ</h1>
                         <div class="space-y-4">
@@ -706,27 +743,20 @@
                         </div></div>`;
                 }
                 if(view === 'guides') {
-                    // Populate Guides (Using simplified logic for brevity, expands in full view)
-                     // Note: Reusing the detailed guide content from the HTML block above
-                     // For dynamic switching, we'd inject here. Since it's static in the file now, we just show/hide.
+                    // Re-inject static HTML here if needed, but it's hardcoded for stability now
                 }
             },
-            // Supply Functions
             saveSupply: async (e) => {
                 e.preventDefault();
                 const newBatch = { credits: Number(document.getElementById('supply-credits').value), cost: Number(document.getElementById('supply-cost').value), btc: document.getElementById('supply-btc').value, date: document.getElementById('supply-date').value };
                 const metaRef = doc(db, "business_data", "supply_ledger");
                 const snap = await getDoc(metaRef);
                 if (snap.exists()) await updateDoc(metaRef, { batches: arrayUnion(newBatch) });
-                else await setDoc(metaRef, { batches: [newBatch] }); // Corrected: Removed default batch
+                else await setDoc(metaRef, { batches: [newBatch] }); 
                 UI.closeModal('supply'); window.loadAdminData();
             },
             renderSupplyHistory: () => {
                  const list = document.getElementById('supply-history-list');
-                 // Note: Needs global allSupplyBatches, or fetch again. For simplicity, just refetch for now to be safe or store state.
-                 // Ideally supply batches should be stored in App state.
-                 // For now, let's assume loadAdminData has run and populated a variable or we fetch.
-                 // To fix properly, let's just make it simpler: fetch on open.
                  (async () => {
                      const supplyDoc = await getDoc(doc(db, "business_data", "supply_ledger"));
                      const batches = supplyDoc.exists() ? supplyDoc.data().batches : [];
@@ -741,12 +771,10 @@
 
         window.getIcon = (t) => ({'tv':'tv','mobile':'mobile-alt','computer':'laptop'}[t.split('_')[0]] || 'question');
 
-        // Start safely
         document.addEventListener('DOMContentLoaded', () => {
              App.init();
         });
 
-        // Export functions to window for onclicks
         window.handleEmailLogin = Auth.loginEmail;
         window.handleGoogleLogin = Auth.loginGoogle;
         window.handleRegister = Auth.register;
