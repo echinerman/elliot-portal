@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>goelliot.vip | Private Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -24,7 +24,6 @@
         .toast.show { visibility: visible; opacity: 1; transform: translateY(0); }
         .tooltip-trigger:hover .tooltip-content { visibility: visible; opacity: 1; }
         .tooltip-content { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
-        /* Scrollbar polish */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #f5f5f4; }
         ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
@@ -223,11 +222,121 @@
         </div>
     </main>
 
+    <!-- VIEW: ADMIN DASHBOARD -->
+    <main id="view-admin" class="view-section pt-32 pb-24 min-h-screen bg-stone-100">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="font-serif text-3xl text-stone-900">Admin Console</h1>
+                <div class="flex gap-2">
+                    <button onclick="UI.openModal('supply')" class="text-xs bg-white border border-stone-300 text-stone-600 px-3 py-2 rounded-lg hover:bg-stone-50 shadow-sm font-bold flex items-center gap-1"><i class="fas fa-coins"></i> Supply</button>
+                    <button onclick="UI.openModal('supply-history'); Renderer.renderSupplyHistory()" class="text-xs bg-white border border-stone-300 text-stone-600 px-3 py-2 rounded-lg hover:bg-stone-50 shadow-sm font-bold"><i class="fas fa-history"></i></button>
+                    <div class="w-px bg-stone-300 mx-1 h-8"></div>
+                    <button onclick="UI.openModal('edit'); Admin.hydrateEdit(null)" class="text-xs bg-stone-900 text-white px-3 py-2 rounded-lg hover:bg-stone-700 shadow-md font-bold"><i class="fas fa-plus mr-1"></i> Add Client</button>
+                    <button onclick="window.loadAdminData()" class="text-xs bg-white border border-stone-300 px-3 py-2 rounded-lg hover:bg-stone-50"><i class="fas fa-sync-alt"></i></button>
+                </div>
+            </div>
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                <div class="bg-stone-900 text-white p-6 rounded-2xl shadow-lg"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Credits Remaining</p><div class="flex items-end gap-2"><span id="stat-credits-left" class="text-3xl font-bold">---</span><span id="stat-credits-total" class="text-sm text-stone-400 mb-1">/ ---</span></div><div class="w-full bg-stone-800 h-1.5 rounded-full mt-4 overflow-hidden"><div id="stat-bar" class="bg-green-500 h-full rounded-full" style="width: 0%"></div></div></div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Total Revenue</p><span id="stat-revenue" class="text-3xl font-bold text-stone-800">$0.00</span></div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Net Profit</p><span id="stat-profit" class="text-3xl font-bold text-stone-800">$0.00</span></div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Avg Profit / Credit</p><span id="stat-avg" class="text-3xl font-bold text-stone-800">$0.00</span><p id="stat-cost-basis" class="text-xs text-stone-400 mt-1">Cost Basis: $---</p></div>
+            </div>
+            <!-- Roster -->
+            <div class="bg-white rounded-3xl shadow-sm border border-stone-200 overflow-hidden">
+                <div class="p-4 border-b border-stone-100 bg-stone-50 flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <div class="flex items-center gap-2 w-full md:w-auto"><h2 class="font-bold text-lg text-stone-700 mr-2">Roster</h2><input type="text" id="filter-search" onkeyup="Admin.renderRoster()" placeholder="Search..." class="pl-3 pr-4 py-2 border rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-stone-200 outline-none"></div>
+                    <div class="flex gap-2 w-full md:w-auto"><select id="filter-status" onchange="Admin.renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Pending">Pending</option><option value="Expired">Expired</option></select><select id="filter-sort" onchange="Admin.renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="recent">Recent</option><option value="name">Name</option><option value="expiry_soon">Expires Soon</option></select></div>
+                </div>
+                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 bg-white"><div class="col-span-3">User / Name</div><div class="col-span-2">Product</div><div class="col-span-2">Supporter</div><div class="col-span-2">Payment</div><div class="col-span-3 text-right">Action</div></div>
+                <div id="admin-user-list" class="divide-y divide-stone-100 text-sm"><div class="p-8 text-center text-stone-500">Loading roster...</div></div>
+            </div>
+        </div>
+    </main>
+
     <!-- VIEW: ADMIN, GUIDES, FAQ (Generated by JS) -->
     <div id="dynamic-views"></div>
 
-    <!-- MODALS CONTAINER -->
-    <div id="modals"></div>
+    <!-- MODALS RESTORED -->
+    <div id="modal-login" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
+            <button onclick="UI.closeModal('login')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <h2 class="text-2xl font-serif font-bold text-center mb-6">Log In</h2>
+            <button onclick="handleGoogleLogin()" class="w-full bg-white border border-stone-300 py-3 rounded-lg mb-4 flex justify-center gap-2 font-bold text-stone-700"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5"> Google</button>
+            <div class="text-center text-stone-400 text-sm mb-4">- OR -</div>
+            <form onsubmit="handleEmailLogin(event)"><input id="login-email" type="email" placeholder="Email" class="w-full mb-3 px-4 py-3 bg-stone-50 border rounded-lg" required><input id="login-pass" type="password" placeholder="Password" class="w-full mb-6 px-4 py-3 bg-stone-50 border rounded-lg" required><button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Log In</button></form>
+            <p id="login-error" class="text-red-500 text-center mt-4 text-sm hidden"></p>
+        </div>
+    </div>
+    
+    <div id="modal-register" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
+            <button onclick="UI.closeModal('register')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <h2 class="text-2xl font-serif font-bold text-center mb-2">New Account</h2>
+            <p class="text-center text-stone-500 text-sm mb-6">Enter the invite code from Elliot.</p>
+            <form onsubmit="handleRegister(event)"><label class="text-xs font-bold text-stone-500 uppercase">Invite Code</label><input id="reg-code" type="text" placeholder="e.g. FAMILY" class="w-full mb-4 px-4 py-3 bg-stone-50 border rounded-lg uppercase tracking-widest" required><label class="text-xs font-bold text-stone-500 uppercase">Your Email</label><input id="reg-email" type="email" placeholder="you@example.com" class="w-full mb-4 px-4 py-3 bg-stone-50 border rounded-lg" required><label class="text-xs font-bold text-stone-500 uppercase">Create Password</label><input id="reg-pass" type="password" placeholder="Min 6 chars" class="w-full mb-6 px-4 py-3 bg-stone-50 border rounded-lg" required minlength="6"><button type="submit" id="reg-btn" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Create Account</button></form>
+            <p id="reg-error" class="text-red-500 text-center mt-4 text-sm hidden"></p>
+        </div>
+    </div>
+
+    <!-- Admin Edit Modal -->
+    <div id="modal-edit" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl w-full relative my-8">
+            <button onclick="UI.closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <h2 id="modal-edit-title" class="text-xl font-serif font-bold mb-6">Edit User & License</h2>
+            <form onsubmit="Admin.saveUser(event)">
+                <input type="hidden" id="edit-uid">
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Real Name</label><input id="edit-realname" type="text" placeholder="e.g. Uncle Bob" class="w-full px-3 py-2 border rounded bg-stone-50 text-sm"></div>
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" readonly class="w-full px-3 py-2 border rounded bg-stone-100 text-stone-500 cursor-not-allowed text-sm"></div>
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Status</label><select id="edit-status" class="w-full px-3 py-2 border rounded text-sm"><option>Pending</option><option>Active</option><option>Expired</option></select></div>
+                </div>
+                <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-6">
+                    <h3 class="text-sm font-bold text-stone-700 mb-3">Product & Billing</h3>
+                    <div class="grid grid-cols-3 gap-4 mb-3">
+                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Product</label><select id="edit-product" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="Demo">Demo (1 Day)</option><option value="1 Month">1 Month</option><option value="3 Months">3 Months</option><option value="6 Months">6 Months</option><option value="1 Year">1 Year</option></select></div>
+                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Expiry Date</label><input id="edit-expiry" type="text" placeholder="Dec 31, 2026" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
+                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Date Paid</label><input id="edit-paydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="text-xs font-bold uppercase text-stone-500">Date Purchased</label><input id="edit-buydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-xs"></div>
+                        <div><label class="text-xs font-bold uppercase text-stone-500">Supporter Status</label><select id="edit-supporter-status" class="w-full px-3 py-2 border rounded bg-white text-xs"><option value="Not Requested">Not Requested</option><option value="Requested - Unpaid">Requested - Unpaid</option><option value="Requested - Paid">Requested - Paid</option><option value="Enabled">Enabled</option></select></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500 mb-1">Server URL</label><select id="edit-server" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="http://cf.taty.website">http://cf.taty.website (Cloudflare)</option><option value="http://taty.website">http://taty.website (Backup)</option></select></div>
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Strong 8K User</label><input id="edit-user" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
+                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Strong 8K Pass</label><input id="edit-pass" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
+                </div>
+                <div class="grid grid-cols-1 gap-4 mb-4">
+                    <div><label class="text-xs font-bold uppercase text-stone-500">EPGenius M3U URL</label><input id="edit-epgenius" type="text" class="w-full px-3 py-2 border rounded font-mono text-xs"></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K M3U</label><input id="edit-m3u" type="text" class="w-full px-3 py-2 border rounded font-mono text-xs"></div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-stone-100 bg-gray-50 p-4 rounded-lg max-h-32 overflow-y-auto">
+                    <h3 class="text-xs font-bold uppercase text-stone-500 mb-2">User's Requested Setup</h3>
+                    <div class="grid grid-cols-2 gap-4 text-xs text-stone-700">
+                        <div><span class="block text-stone-400">Devices:</span><ul id="edit-pref-devices" class="list-disc pl-4 mt-1 font-mono"><li>None listed</li></ul></div>
+                        <div><span class="block text-stone-400">PVR:</span> <span id="edit-pref-pvr" class="font-mono">---</span><br><span class="block text-stone-400 mt-1">Bouquet:</span> <span id="edit-pref-bouquet" class="font-mono">---</span></div>
+                    </div>
+                    <div class="mt-2 text-xs text-stone-700 border-t border-stone-200 pt-2">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><span class="block text-stone-400">Live TV Request:</span><p id="edit-pref-live-note" class="italic">---</p></div>
+                            <div><span class="block text-stone-400">VOD Request:</span><p id="edit-pref-vod-note" class="italic">---</p></div>
+                        </div>
+                        <span class="block text-stone-400 mt-2">Supporter Interest:</span><p id="edit-pref-supporter-interest" class="italic font-bold text-green-700">---</p>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-6 sticky bottom-0 bg-white pt-2 border-t border-stone-100">
+                    <button type="button" onclick="Admin.softDeleteUser()" class="flex-1 bg-red-50 text-red-600 font-bold py-3 rounded-lg hover:bg-red-100 transition">Archive</button>
+                    <button type="submit" class="flex-[2] bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-lg transition">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="modal-supply" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="UI.closeModal('supply')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Record New Supply</h2><form onsubmit="Renderer.saveSupply(event)"><div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Credits</label><input id="supply-credits" type="number" class="w-full px-3 py-2 border rounded" required></div><div class="grid grid-cols-2 gap-4 mb-4"><div><label class="text-xs font-bold uppercase text-stone-500">Cost (CAD)</label><input id="supply-cost" type="number" step="0.01" class="w-full px-3 py-2 border rounded" required></div><div><label class="text-xs font-bold uppercase text-stone-500">BTC</label><input id="supply-btc" type="text" class="w-full px-3 py-2 border rounded"></div></div><div class="mb-6"><label class="text-xs font-bold uppercase text-stone-500">Date</label><input id="supply-date" type="date" class="w-full px-3 py-2 border rounded" required></div><button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Add to Ledger</button></form></div></div>
+    <div id="modal-supply-history" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-lg w-full relative"><button onclick="UI.closeModal('supply-history')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Supply History</h2><div id="supply-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div></div></div>
+    <div id="password-modal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="UI.closePasswordModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold text-center mb-6">Change Password</h2><form onsubmit="UI.handleChangePasswordSubmit(event)"><div class="mb-6"><label class="block text-xs font-bold text-stone-500 mb-2 uppercase">New Password</label><input type="password" id="new-password" required minlength="6" class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg"></div><button type="submit" id="pass-submit-btn" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg hover:bg-stone-800 transition">Update Password</button></form></div></div>
 
     <!-- APP LOGIC -->
     <script type="module">
@@ -283,7 +392,24 @@
             },
             closeModal: (id) => document.getElementById('modal-' + id).classList.add('hidden'),
             copy: (id) => { document.getElementById(id).select(); document.execCommand('copy'); UI.showToast("Copied to clipboard!"); },
-            copyText: (text) => { navigator.clipboard.writeText(text).then(() => UI.showToast(`Copied: ${text}`)); }
+            copyText: (text) => { navigator.clipboard.writeText(text).then(() => UI.showToast(`Copied: ${text}`)); },
+            openChangePasswordModal: () => {
+                if (!auth || !auth.currentUser) return;
+                if (auth.currentUser.providerData.some(p => p.providerId === 'google.com')) return alert("Please change your password via Google.");
+                document.getElementById('new-password').value = "";
+                document.getElementById('password-modal').classList.remove('hidden');
+            },
+            closePasswordModal: () => document.getElementById('password-modal').classList.add('hidden'),
+            handleChangePasswordSubmit: async (e) => {
+                e.preventDefault();
+                try {
+                    await updatePassword(auth.currentUser, document.getElementById('new-password').value);
+                    alert("Success!"); UI.closePasswordModal();
+                } catch (err) { 
+                    if (err.code === 'auth/requires-recent-login') { alert("Please re-login to change password."); Auth.logout(); }
+                    else alert(err.message); 
+                }
+            }
         };
 
         window.App = {
@@ -472,7 +598,7 @@
             }
         };
 
-        // --- ADMIN FUNCTIONS (Top Level) ---
+        // --- ADMIN FUNCTIONS ---
         window.loadAdminData = async () => {
             const list = document.getElementById('admin-user-list');
             list.innerHTML = 'Loading...';
@@ -492,28 +618,82 @@
                      }
                 });
                 list.innerHTML = html || 'No users.';
-                
-                // (Note: To restore full stats logic, copy from previous turn or expand this.
-                // For brevity in this fix, I am ensuring the LIST works primarily.)
             } catch(e) { console.error(e); list.innerHTML = "Error loading admin data"; }
         };
         
         // Ensure Admin object for hydration is available
         window.Admin = {
              hydrateEdit: async (uid) => {
-                 const d = (await getDoc(doc(db, "users", uid))).data();
-                 document.getElementById('edit-uid').value = uid;
-                 document.getElementById('edit-realname').value = d.realName || '';
-                 document.getElementById('edit-email').value = d.email || '';
-                 // ... other fields would be here in full implementation
+                 if(uid) {
+                     const d = (await getDoc(doc(db, "users", uid))).data();
+                     document.getElementById('modal-edit-title').innerText = "Edit User";
+                     document.getElementById('edit-uid').value = uid;
+                     // Map fields
+                     document.getElementById('edit-realname').value = d.realName || '';
+                     document.getElementById('edit-email').value = d.email || '';
+                     document.getElementById('edit-email').readOnly = true;
+                     document.getElementById('edit-status').value = d.status || 'Pending';
+                     document.getElementById('edit-product').value = d.product || 'Demo';
+                     document.getElementById('edit-expiry').value = d.expiry || '';
+                     document.getElementById('edit-paydate').value = d.payDate || '';
+                     document.getElementById('edit-buydate').value = d.buyDate || '';
+                     document.getElementById('edit-server').value = d.serverUrl || 'http://cf.taty.website';
+                     document.getElementById('edit-user').value = d.username || '';
+                     document.getElementById('edit-pass').value = d.password || '';
+                     document.getElementById('edit-epgenius').value = d.epgeniusM3u || '';
+                     document.getElementById('edit-m3u').value = d.m3uUrl || '';
+                     document.getElementById('edit-supporter-status').value = d.supporterStatus || 'Not Requested';
+                     // Prefs read-only
+                     const deviceList = (d.devices || []).map(dev => window.getDeviceName(dev.type)).join(', ') || 'None';
+                     document.getElementById('edit-pref-devices').innerHTML = deviceList;
+                     document.getElementById('edit-pref-pvr').innerText = d.pvrPreference || '---';
+                     document.getElementById('edit-pref-bouquet').innerText = d.bouquetPreference || '---';
+                     document.getElementById('edit-pref-live-note').innerText = d.liveBouquet || '---';
+                     document.getElementById('edit-pref-vod-note').innerText = d.vodBouquet || '---';
+                     document.getElementById('edit-pref-supporter-interest').innerText = d.supporterRequest ? "Yes, Requested" : "No";
+                 } else {
+                     // Add New
+                     document.getElementById('modal-edit-title').innerText = "Add Manual Client";
+                     document.getElementById('edit-uid').value = "";
+                     document.querySelectorAll('#modal-edit input').forEach(i => i.value = '');
+                     document.getElementById('edit-status').value = 'Active';
+                     document.getElementById('edit-product').value = '1 Month';
+                     document.getElementById('edit-server').value = 'http://cf.taty.website';
+                     document.getElementById('edit-email').readOnly = false;
+                 }
              },
              saveUser: async (e) => {
                  e.preventDefault();
                  const uid = document.getElementById('edit-uid').value;
-                 // Simplistic save for fix demonstration
-                 const data = { realName: document.getElementById('edit-realname').value };
+                 const data = {
+                    realName: document.getElementById('edit-realname').value,
+                    status: document.getElementById('edit-status').value,
+                    product: document.getElementById('edit-product').value,
+                    expiry: document.getElementById('edit-expiry').value,
+                    payDate: document.getElementById('edit-paydate').value,
+                    buyDate: document.getElementById('edit-buydate').value,
+                    serverUrl: document.getElementById('edit-server').value,
+                    username: document.getElementById('edit-user').value,
+                    password: document.getElementById('edit-pass').value,
+                    epgeniusM3u: document.getElementById('edit-epgenius').value,
+                    m3uUrl: document.getElementById('edit-m3u').value,
+                    supporterStatus: document.getElementById('edit-supporter-status').value,
+                    isSupporter: document.getElementById('edit-supporter-status').value === "Enabled"
+                 };
+                 
+                 if(!uid) data.email = document.getElementById('edit-email').value;
+
                  if(uid) await updateDoc(doc(db, "users", uid), data);
                  else await addDoc(collection(db, "users"), { ...data, created: new Date().toISOString() });
+                 
+                 UI.closeModal('edit'); window.loadAdminData();
+                 UI.showToast("User saved.");
+             },
+             softDeleteUser: async () => {
+                 const uid = document.getElementById('edit-uid').value;
+                 if (!uid) { UI.closeModal('edit'); return; }
+                 if (!confirm("Are you sure? This will hide the user.")) return;
+                 await updateDoc(doc(db, "users", uid), { deleted: true, deletedAt: new Date().toISOString() });
                  UI.closeModal('edit'); window.loadAdminData();
              }
         };
@@ -563,7 +743,7 @@
                 });
             },
             renderModal: (id) => {
-                // Lazy render placeholder
+                // Intentionally left blank as modals are now static HTML in body for robustness
             },
             loadView: (view) => {
                 if(view === 'faq') {
@@ -580,6 +760,32 @@
                     // Populate Guides
                     document.getElementById('view-guides').innerHTML = `<div class="max-w-4xl mx-auto px-4 text-center mt-10">... Guides Content ...</div>`;
                 }
+            },
+            // Supply Functions
+            saveSupply: async (e) => {
+                e.preventDefault();
+                const newBatch = { credits: Number(document.getElementById('supply-credits').value), cost: Number(document.getElementById('supply-cost').value), btc: document.getElementById('supply-btc').value, date: document.getElementById('supply-date').value };
+                const metaRef = doc(db, "business_data", "supply_ledger");
+                const snap = await getDoc(metaRef);
+                if (snap.exists()) await updateDoc(metaRef, { batches: arrayUnion(newBatch) });
+                else await setDoc(metaRef, { batches: [{ credits: 120, cost: 403.42, date: "2026-01-01" }, newBatch] });
+                UI.closeModal('supply'); window.loadAdminData();
+            },
+            renderSupplyHistory: () => {
+                 const list = document.getElementById('supply-history-list');
+                 // Note: Needs global allSupplyBatches, or fetch again. For simplicity, just refetch for now to be safe or store state.
+                 // Ideally supply batches should be stored in App state.
+                 // For now, let's assume loadAdminData has run and populated a variable or we fetch.
+                 // To fix properly, let's just make it simpler: fetch on open.
+                 (async () => {
+                     const supplyDoc = await getDoc(doc(db, "business_data", "supply_ledger"));
+                     const batches = supplyDoc.exists() ? supplyDoc.data().batches : [];
+                     let html = '';
+                     batches.forEach((batch, index) => {
+                         html += `<div class="flex justify-between p-2 border-b"><span>${batch.credits} Creds</span><span>$${batch.cost}</span></div>`;
+                     });
+                     list.innerHTML = html || 'No history';
+                 })();
             }
         };
 
