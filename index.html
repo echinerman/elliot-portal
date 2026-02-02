@@ -18,8 +18,10 @@
         }
     </script>
     <style>
+        /* Simplified View Logic for Stability */
         .view-section { display: none; }
         .view-section.active { display: block; }
+        
         .toast { visibility: hidden; opacity: 0; transform: translateY(20px); transition: all 0.3s; }
         .toast.show { visibility: visible; opacity: 1; transform: translateY(0); }
         .tooltip-trigger:hover .tooltip-content { visibility: visible; opacity: 1; }
@@ -31,6 +33,7 @@
 </head>
 <body class="font-sans text-stone-800 antialiased bg-stone-50">
 
+    <!-- NAV -->
     <nav class="fixed w-full bg-stone-50/90 backdrop-blur-md border-b border-stone-200 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20 items-center">
@@ -45,12 +48,13 @@
         <div id="mobile-menu" class="hidden md:hidden bg-stone-50 border-t border-stone-200 absolute w-full px-4 pt-4 pb-6 space-y-2 shadow-xl"></div>
     </nav>
 
+    <!-- TOAST -->
     <div id="toast" class="toast fixed bottom-6 right-6 z-[100] max-w-sm w-full bg-stone-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
         <div class="text-green-400 text-xl"><i class="fas fa-check-circle"></i></div>
-        <div><h4 class="font-bold text-sm">Success</h4><p class="text-xs text-stone-400" id="toast-msg">Updated successfully.</p></div>
+        <div><h4 class="font-bold text-sm">Success</h4><p class="text-xs text-stone-400" id="toast-msg">Changes saved.</p></div>
     </div>
 
-    <!-- VIEW: HOME -->
+    <!-- VIEW: HOME (Public) -->
     <main id="view-home" class="view-section active">
         <section class="min-h-screen flex items-center justify-center text-center px-4">
             <div class="max-w-3xl -mt-20">
@@ -65,7 +69,7 @@
         </section>
     </main>
 
-    <!-- VIEW: DASHBOARD -->
+    <!-- VIEW: DASHBOARD (Client) -->
     <main id="view-dashboard" class="view-section pt-32 pb-24 min-h-screen">
         <div class="max-w-6xl mx-auto px-4">
             <div class="flex justify-between items-end mb-10">
@@ -79,6 +83,7 @@
                 <button type="button" onclick="Auth.logout()" class="text-sm text-red-600 hover:text-red-800 font-medium">Sign Out</button>
             </div>
 
+            <!-- STATES -->
             <div id="state-disabled" class="hidden bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
                 <i class="fas fa-ban text-3xl text-red-600 mb-4"></i>
                 <h2 class="text-xl font-bold text-red-800">Account Deactivated</h2>
@@ -95,12 +100,40 @@
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
                         <h3 class="font-bold text-stone-900 mb-4 text-sm uppercase tracking-wider border-b border-stone-100 pb-2">Renewal Calculator</h3>
                         <div id="pricing-rows" class="space-y-2 mb-4"></div> 
+                        <div class="flex justify-between items-center py-2 border-t border-stone-100 mb-2">
+                            <span class="text-xs font-bold text-stone-500">Supporter (+$20)</span>
+                            <input type="checkbox" id="calc-supporter" onchange="Calc.updateTotal()" class="w-4 h-4 text-green-600 rounded">
+                        </div>
                         <div class="bg-stone-50 p-3 rounded-lg flex justify-between items-center mb-4">
                             <span class="font-bold text-stone-700">Total:</span><span id="calc-total" class="font-bold text-xl text-blue-600">$0.00</span>
                         </div>
+                        
+                        <label class="text-xs font-bold text-stone-400 uppercase block mb-2">Payment Method</label>
+                        <select id="pay-method" onchange="Calc.toggleMethod()" class="w-full px-3 py-2 border rounded-lg text-sm mb-3">
+                            <option value="interac">Interac e-Transfer</option>
+                            <option value="bitcoin">Bitcoin</option>
+                        </select>
+                        <div id="pay-details" class="text-xs bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4"></div>
+
                         <button type="button" onclick="Calc.sendRequest()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-lg">
                             <i class="fab fa-facebook-messenger"></i> Request Renewal
                         </button>
+                    </div>
+
+                    <!-- Supporter Status -->
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-stone-900 text-sm">GanjaRelease Supporter</h3>
+                            <span id="dash-supporter-badge" class="px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold">Inactive</span>
+                        </div>
+                        <div id="supporter-content" class="text-xs text-stone-500"></div>
+                        <div id="dash-supporter-active" class="hidden mt-2">
+                             <p class="text-xs text-green-600 mb-2 font-medium"><i class="fas fa-check-circle mr-1"></i> Active</p>
+                             <div id="dash-supporter-list" class="h-32 overflow-y-auto bg-stone-50 rounded border border-stone-100 p-2 text-[10px] font-mono text-stone-600 leading-tight"></div>
+                        </div>
+                        <div id="dash-supporter-inactive" class="mt-2 text-xs text-stone-500 hidden">
+                             <p>Support the creator (+$20) to unlock premium EPG updates.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -111,10 +144,13 @@
                         <form onsubmit="Client.saveConfig(event)">
                             <div class="mb-10">
                                 <h3 class="font-bold text-sm uppercase text-stone-400 tracking-wider mb-4">My Roster</h3>
-                                <div id="device-selection-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                                    <!-- Dynamic Device Tag Buttons -->
+                                <div class="grid grid-cols-3 gap-3 mb-4">
+                                    <button type="button" onclick="Client.addDevice('tv')" class="p-3 border rounded-xl hover:bg-stone-50 flex flex-col items-center gap-1"><i class="fas fa-tv text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500">TV Device</span></button>
+                                    <button type="button" onclick="Client.addDevice('mobile')" class="p-3 border rounded-xl hover:bg-stone-50 flex flex-col items-center gap-1"><i class="fas fa-mobile-alt text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500">Mobile</span></button>
+                                    <button type="button" onclick="Client.addDevice('computer')" class="p-3 border rounded-xl hover:bg-stone-50 flex flex-col items-center gap-1"><i class="fas fa-laptop text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500">PC/Mac</span></button>
                                 </div>
                                 <div id="device-list" class="space-y-2 mb-2 p-4 bg-stone-50 rounded-xl min-h-[50px] text-xs"></div>
+                                <p class="text-xs text-stone-400 text-center italic mt-4 hidden" id="empty-device-msg">No devices added. Add one above.</p>
                             </div>
 
                             <hr class="border-stone-100 mb-8">
@@ -179,6 +215,7 @@
         </div>
     </div>
 
+    <!-- Admin Edit Modal -->
     <div id="modal-edit" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl p-8 max-w-2xl w-full relative my-8 shadow-2xl">
             <button type="button" onclick="UI.closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
@@ -202,6 +239,7 @@
                 </div>
                 <button type="button" onclick="Admin.addLicenseRow()" class="text-xs text-blue-600 font-bold">+ Add License Slot</button>
                 <hr>
+                <div class="mb-4"><label>Supporter:</label> <select id="edit-supporter-status" class="border p-2 rounded"><option>Not Requested</option><option>Enabled</option></select></div>
                 <button type="submit" class="bg-stone-900 text-white p-3 rounded-lg w-full font-bold">Update Account</button>
             </form>
         </div>
@@ -210,21 +248,33 @@
     <!-- APP SCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, getDocs, query, where, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // --- CONSTANTS ---
         const CONFIG = {
             ADMIN_EMAIL: "e.chinerman@gmail.com",
             INVITE_CODE: "FAMILY8K",
-            FB_LINK: "https://m.me/rds.ca"
+            FB_LINK: "https://m.me/rds.ca",
+            PAY_INTERAC: ["e.chinerman@gmail.com", "514-943-5664"],
+            PAY_BTC: { lightning: "gogobonobo@shakepay.me", chain: "bc1q6fu87a280v4g6wcjgu2kewv8qyuh3vl93deta8v297r4prswu4dqqxx3xw" }
         };
+
+        const PRODUCTS = { 'Demo': {c:0,p:0}, '1 Month': {c:1,p:10}, '3 Months': {c:3,p:25}, '6 Months': {c:6,p:40}, '1 Year': {c:12,p:60} };
+        
+        const TAGS = {
+            live: ['All English', 'All French', 'Sports', 'News', 'Kids', 'UK Channels'], 
+            vod: ['All Movies', 'All Series', 'English Only', 'French Only', 'No Horror'] 
+        };
+
+        const SUPPORTER_CATS = ["✅CA| SPORTSNET+ PPV", "✅CA| WHL PPV", "✅CA| TSN+ PPV", "✅CA| PRIME PPV", "✅NFL Sunday Ticket", "✅NBA League Pass", "✅UFC Fight Pass", "✅F1 TV", "✅DAZN PPV", "✅Peacock PPV", "✅Flo Sports"]; 
 
         const firebaseConfig = { apiKey: "AIzaSyAH5CRCJoktmY6baXshDnOVgylHldcPa3E", authDomain: "elliotvip.firebaseapp.com", projectId: "elliotvip", storageBucket: "elliotvip.firebasestorage.app", messagingSenderId: "223494244969", appId: "1:223494244969:web:edcf227f756ac76ba170f8" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- CONFIG SERVICE (Pulls from Firestore app_config/settings) ---
+        // --- CONFIG SERVICE ---
         window.Config = {
             data: {
                 PRODUCTS: { '1 Month': {p:10}, '3 Months': {p:25}, '1 Year': {p:60} },
@@ -244,7 +294,7 @@
                 Renderer.renderDeviceGrid();
             },
             seed: async () => {
-                if(!confirm("Push current settings to Database? This will define your dropdowns and prices.")) return;
+                if(!confirm("Push current settings to Database?")) return;
                 await setDoc(doc(db, "app_config", "settings"), window.Config.data);
                 UI.showToast("Database Synced!");
             }
@@ -295,7 +345,10 @@
                 document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
                 document.getElementById('view-' + view).classList.add('active');
                 document.getElementById('mobile-menu').classList.add('hidden');
-                if(view === 'admin') window.loadAdminData();
+                
+                // IMPORTANT: Trigger data load based on view
+                if(view === 'admin' && auth.currentUser?.email === CONFIG.ADMIN_EMAIL) window.loadAdminData();
+                if(view === 'dashboard' && auth.currentUser) Client.loadData(auth.currentUser.uid);
             },
             showToast: (msg) => {
                 const t = document.getElementById('toast');
@@ -307,11 +360,41 @@
             closeModal: (id) => document.getElementById('modal-' + id).classList.add('hidden'),
             copyText: (text) => {
                 navigator.clipboard.writeText(text).then(() => UI.showToast("Copied!"));
+            },
+            copy: (id) => {
+                document.getElementById(id).select();
+                document.execCommand('copy');
+                UI.showToast("Copied!");
             }
+        };
+
+        window.App = {
+            init: () => {
+                Config.load();
+                onAuthStateChanged(auth, async (user) => {
+                    Renderer.updateNav(user);
+                    if (user) {
+                        UI.closeModal('login'); UI.closeModal('register');
+                        await Auth.ensureDoc(user);
+                        const currentView = document.querySelector('.view-section.active')?.id.replace('view-', '') || 'home';
+                        
+                        // Force redirect logic on login
+                        if(currentView === 'home') {
+                             UI.switchView(user.email === CONFIG.ADMIN_EMAIL ? 'admin' : 'dashboard');
+                        } else {
+                             // Already on a view, refresh data
+                             if(currentView === 'dashboard') Client.loadData(user.uid);
+                             if(currentView === 'admin' && user.email === CONFIG.ADMIN_EMAIL) window.loadAdminData();
+                        }
+                    } else { UI.switchView('home'); }
+                });
+            },
+            handleTitleClick: () => auth.currentUser ? UI.switchView('dashboard') : UI.switchView('home')
         };
 
         // --- CLIENT DASHBOARD ---
         window.Client = {
+            calcState: { '1 Month': 0, '3 Months': 0, '1 Year': 0 },
             loadData: async (uid) => {
                 const snap = await getDoc(doc(db, "users", uid));
                 if (snap.exists()) {
@@ -331,7 +414,7 @@
                     
                     // Render Licenses
                     const container = document.getElementById('license-container');
-                    container.innerHTML = d.licenses?.length ? '' : '<div class="bg-stone-100 p-4 rounded-xl text-xs text-stone-500 text-center italic">No active licenses found. Use the calculator to request one.</div>';
+                    container.innerHTML = (d.licenses && d.licenses.length) ? '' : '<div class="bg-stone-100 p-4 rounded-xl text-xs text-stone-500 text-center italic">No active licenses found. Use the calculator to request one.</div>';
                     
                     d.licenses?.forEach((lic, i) => {
                         const div = document.createElement('div');
@@ -346,8 +429,9 @@
                                 <div><p class="text-[10px] text-stone-400 uppercase font-bold">Expiry</p><p class="text-sm font-mono">${lic.expiry || '---'}</p></div>
                             </div>
                             <div class="space-y-2 pt-3 border-t border-stone-50">
-                                <div class="flex justify-between text-xs"><span class="text-stone-400">User:</span><code class="font-bold">${lic.username || '---'}</code></div>
-                                <div class="flex justify-between text-xs"><span class="text-stone-400">Pass:</span><code class="font-bold">${lic.password || '---'}</code></div>
+                                <div class="flex justify-between text-xs"><span class="text-stone-400">User:</span><code class="font-bold select-all">${lic.username || '---'}</code></div>
+                                <div class="flex justify-between text-xs"><span class="text-stone-400">Pass:</span><code class="font-bold select-all">${lic.password || '---'}</code></div>
+                                <div class="flex justify-between text-xs"><span class="text-stone-400">Server:</span><code class="font-bold select-all">http://cf.taty.website</code></div>
                                 <button type="button" onclick="UI.copyText('${lic.epgeniusM3u}')" class="w-full mt-2 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase hover:bg-blue-100 transition">Copy EPGenius M3U</button>
                             </div>
                         `;
@@ -359,6 +443,19 @@
                     Client.renderSavedDevices(d.devices || []);
                     Client.renderSavedTags(d.liveTags || [], 'live');
                     Client.renderSavedTags(d.vodTags || [], 'vod');
+                    
+                    // Supporter
+                    const sStatus = d.supporterStatus || "Not Requested";
+                    const sActive = document.getElementById('dash-supporter-active');
+                    const sInactive = document.getElementById('dash-supporter-inactive');
+                    if(sStatus === "Enabled") {
+                        document.getElementById('dash-supporter-badge').innerText = "Active";
+                        sActive.classList.remove('hidden'); sInactive.classList.add('hidden');
+                        document.getElementById('dash-supporter-list').innerHTML = SUPPORTER_CATS.map(c => `<div>${c}</div>`).join('');
+                    } else {
+                        document.getElementById('dash-supporter-badge').innerText = sStatus;
+                        sActive.classList.add('hidden'); sInactive.classList.remove('hidden');
+                    }
                 }
             },
             addDevice: (name) => {
@@ -387,7 +484,8 @@
                 
                 await updateDoc(doc(db, "users", auth.currentUser.uid), {
                     devices, liveTags, vodTags,
-                    customNote: document.getElementById('cfg-custom-note').value
+                    customNote: document.getElementById('cfg-custom-note').value,
+                    supporterRequest: document.getElementById('cfg-supporter').checked
                 });
                 UI.showToast("Configuration Saved");
             }
@@ -407,16 +505,24 @@
                 Object.entries(window.Calc.state).forEach(([name, qty]) => {
                     t += (Config.data.PRODUCTS[name]?.p || 0) * qty;
                 });
+                if(document.getElementById('calc-supporter').checked) t += 20;
                 document.getElementById('calc-total').innerText = `$${t.toFixed(2)}`;
             },
+            toggleMethod: () => {
+                 const m = document.getElementById('pay-method').value;
+                 document.getElementById('pay-details').innerHTML = m === 'interac' ? 
+                    `<div class="space-y-1"><p>Send to:</p><div class="flex justify-between bg-white p-1 rounded border"><span class="font-mono">${CONFIG.PAY_INTERAC[0]}</span><button type="button" onclick="UI.copyText('${CONFIG.PAY_INTERAC[0]}')"><i class="fas fa-copy"></i></button></div></div>` :
+                    `<div class="space-y-1"><p>Lightning:</p><div class="flex justify-between bg-white p-1 rounded border"><span class="font-mono truncate w-48">${CONFIG.PAY_BTC.lightning}</span><button type="button" onclick="UI.copyText('${CONFIG.PAY_BTC.lightning}')"><i class="fas fa-copy"></i></button></div></div>`;
+            },
             sendRequest: () => {
-                const summary = Object.entries(window.Calc.state).filter(([n,q]) => q > 0).map(([n,q]) => `${q}x ${n}`).join(', ');
-                const msg = `License Request: ${summary} (Total: ${document.getElementById('calc-total').innerText})`;
+                const total = document.getElementById('calc-total').innerText;
+                const plans = Object.entries(window.Calc.state).filter(([n,q]) => q > 0).map(([n,q]) => `${q}x ${n}`).join(', ');
+                const msg = `License Request: ${plans} (Total: ${total})`;
                 window.open(`${CONFIG.FB_LINK}?text=${encodeURIComponent(msg)}`, '_blank');
             }
         };
 
-        // --- ADMIN ---
+        // --- ADMIN FUNCTIONS ---
         window.loadAdminData = async () => {
             const list = document.getElementById('admin-user-list');
             list.innerHTML = '<div class="p-8 text-center text-stone-400">Fetching client roster...</div>';
@@ -460,7 +566,8 @@
                 document.getElementById('edit-email').value = d.email;
                 document.getElementById('edit-email').readOnly = true;
                 document.getElementById('edit-account-status').value = d.accountStatus || 'Active';
-                
+                document.getElementById('edit-supporter-status').value = d.supporterStatus || 'Not Requested';
+
                 (d.licenses || []).forEach((lic, i) => Admin.addLicenseRow(lic));
             },
             addLicenseRow: (data = {}) => {
@@ -496,6 +603,7 @@
                 const data = {
                     realName: document.getElementById('edit-realname').value,
                     accountStatus: document.getElementById('edit-account-status').value,
+                    supporterStatus: document.getElementById('edit-supporter-status').value,
                     licenses
                 };
 
@@ -510,15 +618,18 @@
             }
         };
 
-        // --- RENDERERS ---
+        // --- RENDERER (Clean HTML Generation) ---
         window.Renderer = {
-            initNav: () => { document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden'); },
+            initNav: () => {
+                document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
+            },
             updateNav: (user) => {
                 const nav = document.getElementById('desktop-nav');
                 nav.innerHTML = user ? `${user.email === CONFIG.ADMIN_EMAIL ? `<button type="button" onclick="UI.switchView('admin')" class="font-bold text-blue-600 mr-4">ADMIN</button>` : ''}<button type="button" onclick="UI.switchView('dashboard')" class="font-medium hover:text-stone-900 transition">Dashboard</button>` : `<button type="button" onclick="UI.openModal('login')" class="font-medium">Log In</button>`;
             },
             renderPricing: () => {
                 const c = document.getElementById('pricing-rows');
+                if(!c) return;
                 c.innerHTML = Object.entries(Config.data.PRODUCTS).map(([name, v]) => `
                     <div class="flex justify-between items-center bg-stone-50 p-2 rounded">
                         <span class="text-xs font-bold">${name} ($${v.p})</span>
@@ -532,6 +643,7 @@
             renderTags: () => {
                 ['live', 'vod'].forEach(type => {
                     const c = document.getElementById(`tags-${type}`);
+                    if(!c) return;
                     c.innerHTML = Config.data.TAGS[type].map(tag => `<button type="button" onclick="this.classList.toggle('bg-stone-900'); this.classList.toggle('text-white')" class="px-3 py-1 border rounded-full text-xs hover:bg-stone-100 transition">${tag}</button>`).join('');
                 });
             },
@@ -547,10 +659,12 @@
         window.getIcon = (t) => t.includes('TV') ? 'tv' : (t.includes('Phone') ? 'mobile-alt' : 'laptop');
 
         document.addEventListener('DOMContentLoaded', () => {
-            App.init();
+             App.init();
         });
 
-        window.App = App;
+        window.handleEmailLogin = Auth.loginEmail;
+        window.handleGoogleLogin = Auth.loginGoogle;
+        window.handleRegister = Auth.register;
     </script>
 </body>
 </html>
