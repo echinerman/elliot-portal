@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>goelliot.vip | Private Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -18,24 +18,23 @@
         }
     </script>
     <style>
-        .view-section { display: none; opacity: 0; transition: opacity 0.3s ease-in-out; }
-        .view-section.active { display: block; opacity: 1; }
-        .toast { visibility: hidden; opacity: 0; transform: translateY(20px); transition: all 0.3s; }
-        .toast.show { visibility: visible; opacity: 1; transform: translateY(0); }
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Tooltip Styles */
         .tooltip-trigger:hover .tooltip-content { visibility: visible; opacity: 1; }
         .tooltip-content { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f5f5f4; }
-        ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
     </style>
 </head>
 <body class="font-sans text-stone-800 antialiased bg-stone-50">
 
-    <!-- NAV -->
+    <!-- Navigation -->
     <nav class="fixed w-full bg-stone-50/90 backdrop-blur-md border-b border-stone-200 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20 items-center">
-                <div class="flex items-center gap-3 cursor-pointer" onclick="App.handleTitleClick()">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="switchView('home')">
                     <div class="w-10 h-10 border border-stone-800 rounded-full flex items-center justify-center text-stone-800"><i class="fas fa-tv"></i></div>
                     <span class="font-serif font-semibold text-2xl text-stone-900">goelliot.vip</span>
                 </div>
@@ -43,201 +42,437 @@
                 <button id="mobile-menu-btn" class="md:hidden text-stone-800 p-2"><i class="fas fa-bars text-xl"></i></button>
             </div>
         </div>
-        <div id="mobile-menu" class="hidden md:hidden bg-stone-50 border-t border-stone-200 absolute w-full px-4 pt-4 pb-6 space-y-2 shadow-xl"></div>
+        <div id="mobile-menu" class="hidden md:hidden bg-stone-50 border-t border-stone-200 absolute w-full px-4 pt-4 pb-6 space-y-2">
+            <div id="mobile-nav" class="space-y-2"></div>
+        </div>
     </nav>
 
-    <!-- TOAST -->
-    <div id="toast" class="toast fixed bottom-6 right-6 z-[100] max-w-sm w-full bg-stone-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
-        <div class="text-green-400 text-xl"><i class="fas fa-check-circle"></i></div>
-        <div><h4 class="font-bold text-sm">Success</h4><p class="text-xs text-stone-400" id="toast-msg">Changes saved.</p></div>
-    </div>
-
-    <!-- VIEW: HOME (Public) -->
+    <!-- VIEW: HOME -->
     <main id="view-home" class="view-section active">
         <section class="min-h-screen flex items-center justify-center text-center px-4">
-            <div class="max-w-3xl -mt-20">
-                <span class="inline-block py-1 px-4 border border-stone-300 rounded-full text-stone-600 text-sm mb-8 bg-white/50 backdrop-blur">Members Only</span>
+            <div class="max-w-3xl">
+                <span class="inline-block py-1 px-4 border border-stone-300 rounded-full text-stone-600 text-sm mb-8">Members Only</span>
                 <h1 class="font-serif text-5xl md:text-7xl text-stone-900 mb-8">Private Viewing Infrastructure</h1>
-                <p class="text-xl text-stone-600 mb-12 max-w-xl mx-auto">A curated 4K experience for friends and family.</p>
+                <p class="text-xl text-stone-600 mb-12">A curated 4K experience for friends and family.</p>
                 <div class="flex justify-center gap-4">
-                    <button onclick="UI.openModal('login')" class="px-8 py-3 bg-stone-900 text-white rounded-full hover:bg-stone-700 transition shadow-lg">Log In</button>
-                    <button onclick="UI.openModal('register')" class="px-8 py-3 border border-stone-300 bg-white rounded-full hover:bg-stone-50 transition shadow-sm">Register</button>
+                    <button onclick="openModal('login')" class="px-8 py-3 bg-stone-900 text-white rounded-full hover:bg-stone-700 transition">Log In</button>
+                    <button onclick="openModal('register')" class="px-8 py-3 border border-stone-300 rounded-full hover:bg-stone-200 transition">Register</button>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- VIEW: DASHBOARD (Client) -->
+    <!-- VIEW: DASHBOARD (User) -->
     <main id="view-dashboard" class="view-section pt-32 pb-24 min-h-screen">
         <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between items-end mb-10">
-                <div><h1 class="font-serif text-3xl text-stone-900">My Dashboard</h1><p class="text-stone-500 text-sm mt-1" id="dash-welcome">Welcome back.</p></div>
-                <button onclick="Auth.logout()" class="text-sm text-red-600 hover:text-red-800 font-medium">Sign Out</button>
+            <!-- Header -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+                <div>
+                    <h1 class="font-serif text-3xl text-stone-900">My Dashboard</h1>
+                    <p class="text-stone-500 text-sm mt-1" id="dash-welcome">Welcome back.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="switchView('config')" class="text-sm bg-white border border-stone-300 px-4 py-2 rounded-lg hover:bg-stone-50 shadow-sm font-medium"><i class="fas fa-sliders-h mr-2"></i> My Configuration</button>
+                    <button onclick="handleLogout()" class="text-sm bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 font-medium">Sign Out</button>
+                </div>
             </div>
 
-            <!-- STATES -->
-            <div id="state-disabled" class="hidden bg-red-50 border border-red-200 rounded-2xl p-8 text-center"><i class="fas fa-ban text-3xl text-red-600 mb-4"></i><h2 class="text-xl font-bold text-red-800">Account Disabled</h2><p class="text-red-700 mt-2">Please contact Elliot for assistance.</p></div>
-            <div id="state-pending" class="hidden bg-yellow-50 border border-yellow-200 rounded-2xl p-8 text-center"><i class="fas fa-clock text-3xl text-yellow-600 mb-4"></i><h2 class="text-xl font-bold text-yellow-800">Account Pending</h2><p class="text-yellow-700 mt-2">Your account is being set up. Check back shortly.</p></div>
+            <!-- Disabled/Deleted State -->
+            <div id="user-disabled" class="hidden bg-red-50 border border-red-200 rounded-2xl p-8 text-center max-w-2xl mx-auto">
+                <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-ban text-2xl"></i></div>
+                <h2 class="text-xl font-bold text-red-800 mb-2">Account Disabled</h2>
+                <p class="text-red-700">This account has been deactivated. Please contact Elliot for assistance.</p>
+            </div>
 
-            <!-- ACTIVE CONTENT -->
-            <div id="state-active" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Col 1: Status & Tools -->
+            <!-- Pending State -->
+            <div id="user-pending" class="hidden bg-yellow-50 border border-yellow-200 rounded-2xl p-8 text-center max-w-2xl mx-auto">
+                <div class="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-clock text-2xl"></i></div>
+                <h2 class="text-xl font-bold text-yellow-800 mb-2">Account Pending</h2>
+                <p class="text-yellow-700">Your account is being set up. Please check back shortly.</p>
+            </div>
+
+            <!-- Active State -->
+            <div id="user-active" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Left Column: Status & Actions -->
                 <div class="space-y-6">
                     <!-- Status Card -->
                     <div class="bg-stone-900 text-stone-50 p-8 rounded-3xl shadow-xl relative overflow-hidden">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-stone-800 rounded-full blur-2xl opacity-50 -mr-10 -mt-10"></div>
-                        <div class="relative z-10">
-                            <div class="flex justify-between items-start mb-6">
-                                <div><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Status</p><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div><span class="text-xl font-bold">Active</span></div></div>
-                            </div>
-                            <div class="border-t border-stone-800 pt-4"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Plan</p><p id="dash-product" class="font-serif text-lg text-white">Standard</p></div>
-                            <div class="pt-4"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Expires</p><p id="dash-expiry" class="font-mono text-lg text-white">---</p></div>
-                        </div>
-                    </div>
-
-                    <!-- Calculator -->
-                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
-                        <h3 class="font-bold text-stone-900 mb-4 text-sm uppercase tracking-wider border-b border-stone-100 pb-2">Renewal Calculator</h3>
-                        <div id="calc-rows" class="space-y-2 mb-4"></div> <!-- JS Injected -->
-                        <div class="flex justify-between items-center py-2 border-t border-stone-100 mb-2">
-                            <span class="text-xs font-bold text-stone-500">Supporter (+$20)</span>
-                            <input type="checkbox" id="calc-supporter" onchange="Calc.updateTotal()" class="w-4 h-4 text-green-600 rounded">
-                        </div>
-                        <div class="bg-stone-50 p-3 rounded-lg flex justify-between items-center mb-4">
-                            <span class="font-bold text-stone-700">Total:</span><span id="calc-total" class="font-bold text-xl text-blue-600">$0.00</span>
-                        </div>
                         
-                        <label class="text-xs font-bold text-stone-400 uppercase block mb-2">Payment Method</label>
-                        <select id="pay-method" onchange="Calc.toggleMethod()" class="w-full px-3 py-2 border rounded-lg text-sm mb-3">
-                            <option value="interac">Interac e-Transfer</option>
-                            <option value="bitcoin">Bitcoin</option>
-                        </select>
-                        <div id="pay-details" class="text-xs bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4"></div>
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Status</p>
+                                <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div><span class="text-xl font-bold">Active</span></div>
+                            </div>
+                            <div class="bg-stone-800 px-3 py-1 rounded text-xs font-mono text-stone-300">License #1</div>
+                        </div>
 
-                        <button onclick="Calc.sendRequest()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-lg"><i class="fab fa-facebook-messenger"></i> Request License</button>
+                        <div class="border-t border-stone-800 pt-4 mt-2">
+                            <p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Current Plan</p>
+                            <p id="dash-product" class="font-serif text-lg text-white">Standard License</p>
+                        </div>
+                        <div class="pt-4">
+                            <p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Expires On</p>
+                            <p id="dash-expiry" class="font-mono text-lg text-white">---</p>
+                        </div>
                     </div>
 
-                    <!-- Supporter Status -->
+                    <!-- Support Card -->
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-stone-900 text-sm">GanjaRelease Supporter</h3>
-                            <span id="supporter-badge" class="px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold">Inactive</span>
+                        <h3 class="font-bold text-stone-900 mb-4 flex items-center gap-2"><i class="fas fa-life-ring text-stone-400"></i> Support</h3>
+                        <div class="space-y-3">
+                            <button id="btn-device-guide" onclick="showSpecificGuide()" class="w-full text-left px-4 py-3 bg-stone-50 hover:bg-stone-100 rounded-xl text-sm font-medium transition flex justify-between items-center group">
+                                <span>View Setup Guide</span>
+                                <i class="fas fa-book text-stone-400 group-hover:text-stone-600"></i>
+                            </button>
+                            <button onclick="switchView('faq')" class="w-full text-left px-4 py-3 bg-stone-50 hover:bg-stone-100 rounded-xl text-sm font-medium transition flex justify-between items-center group">
+                                <span>FAQ & Troubleshooting</span>
+                                <i class="fas fa-question-circle text-stone-400 group-hover:text-stone-600"></i>
+                            </button>
+                            <button id="btn-contact-elliot" class="w-full text-left px-4 py-3 bg-stone-50 hover:bg-stone-100 rounded-xl text-sm font-medium transition flex justify-between items-center group">
+                                <span>Contact Elliot</span>
+                                <i class="fab fa-facebook-messenger text-blue-500 group-hover:text-blue-600"></i>
+                            </button>
                         </div>
-                        <div id="supporter-content" class="text-xs text-stone-500"></div>
                     </div>
                 </div>
 
-                <!-- Col 2&3: Connection & Config -->
-                <div class="lg:col-span-2 space-y-8">
-                    <!-- Connections -->
-                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-stone-200">
-                        <h2 class="font-bold text-2xl font-serif text-stone-900 mb-6">Connection Details</h2>
-                        
-                        <!-- Hero Card -->
-                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8">
-                            <div class="flex gap-4">
-                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0"><i class="fas fa-star"></i></div>
-                                <div class="flex-1">
-                                    <h3 class="font-bold text-blue-900 mb-1">Recommended: EPGenius (GanjaRelease #6)</h3>
-                                    <p class="text-sm text-blue-800/80 mb-3">Smart M3U Playlist with built-in EPG.</p>
-                                    <div class="flex bg-white rounded-lg border border-blue-200 p-1">
-                                        <input id="dash-epgenius" type="text" readonly class="flex-1 px-3 py-2 text-sm font-mono text-stone-600 outline-none bg-transparent" value="...">
-                                        <button onclick="UI.copy('dash-epgenius')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-md text-sm font-medium transition">Copy</button>
-                                    </div>
+                <!-- Right Column: Connection Details -->
+                <div class="bg-white p-8 rounded-3xl shadow-sm border border-stone-200 lg:col-span-2">
+                    <div class="flex items-center justify-between mb-8">
+                        <h2 class="font-bold text-2xl font-serif text-stone-900">Connection Details</h2>
+                        <span id="dash-device-badge" class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider hidden">Firestick 4K</span>
+                    </div>
+
+                    <!-- Recommendation Banner -->
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 relative">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-blue-900 mb-1">Recommended Setup: EPGenius (GanjaRelease #6)</h3>
+                                <p class="text-sm text-blue-800/80 mb-4 leading-relaxed">
+                                    Use this link for the best experience. It is a smart <strong>M3U Playlist URL</strong> (different from the raw connection below) that includes a custom Electronic Program Guide (EPG) automatically.
+                                </p>
+                                <div class="flex bg-white rounded-lg border border-blue-200 p-1">
+                                    <input id="dash-epgenius" type="text" readonly class="flex-1 px-3 py-2 text-sm font-mono text-stone-600 outline-none bg-transparent" value="Loading...">
+                                    <button onclick="copyToClipboard('dash-epgenius')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-md transition font-medium text-sm">Copy Link</button>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Strong 8K -->
-                        <div class="mb-6">
-                            <h3 class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">Strong 8K Credentials</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><label class="text-xs text-stone-500 block mb-1">Server URL</label><div class="flex bg-stone-50 rounded border"><code id="dash-server" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button onclick="UI.copyText('dash-server')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
-                                <div><label class="text-xs text-stone-500 block mb-1">Username</label><div class="flex bg-stone-50 rounded border"><code id="dash-user" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button onclick="UI.copyText('dash-user')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
-                                <div><label class="text-xs text-stone-500 block mb-1">Password</label><div class="flex bg-stone-50 rounded border"><code id="dash-pass" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button onclick="UI.copyText('dash-pass')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
+                    </div>
+                    
+                    <!-- Credentials Grid -->
+                    <div class="mb-8">
+                        <h3 class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">Strong 8K Credentials</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-xs text-stone-500 block mb-1">Server URL (Cloudflare Optimized)</label>
+                                <div class="flex bg-stone-50 rounded-lg border border-stone-200">
+                                    <code id="dash-server" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code>
+                                    <button onclick="copyToClipboardText('dash-server')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <!-- Backup -->
-                        <div class="pt-4 border-t border-stone-100">
-                            <details class="group">
-                                <summary class="flex items-center gap-2 cursor-pointer text-xs font-bold text-stone-400 uppercase hover:text-stone-600 transition"><i class="fas fa-chevron-right group-open:rotate-90 transition-transform"></i> Backup / Raw M3U</summary>
-                                <div class="mt-4 flex bg-stone-50 rounded border p-1"><input id="dash-m3u" readonly class="flex-1 px-3 py-2 text-xs font-mono bg-transparent outline-none text-stone-500" value="..."><button onclick="UI.copy('dash-m3u')" class="text-xs bg-stone-200 px-3 rounded hover:bg-stone-300">Copy</button></div>
-                            </details>
+                            <div>
+                                <label class="text-xs text-stone-500 block mb-1">Username</label>
+                                <div class="flex bg-stone-50 rounded-lg border border-stone-200">
+                                    <code id="dash-user" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code>
+                                    <button onclick="copyToClipboardText('dash-user')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-stone-500 block mb-1">Password</label>
+                                <div class="flex bg-stone-50 rounded-lg border border-stone-200">
+                                    <code id="dash-pass" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code>
+                                    <button onclick="copyToClipboardText('dash-pass')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Config Form -->
-                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-stone-200">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="font-bold text-2xl font-serif text-stone-900">My Configuration</h2>
-                            <span id="device-counter" class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">Active: 0</span>
-                        </div>
-                        <form onsubmit="Client.saveConfig(event)">
-                            <!-- Devices -->
-                            <div class="mb-8">
-                                <div class="grid grid-cols-3 gap-3 mb-4">
-                                    <button type="button" onclick="Client.addDevice('tv')" class="p-3 border rounded-xl hover:bg-stone-50 flex flex-col items-center gap-1"><i class="fas fa-tv text-stone-400"></i><span class="text-[10px] font-bold uppercase text-stone-500">TV</span></button>
-                                    <button type="button" onclick="Client.addDevice('mobile')" class="p-3 border rounded-xl hover:bg-stone-50 flex flex-col items-center gap-1"><i class="fas fa-mobile-alt text-stone-400"></i><span class="text-[10px] font-bold uppercase text-stone-500">Mobile</span></button>
-                                    <button type="button" onclick="Client.addDevice('computer')" class="p-3 border rounded-xl hover:bg-stone-50 flex flex-col items-center gap-1"><i class="fas fa-laptop text-stone-400"></i><span class="text-[10px] font-bold uppercase text-stone-500">PC/Mac</span></button>
-                                </div>
-                                <div id="device-list" class="space-y-2 mb-2 p-4 bg-stone-50 rounded-xl min-h-[50px] text-xs"></div>
-                            </div>
-
-                            <hr class="border-stone-100 mb-8">
-
-                            <!-- Prefs -->
-                            <div class="mb-8">
-                                <div class="mb-6">
-                                    <label class="text-xs font-bold text-stone-500 mb-2 uppercase flex items-center gap-2">Concurrent Connections <i class="fas fa-info-circle text-stone-400 tooltip-trigger relative"><div class="tooltip-content absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-stone-800 text-white text-xs rounded shadow-xl normal-case font-normal z-10">1 License = 1 Device at a time.</div></i></label>
-                                    <select id="cfg-screens" onchange="Client.checkScreens()" class="w-full px-4 py-3 bg-stone-50 border rounded-lg text-sm"><option value="1">1 Connection</option><option value="2">2 Connections</option><option value="3">3 Connections</option><option value="4">4 Connections</option></select>
-                                    <p id="screens-warn" class="hidden text-xs text-amber-600 mt-2 bg-amber-50 p-2 rounded border border-amber-100"><i class="fas fa-exclamation-triangle mr-1"></i> Requires additional license purchase.</p>
-                                </div>
-                                
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                    <div>
-                                        <label class="text-xs font-bold text-stone-500 mb-2 uppercase block">Live TV Bouquet</label>
-                                        <div class="flex flex-wrap gap-2 mb-2" id="tags-live"></div>
-                                        <textarea id="cfg-live-note" rows="2" class="hidden w-full px-3 py-2 bg-stone-50 border rounded-lg text-sm" placeholder="Details..."></textarea>
-                                    </div>
-                                    <div>
-                                        <label class="text-xs font-bold text-stone-500 mb-2 uppercase block">VOD Bouquet</label>
-                                        <div class="flex flex-wrap gap-2 mb-2" id="tags-vod"></div>
-                                        <textarea id="cfg-vod-note" rows="2" class="hidden w-full px-3 py-2 bg-stone-50 border rounded-lg text-sm" placeholder="Details..."></textarea>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-100">
-                                    <input type="checkbox" id="cfg-supporter" class="w-4 h-4 text-green-600 rounded">
-                                    <div><label for="cfg-supporter" class="text-sm font-bold text-green-900 block">Interest in Supporter Status (+$20)</label></div>
+                    <!-- Backup -->
+                    <div class="pt-6 border-t border-stone-100">
+                        <details class="group">
+                            <summary class="flex items-center gap-2 cursor-pointer text-xs font-bold text-stone-400 uppercase hover:text-stone-600 transition">
+                                <i class="fas fa-chevron-right group-open:rotate-90 transition-transform"></i>
+                                Backup / Raw M3U (Inferior EPG)
+                            </summary>
+                            <div class="mt-4 pl-4 border-l-2 border-stone-100">
+                                <p class="text-xs text-stone-500 mb-2">Only use this if the EPGenius link fails.</p>
+                                <div class="flex bg-stone-50 rounded-lg border border-stone-200 p-1">
+                                    <input id="dash-m3u" type="text" readonly class="flex-1 px-3 py-2 text-xs font-mono text-stone-400 outline-none bg-transparent" value="...">
+                                    <button onclick="copyToClipboard('dash-m3u')" class="bg-stone-200 hover:bg-stone-300 text-stone-600 px-3 rounded-md transition text-xs">Copy</button>
                                 </div>
                             </div>
-                            
-                            <button type="submit" class="w-full bg-stone-900 text-stone-50 font-bold py-4 rounded-xl hover:bg-stone-700 transition shadow-lg">Save Configuration</button>
-                        </form>
+                        </details>
                     </div>
-
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- VIEW: ADMIN DASHBOARD -->
+    <!-- VIEW: CONFIGURATION (User Saves Preferences) -->
+    <main id="view-config" class="view-section pt-32 pb-24 min-h-screen">
+        <div class="max-w-4xl mx-auto px-4 relative z-10">
+            <div class="text-center mb-12">
+                <h2 class="font-serif text-4xl md:text-5xl mb-6">My Configuration</h2>
+                <p class="text-stone-400 font-light max-w-2xl mx-auto">
+                    Manage your devices and viewing preferences to help me optimize your experience.
+                </p>
+            </div>
+
+            <form onsubmit="handleUserConfigSave(event)" class="text-left bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
+                <!-- Device Families -->
+                <div class="mb-10">
+                    <h3 class="font-serif text-2xl text-stone-900 mb-4">Device Roster</h3>
+                    <p class="text-sm text-stone-500 mb-4">Select a category to add a device.</p>
+                    
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <button type="button" onclick="addDeviceFromFamily('tv')" class="p-4 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-2 group">
+                            <i class="fas fa-tv text-2xl text-stone-400 group-hover:text-stone-800"></i>
+                            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 group-hover:text-stone-800">TV Device</span>
+                        </button>
+                        <button type="button" onclick="addDeviceFromFamily('mobile')" class="p-4 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-2 group">
+                            <i class="fas fa-mobile-alt text-2xl text-stone-400 group-hover:text-stone-800"></i>
+                            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 group-hover:text-stone-800">Phone/Tablet</span>
+                        </button>
+                        <button type="button" onclick="addDeviceFromFamily('computer')" class="p-4 border border-stone-200 rounded-xl hover:bg-stone-50 hover:border-stone-400 transition flex flex-col items-center gap-2 group">
+                            <i class="fas fa-laptop text-2xl text-stone-400 group-hover:text-stone-800"></i>
+                            <span class="text-xs font-bold uppercase tracking-wider text-stone-500 group-hover:text-stone-800">Computer</span>
+                        </button>
+                    </div>
+
+                    <div id="device-list-container" class="space-y-3 mb-2">
+                        <!-- Dynamic devices injected here -->
+                    </div>
+                    
+                    <p class="text-xs text-stone-400 text-center italic mt-4 hidden" id="empty-device-msg">No devices added. Add one above.</p>
+                </div>
+                
+                <hr class="border-stone-100 mb-8">
+                
+                <!-- Bouquet & Usage -->
+                <div class="mb-10">
+                    <h3 class="font-serif text-2xl text-stone-900 mb-4">Preferences</h3>
+                    
+                    <div class="mb-6">
+                        <label class="text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider flex items-center gap-2">
+                            Concurrent Connections
+                            <div class="relative tooltip-trigger cursor-help">
+                                <i class="fas fa-info-circle text-stone-400"></i>
+                                <div class="tooltip-content absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-stone-800 text-stone-100 text-xs rounded-lg shadow-xl z-10 text-center normal-case font-normal">
+                                    Number of devices watching at the exact same time. 1 License = 1 Connection.
+                                </div>
+                            </div>
+                        </label>
+                        <select id="user-config-screens" onchange="toggleScreenWarning()" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
+                            <option value="1">1 Device at a time</option>
+                            <option value="2">2 Devices simultaneously</option>
+                            <option value="3">3 Devices simultaneously</option>
+                            <option value="4">4 Devices simultaneously</option>
+                        </select>
+                        <p id="screens-warning" class="hidden text-xs text-amber-600 mt-2 font-medium bg-amber-50 p-2 rounded border border-amber-100">
+                            <i class="fas fa-exclamation-triangle mr-1"></i> For each concurrent connection, an additional license is required (only one connection is allowed per license at a time, unfortunately).
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider flex items-center gap-2">
+                                Bouquet Package
+                                <div class="relative tooltip-trigger cursor-help">
+                                    <i class="fas fa-info-circle text-stone-400"></i>
+                                    <div class="tooltip-content absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-stone-800 text-stone-100 text-xs rounded-lg shadow-xl z-10 text-center normal-case font-normal">
+                                        Think of channels as flowers. Categories (Sports, Movies) are the flower types. A 'Bouquet' is how we arrange and tie them together for you.
+                                    </div>
+                                </div>
+                            </label>
+                            <select id="user-config-bouquet" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
+                                <option selected>Standard (US/UK/CA + Sports)</option>
+                                <option>Everything</option>
+                                <option>Sports Only</option>
+                                <option>Minimalist</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Recording (PVR) Needs</label>
+                            <select id="user-config-pvr" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition">
+                                <option>No, I don't need to record.</option>
+                                <option>Yes, I use TiviMate Premium (Self-setup).</option>
+                                <option>Yes, but I need guidance.</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">Live TV Bouquet Requests</label>
+                            <textarea id="user-config-live" rows="3" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Only Sports, UK, and Kids channels. Remove all international."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-stone-500 mb-2 uppercase tracking-wider">VOD Bouquet Requests</label>
+                            <textarea id="user-config-vod" rows="3" class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:ring-1 focus:ring-stone-400 outline-none transition" placeholder="e.g. Add latest Action movies, Netflix series. Remove Horror category."></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Supporter Request -->
+                    <div class="mt-6 flex items-center gap-3 bg-green-50 p-4 rounded-lg border border-green-100">
+                        <input type="checkbox" id="user-config-supporter-req" class="w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
+                        <div>
+                            <label for="user-config-supporter-req" class="text-sm font-bold text-green-900 block">I am interested in GanjaRelease Supporter Status (+$20)</label>
+                            <p class="text-xs text-green-800">Unlocks premium EPG updates for PPV, Sports, and specialized categories.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TiviMate Tip -->
+                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-6 mb-8 flex gap-4">
+                    <div class="text-indigo-600 text-xl pt-1"><i class="fas fa-layer-group"></i></div>
+                    <div>
+                        <h4 class="font-bold text-indigo-900 text-sm mb-1">Pro Tip: TiviMate Premium Configuration</h4>
+                        <p class="text-xs text-indigo-800/80 leading-relaxed">
+                            For the ultimate experience, configure TiviMate with <strong>two playlists</strong>:
+                            <br>1. <strong>Live TV:</strong> Add the EPGenius URL (enable Live TV only).
+                            <br>2. <strong>VOD:</strong> Add the Xtream Codes login (enable Movies/Series only, disable Live TV).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 items-center">
+                    <button type="submit" class="flex-1 bg-stone-900 text-stone-50 font-bold py-4 rounded-xl hover:bg-stone-700 transition-colors shadow-lg">Save Configuration</button>
+                    <button id="btn-notify-elliot" type="button" onclick="notifyElliot()" class="hidden px-6 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg"><i class="fab fa-facebook-messenger mr-2"></i> Notify Elliot</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- VIEW: FAQ -->
+    <main id="view-faq" class="view-section pt-32 pb-24 min-h-screen">
+        <div class="max-w-3xl mx-auto px-4">
+            <h1 class="font-serif text-4xl text-stone-900 mb-10 text-center">Frequently Asked Questions</h1>
+            
+            <div class="space-y-4">
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
+                        How do I set up my Firestick?
+                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
+                    </summary>
+                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
+                        We recommend using <strong>TiviMate Premium</strong> for Firestick. You can find step-by-step instructions in the <button onclick="switchView('guides')" class="text-blue-600 underline">Setup Guides</button> tab.
+                    </div>
+                </details>
+
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
+                        Why is my stream buffering?
+                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
+                    </summary>
+                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
+                        Buffering is usually caused by local internet issues. 
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li>Restart your router and device.</li>
+                            <li>Ensure you are using the <strong>Cloudflare Optimized</strong> server URL found in your Dashboard.</li>
+                            <li>If using WiFi, try moving closer to the router or using a hardwired ethernet connection.</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
+                        Can I watch on multiple TVs at once?
+                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
+                    </summary>
+                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
+                        A standard license allows for <strong>one connection at a time</strong>. If you want to watch on two TVs simultaneously (e.g., Living Room and Bedroom), you will need to purchase an additional license. Please contact Elliot to upgrade.
+                    </div>
+                </details>
+
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
+                        What is EPGenius?
+                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
+                    </summary>
+                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
+                        EPGenius (GanjaRelease #6) is a smart M3U Playlist link. Unlike the raw link from the server, EPGenius automatically organizes channels better and includes a high-quality Electronic Program Guide (EPG) built-in. Always use this link in your player if possible.
+                    </div>
+                </details>
+            </div>
+        </div>
+    </main>
+
+    <!-- VIEW: GUIDES (Private) -->
+    <main id="view-guides" class="view-section pt-32 pb-24 min-h-screen">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h1 class="font-serif text-4xl md:text-6xl text-stone-900 mb-6">Setup Documentation</h1>
+                <p class="text-stone-600 text-lg max-w-2xl mx-auto">Follow these guides to connect your device.</p>
+            </div>
+            <!-- OS Tabs -->
+            <div class="flex justify-center gap-2 mb-12 flex-wrap">
+                <button onclick="showGuide('android')" id="tab-android" class="guide-tab active px-6 py-2 rounded-full border border-stone-300 bg-stone-800 text-white font-medium transition-all">Firestick / Android TV</button>
+                <button onclick="showGuide('ios')" id="tab-ios" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">iOS / Apple TV</button>
+                <button onclick="showGuide('mobile')" id="tab-mobile" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">Android Mobile</button>
+                <button onclick="showGuide('windows')" id="tab-windows" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">Windows / Mac</button>
+            </div>
+            <!-- Guides Content -->
+            <div id="guide-android" class="guide-content bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
+                <h2 class="text-2xl font-bold text-stone-900 mb-4">TiviMate Premium (Recommended)</h2>
+                <div class="prose prose-stone max-w-none text-sm">
+                    <h3 class="font-bold mb-2">Step 1: Install TiviMate</h3>
+                    <ol class="list-decimal pl-5 space-y-2 mb-6">
+                        <li>Install the <strong>Downloader</strong> app from the Amazon App Store.</li>
+                        <li>Enter code: <strong>278077</strong> (Official TiviMate) to download.</li>
+                        <li>Follow prompts to install.</li>
+                    </ol>
+                    <h3 class="font-bold mb-2">Step 2: Premium & Dual Playlist Setup</h3>
+                    <p class="mb-4">To get the best experience (Live TV + VOD), we use two separate lists.</p>
+                    
+                    <h4 class="font-bold text-blue-600 mb-1">List 1: Live TV (EPGenius)</h4>
+                    <ol class="list-decimal pl-5 space-y-2 mb-4">
+                        <li><strong>Settings > Playlists > Add Playlist</strong>. Select <strong>M3U Playlist</strong>.</li>
+                        <li>Enter your <strong>EPGenius M3U URL</strong> (from Dashboard).</li>
+                        <li>Name it "Live TV".</li>
+                        <li><strong>Important:</strong> Manage groups > Hide all VOD groups (Movies/Series).</li>
+                    </ol>
+
+                    <h4 class="font-bold text-indigo-600 mb-1">List 2: VOD (Movies/Series)</h4>
+                    <ol class="list-decimal pl-5 space-y-2">
+                        <li><strong>Add Playlist > Xtream Codes</strong>.</li>
+                        <li>Enter Server, User, Pass from Dashboard. Check "Include VOD".</li>
+                        <li>Name it "VOD".</li>
+                        <li><strong>Important:</strong> Manage groups > Hide all Live TV groups.</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div id="guide-ios" class="guide-content hidden bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl"><h2 class="text-xl font-bold text-stone-900 mb-4">UHF (Paid) or Chillio</h2><ul class="list-disc pl-5 space-y-2"><li>Use <strong>Xtream Codes</strong> login from Dashboard.</li><li>Enter Server URL, User, Pass.</li></ul></div>
+            <div id="guide-mobile" class="guide-content hidden bg-white p-8 rounded-3xl border border-stone-200 shadow-xl"><h2 class="text-xl font-bold mb-4">Android Mobile</h2><p>Download <strong>IPTV Smarters Pro</strong> or <strong>Televizo</strong>.</p></div>
+            <div id="guide-windows" class="guide-content hidden bg-white p-8 rounded-3xl border border-stone-200 shadow-xl"><h2 class="text-xl font-bold mb-4">Windows / Mac</h2><p>We recommend <strong>FredTV</strong> or <strong>OpenTV</strong> (Windows) or <strong>GSE Smart IPTV</strong> (Mac).</p></div>
+        </div>
+    </main>
+
+    <!-- VIEW: ADMIN DASHBOARD (Unchanged layout, hidden for client) -->
     <main id="view-admin" class="view-section pt-32 pb-24 min-h-screen bg-stone-100">
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between items-center mb-8">
                 <h1 class="font-serif text-3xl text-stone-900">Admin Console</h1>
                 <div class="flex gap-2">
-                    <button onclick="UI.openModal('supply')" class="text-xs bg-white border border-stone-300 text-stone-600 px-3 py-2 rounded-lg hover:bg-stone-50 shadow-sm font-bold flex items-center gap-1"><i class="fas fa-coins"></i> Supply</button>
-                    <button onclick="UI.openModal('supply-history'); Renderer.renderSupplyHistory()" class="text-xs bg-white border border-stone-300 text-stone-600 px-3 py-2 rounded-lg hover:bg-stone-50 shadow-sm font-bold"><i class="fas fa-history"></i></button>
+                    <button onclick="openSupplyModal()" class="text-xs bg-white border border-stone-300 text-stone-600 px-3 py-2 rounded-lg hover:bg-stone-50 shadow-sm font-bold flex items-center gap-1"><i class="fas fa-coins"></i> Supply</button>
+                    <button onclick="openSupplyHistory()" class="text-xs bg-white border border-stone-300 text-stone-600 px-3 py-2 rounded-lg hover:bg-stone-50 shadow-sm font-bold"><i class="fas fa-history"></i></button>
                     <div class="w-px bg-stone-300 mx-1 h-8"></div>
-                    <button onclick="UI.openModal('edit'); Admin.hydrateEdit(null)" class="text-xs bg-stone-900 text-white px-3 py-2 rounded-lg hover:bg-stone-700 shadow-md font-bold"><i class="fas fa-plus mr-1"></i> Add Client</button>
-                    <button onclick="window.loadAdminData()" class="text-xs bg-white border border-stone-300 px-3 py-2 rounded-lg hover:bg-stone-50"><i class="fas fa-sync-alt"></i></button>
+                    <button onclick="openEditModal(null)" class="text-xs bg-stone-900 text-white px-3 py-2 rounded-lg hover:bg-stone-700 shadow-md font-bold"><i class="fas fa-plus mr-1"></i> Add Client</button>
+                    <button onclick="loadAdminData()" class="text-xs bg-white border border-stone-300 px-3 py-2 rounded-lg hover:bg-stone-50"><i class="fas fa-sync-alt"></i></button>
                 </div>
             </div>
             <!-- Stats -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                <div class="bg-stone-900 text-white p-6 rounded-2xl shadow-lg"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Credits Remaining</p><div class="flex items-end gap-2"><span id="stat-credits-left" class="text-3xl font-bold">---</span><span id="stat-credits-total" class="text-sm text-stone-400 mb-1">/ ---</span></div><div class="w-full bg-stone-800 h-1.5 rounded-full mt-4 overflow-hidden"><div id="stat-bar" class="bg-green-500 h-full rounded-full" style="width: 0%"></div></div></div>
+                <div class="bg-stone-900 text-white p-6 rounded-2xl shadow-lg">
+                    <p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Credits Remaining</p>
+                    <div class="flex items-end gap-2"><span id="stat-credits-left" class="text-3xl font-bold">---</span><span id="stat-credits-total" class="text-sm text-stone-400 mb-1">/ ---</span></div>
+                    <div class="w-full bg-stone-800 h-1.5 rounded-full mt-4 overflow-hidden"><div id="stat-bar" class="bg-green-500 h-full rounded-full" style="width: 0%"></div></div>
+                </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Total Revenue</p><span id="stat-revenue" class="text-3xl font-bold text-stone-800">$0.00</span></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Net Profit</p><span id="stat-profit" class="text-3xl font-bold text-stone-800">$0.00</span></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Avg Profit / Credit</p><span id="stat-avg" class="text-3xl font-bold text-stone-800">$0.00</span><p id="stat-cost-basis" class="text-xs text-stone-400 mt-1">Cost Basis: $---</p></div>
@@ -245,561 +480,806 @@
             <!-- Roster -->
             <div class="bg-white rounded-3xl shadow-sm border border-stone-200 overflow-hidden">
                 <div class="p-4 border-b border-stone-100 bg-stone-50 flex flex-col md:flex-row gap-4 justify-between items-center">
-                    <div class="flex items-center gap-2 w-full md:w-auto"><h2 class="font-bold text-lg text-stone-700 mr-2">Roster</h2><input type="text" id="filter-search" onkeyup="Admin.renderRoster()" placeholder="Search..." class="pl-3 pr-4 py-2 border rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-stone-200 outline-none"></div>
-                    <div class="flex gap-2 w-full md:w-auto"><select id="filter-status" onchange="Admin.renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Pending">Pending</option><option value="Expired">Expired</option></select><select id="filter-sort" onchange="Admin.renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="recent">Recent</option><option value="name">Name</option><option value="expiry_soon">Expires Soon</option></select></div>
+                    <div class="flex items-center gap-2 w-full md:w-auto">
+                        <h2 class="font-bold text-lg text-stone-700 mr-2">Roster</h2>
+                        <input type="text" id="filter-search" onkeyup="renderRoster()" placeholder="Search..." class="pl-3 pr-4 py-2 border rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-stone-200 outline-none">
+                    </div>
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <select id="filter-status" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Pending">Pending</option><option value="Expired">Expired</option></select>
+                        <select id="filter-sort" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="recent">Recent</option><option value="name">Name</option><option value="expiry_soon">Expires Soon</option></select>
+                    </div>
                 </div>
-                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 bg-white"><div class="col-span-3">User / Name</div><div class="col-span-2">Product</div><div class="col-span-2">Supporter</div><div class="col-span-2">Payment</div><div class="col-span-3 text-right">Action</div></div>
+                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 bg-white">
+                    <div class="col-span-3">User / Name</div><div class="col-span-2">Product</div><div class="col-span-2">Expiry</div><div class="col-span-2">Payment</div><div class="col-span-3 text-right">Action</div>
+                </div>
                 <div id="admin-user-list" class="divide-y divide-stone-100 text-sm"><div class="p-8 text-center text-stone-500">Loading roster...</div></div>
             </div>
         </div>
     </main>
 
-    <!-- VIEW: ADMIN, GUIDES, FAQ (Generated by JS) -->
-    <div id="dynamic-views"></div>
-
-    <!-- MODALS RESTORED -->
+    <!-- MODALS (Login, Register, Edit, Supply, History, Password) -->
     <div id="modal-login" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
-            <button onclick="UI.closeModal('login')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <button onclick="closeModal('login')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
             <h2 class="text-2xl font-serif font-bold text-center mb-6">Log In</h2>
             <button onclick="handleGoogleLogin()" class="w-full bg-white border border-stone-300 py-3 rounded-lg mb-4 flex justify-center gap-2 font-bold text-stone-700"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5"> Google</button>
             <div class="text-center text-stone-400 text-sm mb-4">- OR -</div>
-            <form onsubmit="handleEmailLogin(event)"><input id="login-email" type="email" placeholder="Email" class="w-full mb-3 px-4 py-3 bg-stone-50 border rounded-lg" required><input id="login-pass" type="password" placeholder="Password" class="w-full mb-6 px-4 py-3 bg-stone-50 border rounded-lg" required><button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Log In</button></form>
+            <form onsubmit="handleEmailLogin(event)">
+                <input id="login-email" type="email" placeholder="Email" class="w-full mb-3 px-4 py-3 bg-stone-50 border rounded-lg" required>
+                <input id="login-pass" type="password" placeholder="Password" class="w-full mb-6 px-4 py-3 bg-stone-50 border rounded-lg" required>
+                <button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Log In</button>
+            </form>
             <p id="login-error" class="text-red-500 text-center mt-4 text-sm hidden"></p>
         </div>
     </div>
-    
+
     <div id="modal-register" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
-            <button onclick="UI.closeModal('register')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <button onclick="closeModal('register')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
             <h2 class="text-2xl font-serif font-bold text-center mb-2">New Account</h2>
             <p class="text-center text-stone-500 text-sm mb-6">Enter the invite code from Elliot.</p>
-            <form onsubmit="handleRegister(event)"><label class="text-xs font-bold text-stone-500 uppercase">Invite Code</label><input id="reg-code" type="text" placeholder="e.g. FAMILY" class="w-full mb-4 px-4 py-3 bg-stone-50 border rounded-lg uppercase tracking-widest" required><label class="text-xs font-bold text-stone-500 uppercase">Your Email</label><input id="reg-email" type="email" placeholder="you@example.com" class="w-full mb-4 px-4 py-3 bg-stone-50 border rounded-lg" required><label class="text-xs font-bold text-stone-500 uppercase">Create Password</label><input id="reg-pass" type="password" placeholder="Min 6 chars" class="w-full mb-6 px-4 py-3 bg-stone-50 border rounded-lg" required minlength="6"><button type="submit" id="reg-btn" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Create Account</button></form>
+            <form onsubmit="handleRegister(event)">
+                <label class="text-xs font-bold text-stone-500 uppercase">Invite Code</label>
+                <input id="reg-code" type="text" placeholder="e.g. FAMILY" class="w-full mb-4 px-4 py-3 bg-stone-50 border rounded-lg uppercase tracking-widest" required>
+                <label class="text-xs font-bold text-stone-500 uppercase">Your Email</label>
+                <input id="reg-email" type="email" placeholder="you@example.com" class="w-full mb-4 px-4 py-3 bg-stone-50 border rounded-lg" required>
+                <label class="text-xs font-bold text-stone-500 uppercase">Create Password</label>
+                <input id="reg-pass" type="password" placeholder="Min 6 chars" class="w-full mb-6 px-4 py-3 bg-stone-50 border rounded-lg" required minlength="6">
+                <button type="submit" id="reg-btn" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Create Account</button>
+            </form>
             <p id="reg-error" class="text-red-500 text-center mt-4 text-sm hidden"></p>
         </div>
     </div>
 
-    <!-- Admin Edit Modal -->
     <div id="modal-edit" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl p-8 max-w-2xl w-full relative my-8">
-            <button onclick="UI.closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <button onclick="closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
             <h2 id="modal-edit-title" class="text-xl font-serif font-bold mb-6">Edit User & License</h2>
-            <form onsubmit="Admin.saveUser(event)">
+            <form onsubmit="saveUserChanges(event)">
                 <input type="hidden" id="edit-uid">
-                <div class="grid grid-cols-3 gap-4 mb-4">
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Real Name</label><input id="edit-realname" type="text" placeholder="e.g. Uncle Bob" class="w-full px-3 py-2 border rounded bg-stone-50 text-sm"></div>
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" readonly class="w-full px-3 py-2 border rounded bg-stone-100 text-stone-500 cursor-not-allowed text-sm"></div>
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Status</label><select id="edit-status" class="w-full px-3 py-2 border rounded text-sm"><option>Pending</option><option>Active</option><option>Expired</option></select></div>
+                
+                <!-- Identity -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Real Name</label><input id="edit-realname" type="text" placeholder="e.g. Uncle Bob" class="w-full px-3 py-2 border rounded bg-stone-50 text-sm"></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" readonly class="w-full px-3 py-2 border rounded bg-stone-100 text-stone-500 cursor-not-allowed text-sm"></div>
                 </div>
+                <div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Status</label><select id="edit-status" class="w-full px-3 py-2 border rounded text-sm"><option>Pending</option><option>Active</option><option>Expired</option></select></div>
                 <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-6">
                     <h3 class="text-sm font-bold text-stone-700 mb-3">Product & Billing</h3>
-                    <div class="grid grid-cols-3 gap-4 mb-3">
-                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Product</label><select id="edit-product" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="Demo">Demo (1 Day)</option><option value="1 Month">1 Month</option><option value="3 Months">3 Months</option><option value="6 Months">6 Months</option><option value="1 Year">1 Year</option></select></div>
-                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Expiry Date</label><input id="edit-expiry" type="text" placeholder="Dec 31, 2026" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
-                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Date Paid</label><input id="edit-paydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
+                    <div class="grid grid-cols-2 gap-4 mb-3">
+                        <div><label class="text-xs font-bold uppercase text-stone-500">Product Purchased</label><select id="edit-product" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="Demo">Demo (1 Day)</option><option value="1 Month">1 Month</option><option value="3 Months">3 Months</option><option value="6 Months">6 Months</option><option value="1 Year">1 Year</option></select></div>
+                        <div><label class="text-xs font-bold uppercase text-stone-500">Expiry Date</label><input id="edit-expiry" type="text" placeholder="Dec 31, 2026" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div><label class="text-xs font-bold uppercase text-stone-500">Date Purchased</label><input id="edit-buydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-xs"></div>
-                        <div><label class="text-xs font-bold uppercase text-stone-500">Supporter Status</label><select id="edit-supporter-status" class="w-full px-3 py-2 border rounded bg-white text-xs"><option value="Not Requested">Not Requested</option><option value="Requested - Unpaid">Requested - Unpaid</option><option value="Requested - Paid">Requested - Paid</option><option value="Enabled">Enabled</option></select></div>
+                        <div><label class="text-xs font-bold uppercase text-stone-500">Date Paid</label><input id="edit-paydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-xs"></div>
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-4 mb-4">
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500 mb-1">Server URL</label><select id="edit-server" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="http://cf.taty.website">http://cf.taty.website (Cloudflare)</option><option value="http://taty.website">http://taty.website (Backup)</option></select></div>
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Strong 8K User</label><input id="edit-user" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Strong 8K Pass</label><input id="edit-pass" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
+                
+                <!-- Supporter Admin Toggle -->
+                <div class="mb-6 flex items-center gap-3 bg-green-50 p-4 rounded-lg border border-green-100">
+                    <input type="checkbox" id="edit-is-supporter" class="w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
+                    <div>
+                        <label for="edit-is-supporter" class="text-sm font-bold text-green-900 block">GanjaRelease Supporter Status</label>
+                        <p class="text-xs text-green-800">Enable to show enhanced EPG categories on client dashboard.</p>
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 gap-4 mb-4">
-                    <div><label class="text-xs font-bold uppercase text-stone-500">EPGenius M3U URL</label><input id="edit-epgenius" type="text" class="w-full px-3 py-2 border rounded font-mono text-xs"></div>
-                    <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K M3U</label><input id="edit-m3u" type="text" class="w-full px-3 py-2 border rounded font-mono text-xs"></div>
+
+                <div class="mb-3">
+                    <label class="text-xs font-bold uppercase text-stone-500 mb-1">Server URL</label>
+                    <select id="edit-server" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="http://cf.taty.website">http://cf.taty.website (Cloudflare)</option><option value="http://taty.website">http://taty.website (Backup)</option></select>
                 </div>
-                <div class="mt-4 pt-4 border-t border-stone-100 bg-gray-50 p-4 rounded-lg max-h-32 overflow-y-auto">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K Username</label><input id="edit-user" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K Password</label><input id="edit-pass" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
+                </div>
+                <label class="text-xs font-bold uppercase text-stone-500">EPGenius M3U URL</label><input id="edit-epgenius" type="text" class="w-full mb-3 px-3 py-2 border rounded font-mono text-xs">
+                <label class="text-xs font-bold uppercase text-stone-500">Strong 8K M3U</label><input id="edit-m3u" type="text" class="w-full mb-6 px-3 py-2 border rounded font-mono text-xs">
+                
+                <!-- NEW: Read Only User Preferences -->
+                <div class="mt-6 pt-4 border-t border-stone-100 bg-gray-50 p-4 rounded-lg">
                     <h3 class="text-xs font-bold uppercase text-stone-500 mb-2">User's Requested Setup</h3>
                     <div class="grid grid-cols-2 gap-4 text-xs text-stone-700">
-                        <div><span class="block text-stone-400">Devices:</span><ul id="edit-pref-devices" class="list-disc pl-4 mt-1 font-mono"><li>None listed</li></ul></div>
-                        <div><span class="block text-stone-400">PVR:</span> <span id="edit-pref-pvr" class="font-mono">---</span><br><span class="block text-stone-400 mt-1">Bouquet:</span> <span id="edit-pref-bouquet" class="font-mono">---</span></div>
-                    </div>
-                    <div class="mt-2 text-xs text-stone-700 border-t border-stone-200 pt-2">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><span class="block text-stone-400">Live TV Request:</span><p id="edit-pref-live-note" class="italic">---</p></div>
-                            <div><span class="block text-stone-400">VOD Request:</span><p id="edit-pref-vod-note" class="italic">---</p></div>
+                        <div>
+                            <span class="block text-stone-400">Devices:</span>
+                            <ul id="edit-pref-devices" class="list-disc pl-4 mt-1 font-mono"><li>None listed</li></ul>
                         </div>
-                        <span class="block text-stone-400 mt-2">Supporter Interest:</span><p id="edit-pref-supporter-interest" class="italic font-bold text-green-700">---</p>
+                        <div>
+                            <span class="block text-stone-400">PVR:</span> <span id="edit-pref-pvr" class="font-mono">---</span><br>
+                            <span class="block text-stone-400 mt-1">Bouquet:</span> <span id="edit-pref-bouquet" class="font-mono">---</span>
+                        </div>
+                    </div>
+                    <!-- Added Bouquet Request Text Areas -->
+                    <div class="mt-2 text-xs text-stone-700">
+                        <span class="block text-stone-400">Live TV Request:</span>
+                        <p id="edit-pref-live-note" class="mb-1 italic">---</p>
+                        <span class="block text-stone-400">VOD Request:</span>
+                        <p id="edit-pref-vod-note" class="italic">---</p>
+                        <span class="block text-stone-400 mt-1">Supporter Interest:</span>
+                        <p id="edit-pref-supporter-interest" class="italic font-bold text-green-700">---</p>
                     </div>
                 </div>
-                <div class="flex gap-3 mt-6 sticky bottom-0 bg-white pt-2 border-t border-stone-100">
-                    <button type="button" onclick="Admin.softDeleteUser()" class="flex-1 bg-red-50 text-red-600 font-bold py-3 rounded-lg hover:bg-red-100 transition">Archive</button>
+
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="softDeleteUser()" class="flex-1 bg-red-50 text-red-600 font-bold py-3 rounded-lg hover:bg-red-100 transition">Archive</button>
                     <button type="submit" class="flex-[2] bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-lg transition">Save</button>
                 </div>
             </form>
         </div>
     </div>
-    
-    <div id="modal-supply" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="UI.closeModal('supply')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Record New Supply</h2><form onsubmit="Renderer.saveSupply(event)"><div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Credits</label><input id="supply-credits" type="number" class="w-full px-3 py-2 border rounded" required></div><div class="grid grid-cols-2 gap-4 mb-4"><div><label class="text-xs font-bold uppercase text-stone-500">Cost (CAD)</label><input id="supply-cost" type="number" step="0.01" class="w-full px-3 py-2 border rounded" required></div><div><label class="text-xs font-bold uppercase text-stone-500">BTC</label><input id="supply-btc" type="text" class="w-full px-3 py-2 border rounded"></div></div><div class="mb-6"><label class="text-xs font-bold uppercase text-stone-500">Date</label><input id="supply-date" type="date" class="w-full px-3 py-2 border rounded" required></div><button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Add to Ledger</button></form></div></div>
-    <div id="modal-supply-history" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-lg w-full relative"><button onclick="UI.closeModal('supply-history')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Supply History</h2><div id="supply-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div></div></div>
-    <div id="password-modal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="UI.closePasswordModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold text-center mb-6">Change Password</h2><form onsubmit="UI.handleChangePasswordSubmit(event)"><div class="mb-6"><label class="block text-xs font-bold text-stone-500 mb-2 uppercase">New Password</label><input type="password" id="new-password" required minlength="6" class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg"></div><button type="submit" id="pass-submit-btn" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg hover:bg-stone-800 transition">Update Password</button></form></div></div>
 
-    <!-- APP LOGIC -->
+    <div id="modal-supply" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
+            <button onclick="closeModal('supply')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <h2 class="text-xl font-serif font-bold mb-4">Record New Supply</h2>
+            <form onsubmit="saveSupply(event)">
+                <div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Credits</label><input id="supply-credits" type="number" class="w-full px-3 py-2 border rounded" required></div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Cost (CAD)</label><input id="supply-cost" type="number" step="0.01" class="w-full px-3 py-2 border rounded" required></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-500">BTC</label><input id="supply-btc" type="text" class="w-full px-3 py-2 border rounded"></div>
+                </div>
+                <div class="mb-6"><label class="text-xs font-bold uppercase text-stone-500">Date</label><input id="supply-date" type="date" class="w-full px-3 py-2 border rounded" required></div>
+                <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Add to Ledger</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-supply-history" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-lg w-full relative">
+            <button onclick="closeModal('supply-history')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <h2 class="text-xl font-serif font-bold mb-4">Supply History</h2>
+            <div id="supply-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
+        </div>
+    </div>
+
+    <div id="password-modal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
+            <button onclick="closePasswordModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <h2 class="text-xl font-serif font-bold text-center mb-6">Change Password</h2>
+            <form onsubmit="handleChangePasswordSubmit(event)">
+                <div class="mb-6"><label class="block text-xs font-bold text-stone-500 mb-2 uppercase">New Password</label><input type="password" id="new-password" required minlength="6" class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg"></div>
+                <button type="submit" id="pass-submit-btn" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg hover:bg-stone-800 transition">Update Password</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, getDocs, query, where, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // --- CONSTANTS ---
-        const CONFIG = {
-            ADMIN_EMAIL: "e.chinerman@gmail.com",
-            INVITE_CODE: "FAMILY8K",
-            FB_LINK: "https://m.me/rds.ca",
-            PAY_INTERAC: ["e.chinerman@gmail.com", "514-943-5664"],
-            PAY_BTC: { lightning: "gogobonobo@shakepay.me", chain: "bc1q6fu87a280v4g6wcjgu2kewv8qyuh3vl93deta8v297r4prswu4dqqxx3xw" }
+        const ADMIN_EMAIL = "e.chinerman@gmail.com"; 
+        const INVITE_CODE = "FAMILY8K"; 
+        const FB_LINK = "https://m.me/rds.ca"; 
+
+        const PRODUCTS = {
+            'Demo':     { credits: 0,  price: 0 },
+            '1 Month':  { credits: 1,  price: 10 },
+            '3 Months': { credits: 3,  price: 25 },
+            '6 Months': { credits: 6,  price: 40 },
+            '1 Year':   { credits: 12, price: 60 }
         };
 
-        const PRODUCTS = { 'Demo': {c:0,p:0}, '1 Month': {c:1,p:10}, '3 Months': {c:3,p:25}, '6 Months': {c:6,p:40}, '1 Year': {c:12,p:60} };
-        
-        const TAGS = {
-            live: ['All English', 'All French', 'Sports', 'News', 'Kids', 'Other'],
-            vod: ['All Movies', 'All Series', 'English Only', 'French Only', 'No Horror', 'Other']
+        const firebaseConfig = {
+            apiKey: "AIzaSyAH5CRCJoktmY6baXshDnOVgylHldcPa3E",
+            authDomain: "elliotvip.firebaseapp.com",
+            projectId: "elliotvip",
+            storageBucket: "elliotvip.firebasestorage.app",
+            messagingSenderId: "223494244969",
+            appId: "1:223494244969:web:edcf227f756ac76ba170f8",
+            measurementId: "G-7591L9DYT6"
         };
 
-        const SUPPORTER_CATS = ["✅CA| SPORTSNET+ PPV", "✅CA| WHL PPV", "✅CA| TSN+ PPV", "✅CA| PRIME PPV", "✅NFL Sunday Ticket", "✅NBA League Pass", "✅UFC Fight Pass", "✅F1 TV", "✅DAZN PPV", "✅Peacock PPV", "✅Flo Sports"]; // Shortened list for UI
-
-        const firebaseConfig = { apiKey: "AIzaSyAH5CRCJoktmY6baXshDnOVgylHldcPa3E", authDomain: "elliotvip.firebaseapp.com", projectId: "elliotvip", storageBucket: "elliotvip.firebasestorage.app", messagingSenderId: "223494244969", appId: "1:223494244969:web:edcf227f756ac76ba170f8" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- GLOBAL SERVICES ---
-        window.UI = {
-            switchView: (view) => {
-                document.querySelectorAll('.view-section').forEach(el => { el.classList.remove('active'); el.style.opacity = 0; setTimeout(() => el.style.display='none', 300) });
-                const target = document.getElementById('view-' + view);
-                target.style.display = 'block';
-                setTimeout(() => { target.classList.add('active'); target.style.opacity = 1; }, 50);
-                document.getElementById('mobile-menu').classList.add('hidden');
+        // --- AUTH & NAV ---
+        onAuthStateChanged(auth, async (user) => {
+            updateNav(user);
+            if (user) {
+                closeModal('login'); closeModal('register');
                 
-                // Lazy Load Views
-                if(view === 'admin' || view === 'guides' || view === 'faq') Renderer.loadView(view);
-                if(view === 'admin' && auth.currentUser?.email === CONFIG.ADMIN_EMAIL) window.loadAdminData(); // Use global function
-            },
-            showToast: (msg) => {
-                const t = document.getElementById('toast');
-                document.getElementById('toast-msg').innerText = msg || "Changes saved.";
-                t.classList.add('show');
-                setTimeout(() => t.classList.remove('show'), 3000);
-            },
-            openModal: (id) => { 
-                if(!document.getElementById('modal-' + id)) Renderer.renderModal(id);
-                document.getElementById('modal-' + id).classList.remove('hidden'); 
-            },
-            closeModal: (id) => document.getElementById('modal-' + id).classList.add('hidden'),
-            copy: (id) => { document.getElementById(id).select(); document.execCommand('copy'); UI.showToast("Copied to clipboard!"); },
-            copyText: (text) => { navigator.clipboard.writeText(text).then(() => UI.showToast(`Copied: ${text}`)); },
-            openChangePasswordModal: () => {
-                if (!auth || !auth.currentUser) return;
-                if (auth.currentUser.providerData.some(p => p.providerId === 'google.com')) return alert("Please change your password via Google.");
-                document.getElementById('new-password').value = "";
-                document.getElementById('password-modal').classList.remove('hidden');
-            },
-            closePasswordModal: () => document.getElementById('password-modal').classList.add('hidden'),
-            handleChangePasswordSubmit: async (e) => {
-                e.preventDefault();
-                try {
-                    await updatePassword(auth.currentUser, document.getElementById('new-password').value);
-                    alert("Success!"); UI.closePasswordModal();
-                } catch (err) { 
-                    if (err.code === 'auth/requires-recent-login') { alert("Please re-login to change password."); Auth.logout(); }
-                    else alert(err.message); 
+                // USER MERGE CHECK: Run every time on login to catch pending migrations
+                await ensureUserDoc(user);
+
+                if(document.getElementById('view-home').classList.contains('active')) {
+                    if (user.email === ADMIN_EMAIL) switchView('admin'); else switchView('dashboard');
                 }
+                if (user.email === ADMIN_EMAIL && document.getElementById('view-admin').classList.contains('active')) loadAdminData();
+                if (document.getElementById('view-dashboard').classList.contains('active')) loadUserData(user.uid);
+            } else {
+                switchView('home');
             }
-        };
-
-        window.App = {
-            init: () => {
-                Renderer.initNav();
-                Renderer.renderPricing();
-                Renderer.renderTags();
-                onAuthStateChanged(auth, async (user) => {
-                    Renderer.updateNav(user);
-                    if (user) {
-                        UI.closeModal('login'); UI.closeModal('register');
-                        await Auth.ensureDoc(user);
-                        const currentView = document.querySelector('.view-section.active').id.replace('view-', '');
-                        if(currentView === 'home') UI.switchView(user.email === CONFIG.ADMIN_EMAIL ? 'admin' : 'dashboard');
-                        if(currentView === 'dashboard') Client.loadData(user.uid);
-                    } else { UI.switchView('home'); }
-                });
-            },
-            handleTitleClick: () => auth.currentUser ? UI.switchView('dashboard') : UI.switchView('home')
-        };
-
-        // --- AUTH SERVICE ---
-        window.Auth = {
-            loginEmail: async (e) => {
-                e.preventDefault();
-                try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value); }
-                catch (e) { alert("Invalid credentials"); }
-            },
-            loginGoogle: async () => {
-                try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { alert("Google Sign-In failed"); }
-            },
-            register: async (e) => {
-                e.preventDefault();
-                if(document.getElementById('reg-code').value.toUpperCase() !== CONFIG.INVITE_CODE) return alert("Invalid Code");
-                try {
-                    const cred = await createUserWithEmailAndPassword(auth, document.getElementById('reg-email').value, document.getElementById('reg-pass').value);
-                    await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, status: "Pending", created: new Date().toISOString() });
-                } catch (e) { alert(e.message); }
-            },
-            logout: () => signOut(auth),
-            ensureDoc: async (user) => {
-                const ref = doc(db, "users", user.uid);
-                const snap = await getDoc(ref);
-                if (!snap.exists()) {
-                    // Merge Logic
-                    const q = query(collection(db, "users"), where("email", "==", user.email.toLowerCase())); // Normalize
-                    const qSnap = await getDocs(q);
-                    if (!qSnap.empty) {
-                        const oldDoc = qSnap.docs[0];
-                        await setDoc(ref, { ...oldDoc.data(), uid: user.uid, mergedAt: new Date().toISOString() });
-                        await deleteDoc(oldDoc.ref);
-                    } else {
-                        await setDoc(ref, { email: user.email, status: "Pending", created: new Date().toISOString() });
-                    }
-                }
-            }
-        };
-
-        // --- CLIENT LOGIC ---
-        window.Client = {
-            calcState: { '1 Month': 0, '3 Months': 0, '6 Months': 0, '1 Year': 0 },
-            loadData: async (uid) => {
-                const snap = await getDoc(doc(db, "users", uid));
-                if (snap.exists()) {
-                    const d = snap.data();
-                    if (d.deleted) return document.getElementById('user-disabled').classList.remove('hidden');
-                    if (d.status === "Pending") return document.getElementById('user-pending').classList.remove('hidden');
-                    
-                    document.getElementById('user-active').classList.remove('hidden');
-                    document.getElementById('dash-welcome').innerText = `Welcome back, ${d.realName || 'User'}.`;
-                    document.getElementById('dash-product').innerText = d.product || 'Standard';
-                    document.getElementById('dash-expiry').innerText = d.expiry || '---';
-                    
-                    ['server','user','pass','epgenius','m3u'].forEach(k => document.getElementById(`dash-${k}`).value = d[k + (k.includes('url') ? '' : (k=='m3u'||k=='epgenius')?'M3U':'')] || (k.includes('dash') ? '...' : ''));
-                    // Text mappings
-                    document.getElementById('dash-server').innerText = d.serverUrl || '...';
-                    document.getElementById('dash-user').innerText = d.username || '...';
-                    document.getElementById('dash-pass').innerText = d.password || '...';
-                    document.getElementById('dash-epgenius').value = d.epgeniusM3u || '';
-                    document.getElementById('dash-m3u').value = d.m3uUrl || '';
-
-                    // Supporter
-                    const sBadge = document.getElementById('dash-supporter-badge');
-                    const sStatus = d.supporterStatus || "Not Requested";
-                    if(sStatus === "Enabled") {
-                        sBadge.innerText = "Active"; sBadge.className = "px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-bold";
-                        document.getElementById('dash-supporter-active').classList.remove('hidden');
-                        document.getElementById('dash-supporter-inactive').classList.add('hidden');
-                        document.getElementById('dash-supporter-list').innerHTML = SUPPORTER_CATS.map(c => `<div>${c}</div>`).join('');
-                    } else {
-                        sBadge.innerText = sStatus; sBadge.className = "px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold";
-                        document.getElementById('dash-supporter-active').classList.add('hidden');
-                        document.getElementById('dash-supporter-inactive').classList.remove('hidden');
-                    }
-
-                    // Config Form
-                    Client.renderDevices(d.devices || []);
-                    document.getElementById('cfg-screens').value = d.screenPreference || '1';
-                    Client.renderTagsState(d.liveBouquet || '', 'live');
-                    Client.renderTagsState(d.vodBouquet || '', 'vod');
-                }
-            },
-            addDevice: (type) => {
-                const list = document.getElementById('device-list');
-                document.getElementById('empty-device-msg').classList.add('hidden');
-                const row = document.createElement('div');
-                row.className = "flex justify-between items-center bg-white border p-2 rounded mb-2 device-row";
-                row.innerHTML = `
-                    <div class="flex items-center gap-2"><i class="fas fa-${window.getIcon(type)} text-stone-400"></i> <span class="text-xs font-bold uppercase text-stone-500">${type}</span></div>
-                    <input type="hidden" value="${type}" class="device-value">
-                    <button type="button" onclick="this.parentElement.remove(); Client.updateCount()" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
-                `;
-                list.appendChild(row);
-                Client.updateCount();
-            },
-            renderDevices: (devices) => {
-                const list = document.getElementById('device-list');
-                list.innerHTML = '<p class="text-xs text-stone-400 text-center italic hidden" id="empty-device-msg">No devices added.</p>';
-                if(!devices.length) document.getElementById('empty-device-msg').classList.remove('hidden');
-                devices.forEach(d => Client.addDevice(d.type));
-            },
-            updateCount: () => {
-                 document.getElementById('device-counter').innerText = `Active: ${document.querySelectorAll('.device-row').length}`;
-            },
-            checkScreens: () => {
-                const val = document.getElementById('cfg-screens').value;
-                document.getElementById('screens-warn').classList.toggle('hidden', val === '1');
-            },
-            renderTagsState: (str, type) => {
-                const container = document.getElementById(`tags-${type}`);
-                container.querySelectorAll('button').forEach(b => {
-                    if(str.includes(b.innerText)) { b.classList.add('bg-stone-800', 'text-white'); b.classList.remove('bg-white', 'text-stone-600'); }
-                    else { b.classList.remove('bg-stone-800', 'text-white'); b.classList.add('bg-white', 'text-stone-600'); }
-                });
-                const note = str.split('Note: ')[1];
-                if(note) { 
-                    const txt = document.getElementById(`cfg-${type}-note`);
-                    txt.value = note; txt.classList.remove('hidden'); 
-                }
-            },
-            saveConfig: async (e) => {
-                e.preventDefault();
-                const devices = Array.from(document.querySelectorAll('.device-value')).map(i => ({type: i.value}));
-                const getTags = (t) => {
-                    const active = Array.from(document.querySelectorAll(`#tags-${t} button.bg-stone-800`)).map(b => b.innerText).join(', ');
-                    const note = document.getElementById(`cfg-${t}-note`).value;
-                    return active + (note ? ` Note: ${note}` : '');
-                };
-                
-                await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                    devices,
-                    screenPreference: document.getElementById('cfg-screens').value,
-                    liveBouquet: getTags('live'),
-                    vodBouquet: getTags('vod'),
-                    supporterRequest: document.getElementById('cfg-supporter').checked
-                });
-                UI.showToast();
-            }
-        };
-
-        // --- CALCULATOR ---
-        window.Calc = {
-            update: (plan, delta) => {
-                const s = Client.calcState;
-                s[plan] = Math.max(0, (s[plan] || 0) + delta);
-                document.getElementById(`qty-${plan.replace(' ', '')}`).innerText = s[plan];
-                Calc.total();
-            },
-            total: () => {
-                let t = 0;
-                for(let p in Client.calcState) t += Client.calcState[p] * PRODUCTS[p].p;
-                if(document.getElementById('calc-supporter').checked) t += 20;
-                document.getElementById('calc-total').innerText = `$${t.toFixed(2)}`;
-            },
-            toggleMethod: () => {
-                const m = document.getElementById('pay-method').value;
-                document.getElementById('pay-details').innerHTML = m === 'interac' ? 
-                    `<div class="space-y-1"><p>Send to:</p><div class="flex justify-between bg-white p-1 rounded border"><span class="font-mono">${CONFIG.PAY_INTERAC[0]}</span><button onclick="UI.copyText('${CONFIG.PAY_INTERAC[0]}')"><i class="fas fa-copy"></i></button></div></div>` :
-                    `<div class="space-y-1"><p>Lightning:</p><div class="flex justify-between bg-white p-1 rounded border"><span class="font-mono truncate w-48">${CONFIG.PAY_BTC.lightning}</span><button onclick="UI.copyText('${CONFIG.PAY_BTC.lightning}')"><i class="fas fa-copy"></i></button></div></div>`;
-            },
-            sendRequest: () => {
-                const total = document.getElementById('calc-total').innerText;
-                const plans = Object.entries(Client.calcState).filter(([k,v]) => v>0).map(([k,v]) => `${v}x ${k}`).join(', ');
-                const msg = `New License Request:%0A%0AItems: ${plans}%0ATotal: ${total}%0APayment: ${document.getElementById('pay-method').value}`;
-                window.open(`${CONFIG.FB_LINK}?text=${msg}`, '_blank');
-            }
-        };
-
-        // --- ADMIN FUNCTIONS ---
-        window.loadAdminData = async () => {
-            const list = document.getElementById('admin-user-list');
-            list.innerHTML = 'Loading...';
-            try {
-                // Fetch Supply
-                let supplyBatches = [{ credits: 120, cost: 403.42, date: "2026-01-01" }];
-                const supplyDoc = await getDoc(doc(db, "business_data", "supply_ledger"));
-                if(supplyDoc.exists()) supplyBatches = supplyDoc.data().batches || supplyBatches;
-                
-                // Fetch Users
-                const snap = await getDocs(collection(db, "users"));
-                let html = '';
-                snap.forEach(d => {
-                     const u = d.data();
-                     if(d.id !== 'meta_supply' && !u.deleted) {
-                         html += `<div class="p-4 border-b flex justify-between"><div><span class="font-bold">${u.realName || 'No Name'}</span><br><span class="text-xs text-stone-500">${u.email}</span></div><button onclick="UI.openModal('edit'); Admin.hydrateEdit('${d.id}')" class="text-xs bg-stone-900 text-white px-2 py-1 rounded">Edit</button></div>`;
-                     }
-                });
-                list.innerHTML = html || 'No users.';
-            } catch(e) { console.error(e); list.innerHTML = "Error loading admin data"; }
-        };
-        
-        // Ensure Admin object for hydration is available
-        window.Admin = {
-             hydrateEdit: async (uid) => {
-                 if(uid) {
-                     const d = (await getDoc(doc(db, "users", uid))).data();
-                     document.getElementById('modal-edit-title').innerText = "Edit User";
-                     document.getElementById('edit-uid').value = uid;
-                     // Map fields
-                     document.getElementById('edit-realname').value = d.realName || '';
-                     document.getElementById('edit-email').value = d.email || '';
-                     document.getElementById('edit-email').readOnly = true;
-                     document.getElementById('edit-status').value = d.status || 'Pending';
-                     document.getElementById('edit-product').value = d.product || 'Demo';
-                     document.getElementById('edit-expiry').value = d.expiry || '';
-                     document.getElementById('edit-paydate').value = d.payDate || '';
-                     document.getElementById('edit-buydate').value = d.buyDate || '';
-                     document.getElementById('edit-server').value = d.serverUrl || 'http://cf.taty.website';
-                     document.getElementById('edit-user').value = d.username || '';
-                     document.getElementById('edit-pass').value = d.password || '';
-                     document.getElementById('edit-epgenius').value = d.epgeniusM3u || '';
-                     document.getElementById('edit-m3u').value = d.m3uUrl || '';
-                     document.getElementById('edit-supporter-status').value = d.supporterStatus || 'Not Requested';
-                     // Prefs read-only
-                     const deviceList = (d.devices || []).map(dev => window.getDeviceName(dev.type)).join(', ') || 'None';
-                     document.getElementById('edit-pref-devices').innerHTML = deviceList;
-                     document.getElementById('edit-pref-pvr').innerText = d.pvrPreference || '---';
-                     document.getElementById('edit-pref-bouquet').innerText = d.bouquetPreference || '---';
-                     document.getElementById('edit-pref-live-note').innerText = d.liveBouquet || '---';
-                     document.getElementById('edit-pref-vod-note').innerText = d.vodBouquet || '---';
-                     document.getElementById('edit-pref-supporter-interest').innerText = d.supporterRequest ? "Yes, Requested" : "No";
-                 } else {
-                     // Add New
-                     document.getElementById('modal-edit-title').innerText = "Add Manual Client";
-                     document.getElementById('edit-uid').value = "";
-                     document.querySelectorAll('#modal-edit input').forEach(i => i.value = '');
-                     document.getElementById('edit-status').value = 'Active';
-                     document.getElementById('edit-product').value = '1 Month';
-                     document.getElementById('edit-server').value = 'http://cf.taty.website';
-                     document.getElementById('edit-email').readOnly = false;
-                 }
-             },
-             saveUser: async (e) => {
-                 e.preventDefault();
-                 const uid = document.getElementById('edit-uid').value;
-                 const data = {
-                    realName: document.getElementById('edit-realname').value,
-                    status: document.getElementById('edit-status').value,
-                    product: document.getElementById('edit-product').value,
-                    expiry: document.getElementById('edit-expiry').value,
-                    payDate: document.getElementById('edit-paydate').value,
-                    buyDate: document.getElementById('edit-buydate').value,
-                    serverUrl: document.getElementById('edit-server').value,
-                    username: document.getElementById('edit-user').value,
-                    password: document.getElementById('edit-pass').value,
-                    epgeniusM3u: document.getElementById('edit-epgenius').value,
-                    m3uUrl: document.getElementById('edit-m3u').value,
-                    supporterStatus: document.getElementById('edit-supporter-status').value,
-                    isSupporter: document.getElementById('edit-supporter-status').value === "Enabled"
-                 };
-                 
-                 if(!uid) data.email = document.getElementById('edit-email').value;
-
-                 if(uid) await updateDoc(doc(db, "users", uid), data);
-                 else await addDoc(collection(db, "users"), { ...data, created: new Date().toISOString() });
-                 
-                 UI.closeModal('edit'); window.loadAdminData();
-                 UI.showToast("User saved.");
-             },
-             softDeleteUser: async () => {
-                 const uid = document.getElementById('edit-uid').value;
-                 if (!uid) { UI.closeModal('edit'); return; }
-                 if (!confirm("Are you sure? This will hide the user.")) return;
-                 await updateDoc(doc(db, "users", uid), { deleted: true, deletedAt: new Date().toISOString() });
-                 UI.closeModal('edit'); window.loadAdminData();
-             }
-        };
-
-        // --- RENDERER (Clean HTML Generation) ---
-        window.Renderer = {
-            initNav: () => {
-                // Mobile menu logic
-                document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
-            },
-            updateNav: (user) => {
-                const nav = document.getElementById('desktop-nav');
-                if(user) {
-                    const isAdmin = user.email === CONFIG.ADMIN_EMAIL;
-                    nav.innerHTML = `
-                        ${isAdmin ? `<button onclick="UI.switchView('admin')" class="font-bold text-blue-600 mr-4">ADMIN</button>` : ''}
-                        <button onclick="UI.switchView('dashboard')" class="font-medium hover:text-stone-600">Dashboard</button>
-                        <button onclick="UI.switchView('guides')" class="font-medium hover:text-stone-600">Guides</button>
-                        <button onclick="UI.switchView('faq')" class="font-medium hover:text-stone-600">FAQ</button>
-                    `;
-                } else {
-                    nav.innerHTML = `<button onclick="UI.openModal('login')" class="font-medium">Log In</button>`;
-                }
-            },
-            renderPricing: () => {
-                const c = document.getElementById('pricing-rows');
-                if(!c) return; // Safety check
-                c.innerHTML = Object.entries(PRODUCTS).filter(([k])=>k!=='Demo').map(([k,v]) => `
-                    <div class="flex justify-between items-center bg-stone-50 p-2 rounded">
-                        <span class="text-xs font-bold">${k} ($${v.p})</span>
-                        <div class="flex items-center gap-2">
-                            <button onclick="Calc.update('${k}',-1)" class="w-5 h-5 bg-stone-200 rounded hover:bg-stone-300">-</button>
-                            <span id="qty-${k.replace(' ','')}" class="text-xs w-3 text-center">0</span>
-                            <button onclick="Calc.update('${k}',1)" class="w-5 h-5 bg-stone-800 text-white rounded hover:bg-stone-600">+</button>
-                        </div>
-                    </div>`).join('');
-            },
-            renderTags: () => {
-                ['live', 'vod'].forEach(t => {
-                    const c = document.getElementById(`tags-${t}`);
-                    if(!c) return; // Safety check
-                    c.innerHTML = TAGS[t].map(tag => {
-                        const isOther = tag === 'Other';
-                        const action = isOther ? `document.getElementById('cfg-${t}-note').classList.toggle('hidden')` : `this.classList.toggle('bg-stone-800'); this.classList.toggle('text-white');`;
-                        return `<button type="button" onclick="${action}" class="px-3 py-1 border rounded-full text-xs bg-white text-stone-600 transition hover:bg-stone-50">${tag}</button>`;
-                    }).join('');
-                });
-            },
-            renderModal: (id) => {
-                // Intentionally left blank as modals are now static HTML in body for robustness
-            },
-            loadView: (view) => {
-                if(view === 'faq') {
-                    // Populate FAQ
-                    document.getElementById('view-faq').innerHTML = `
-                        <div class="max-w-3xl mx-auto px-4"><h1 class="text-3xl font-serif mb-8 text-center">FAQ</h1>
-                        <div class="space-y-4">
-                            ${[['How do I set up?', 'Use the Guides tab.'], ['Buffering?', 'Check internet/CDN.'], ['Multi-room?', 'Requires extra license.']].map(([q,a]) => `
-                                <details class="group bg-white p-4 rounded-xl border border-stone-200 shadow-sm"><summary class="font-bold cursor-pointer flex justify-between">${q} <i class="fas fa-chevron-down group-open:rotate-180"></i></summary><p class="mt-2 text-sm text-stone-600">${a}</p></details>
-                            `).join('')}
-                        </div></div>`;
-                }
-                if(view === 'guides') {
-                    // Populate Guides
-                    document.getElementById('view-guides').innerHTML = `<div class="max-w-4xl mx-auto px-4 text-center mt-10">... Guides Content ...</div>`;
-                }
-            },
-            // Supply Functions
-            saveSupply: async (e) => {
-                e.preventDefault();
-                const newBatch = { credits: Number(document.getElementById('supply-credits').value), cost: Number(document.getElementById('supply-cost').value), btc: document.getElementById('supply-btc').value, date: document.getElementById('supply-date').value };
-                const metaRef = doc(db, "business_data", "supply_ledger");
-                const snap = await getDoc(metaRef);
-                if (snap.exists()) await updateDoc(metaRef, { batches: arrayUnion(newBatch) });
-                else await setDoc(metaRef, { batches: [{ credits: 120, cost: 403.42, date: "2026-01-01" }, newBatch] });
-                UI.closeModal('supply'); window.loadAdminData();
-            },
-            renderSupplyHistory: () => {
-                 const list = document.getElementById('supply-history-list');
-                 // Note: Needs global allSupplyBatches, or fetch again. For simplicity, just refetch for now to be safe or store state.
-                 // Ideally supply batches should be stored in App state.
-                 // For now, let's assume loadAdminData has run and populated a variable or we fetch.
-                 // To fix properly, let's just make it simpler: fetch on open.
-                 (async () => {
-                     const supplyDoc = await getDoc(doc(db, "business_data", "supply_ledger"));
-                     const batches = supplyDoc.exists() ? supplyDoc.data().batches : [];
-                     let html = '';
-                     batches.forEach((batch, index) => {
-                         html += `<div class="flex justify-between p-2 border-b"><span>${batch.credits} Creds</span><span>$${batch.cost}</span></div>`;
-                     });
-                     list.innerHTML = html || 'No history';
-                 })();
-            }
-        };
-
-        window.getIcon = (t) => ({'tv':'tv','mobile':'mobile-alt','computer':'laptop'}[t.split('_')[0]] || 'question');
-
-        // Start safely
-        document.addEventListener('DOMContentLoaded', () => {
-             App.init();
         });
 
-        // Export functions to window for onclicks
-        window.handleEmailLogin = Auth.loginEmail;
-        window.handleGoogleLogin = Auth.loginGoogle;
-        window.handleRegister = Auth.register;
+        window.switchView = (view) => {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+            document.getElementById('mobile-menu').classList.add('hidden');
+            if (view === 'admin' && auth.currentUser?.email === ADMIN_EMAIL) loadAdminData();
+            if (view === 'dashboard' && auth.currentUser) loadUserData(auth.currentUser.uid);
+        };
+
+        // --- MERGE LOGIC ---
+        async function ensureUserDoc(user) {
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                try {
+                    const q = query(collection(db, "users"), where("email", "==", user.email));
+                    const querySnapshot = await getDocs(q);
+
+                    if (!querySnapshot.empty) {
+                        const oldDoc = querySnapshot.docs[0]; 
+                        const oldData = oldDoc.data();
+                        await setDoc(userRef, { ...oldData, uid: user.uid, mergedAt: new Date().toISOString() });
+                        await deleteDoc(oldDoc.ref);
+                        console.log("Account Merged Successfully");
+                    } else {
+                        await setDoc(userRef, { email: user.email, status: "Pending", created: new Date().toISOString() });
+                    }
+                } catch(e) { console.error("Merge logic error", e); }
+            }
+        }
+
+        // --- CLIENT DASHBOARD ---
+        async function loadUserData(uid) {
+            try {
+                const snap = await getDoc(doc(db, "users", uid));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data.deleted) {
+                        document.getElementById('user-disabled').classList.remove('hidden');
+                        document.getElementById('user-pending').classList.add('hidden');
+                        document.getElementById('user-active').classList.add('hidden');
+                        return;
+                    }
+                    if (data.status === "Pending") {
+                        document.getElementById('user-pending').classList.remove('hidden');
+                        document.getElementById('user-active').classList.add('hidden');
+                    } else {
+                        document.getElementById('user-pending').classList.add('hidden');
+                        document.getElementById('user-active').classList.remove('hidden');
+                        
+                        document.getElementById('dash-welcome').innerText = data.realName ? `Welcome back, ${data.realName}.` : "Welcome back.";
+                        document.getElementById('dash-product').innerText = data.product || 'Standard License';
+                        document.getElementById('dash-expiry').innerText = data.expiry || '---';
+                        
+                        // Device Button Logic
+                        const devices = data.devices || [{type: 'firestick'}];
+                        const device = devices[0].type;
+                        const guideBtn = document.getElementById('btn-device-guide');
+                        guideBtn.innerHTML = `<span>Setup Guide for ${getDeviceName(device)}</span><i class="fas fa-book text-stone-400"></i>`;
+                        guideBtn.onclick = () => { switchView('guides'); showGuide(getDeviceGuideId(device)); };
+                        
+                        // Badge
+                        const badge = document.getElementById('dash-device-badge');
+                        if(data.devicePreference || (data.devices && data.devices.length > 0)) {
+                            badge.innerText = getDeviceName(data.devicePreference || data.devices[0].type);
+                            badge.classList.remove('hidden');
+                        }
+
+                        // Connections
+                        document.getElementById('dash-server').innerText = data.serverUrl || '---';
+                        document.getElementById('dash-user').innerText = data.username || '---';
+                        document.getElementById('dash-pass').innerText = data.password || '---';
+                        document.getElementById('dash-epgenius').value = data.epgeniusM3u || '';
+                        document.getElementById('dash-m3u').value = data.m3uUrl || '';
+                        
+                        // Setup Facebook Link
+                        const btnContact = document.getElementById('btn-contact-elliot');
+                        if(btnContact) btnContact.onclick = () => window.open(FB_LINK, '_blank');
+
+                        // Pre-fill config form
+                        renderDeviceList(data.devices || []);
+                        document.getElementById('user-config-screens').value = data.screenPreference || '1';
+                        // Handle Bouquet Smart Tags
+                        renderBouquetTags(data.liveBouquet || '', 'live');
+                        renderBouquetTags(data.vodBouquet || '', 'vod');
+                        document.getElementById('user-config-supporter-req').checked = data.supporterRequest || false;
+                        document.getElementById('user-config-pvr').value = data.pvrPreference || 'No';
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // --- USER CONFIG LOGIC ---
+        function renderDeviceList(devices) {
+            const container = document.getElementById('device-list-container');
+            const emptyMsg = document.getElementById('empty-device-msg');
+            container.innerHTML = '';
+            
+            // Re-append empty msg (hidden/shown logic)
+            container.appendChild(emptyMsg);
+            
+            if(!devices || devices.length === 0) {
+                emptyMsg.classList.remove('hidden');
+                document.getElementById('device-counter').innerText = "Active Devices: 0";
+                return;
+            }
+            emptyMsg.classList.add('hidden');
+            document.getElementById('device-counter').innerText = `Active Devices: ${devices.length}`;
+            
+            devices.forEach(dev => {
+                const row = document.createElement('div');
+                row.className = "flex gap-2 mb-2 device-row items-center";
+                row.innerHTML = `
+                    <div class="flex-1 bg-white border border-stone-200 px-3 py-2 rounded-lg text-sm flex items-center gap-2 shadow-sm">
+                        <i class="fas fa-${getDeviceIcon(dev.type)} text-stone-400"></i>
+                        <span class="font-medium">${getDeviceName(dev.type)}</span>
+                        <input type="hidden" value="${dev.type}" class="device-type-value">
+                    </div>
+                    <button type="button" onclick="this.parentElement.remove(); updateDeviceCount();" class="text-red-400 hover:text-red-600 px-2 transition"><i class="fas fa-trash"></i></button>
+                `;
+                container.appendChild(row);
+            });
+        }
+        
+        window.updateDeviceCount = () => {
+            const count = document.querySelectorAll('.device-row').length;
+            const emptyMsg = document.getElementById('empty-device-msg');
+            document.getElementById('device-counter').innerText = `Active Devices: ${count}`;
+            if(count === 0) emptyMsg.classList.remove('hidden');
+            else emptyMsg.classList.add('hidden');
+        };
+
+        window.addDeviceFromFamily = (family) => {
+            const container = document.getElementById('device-list-container');
+            const row = document.createElement('div');
+            row.className = "flex gap-2 mb-2 device-row";
+            
+            let options = '';
+            if(family === 'tv') options = `<option value="firestick">Firestick 4K</option><option value="shield">Nvidia Shield</option><option value="appletv">Apple TV</option><option value="smarttv">Smart TV</option>`;
+            if(family === 'mobile') options = `<option value="mobile_ios">iPhone / iPad</option><option value="mobile_android">Android Phone/Tablet</option>`;
+            if(family === 'computer') options = `<option value="windows">Windows PC</option><option value="mac">Mac Computer</option>`;
+
+            row.innerHTML = `
+                <select class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm device-type-select">
+                    ${options}
+                </select>
+                <button type="button" onclick="this.parentElement.remove(); updateDeviceCount();" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>
+            `;
+            container.appendChild(row);
+            
+            // Hide empty message
+            document.getElementById('empty-device-msg').classList.add('hidden');
+            updateDeviceCount();
+        };
+
+        window.toggleScreenWarning = () => {
+            const val = document.getElementById('user-config-screens').value;
+            const warning = document.getElementById('screens-warning');
+            if (val !== '1') warning.classList.remove('hidden');
+            else warning.classList.add('hidden');
+        };
+        
+        // --- BOUQUET SMART TAGS LOGIC ---
+        window.toggleTag = (btn, type, tag) => {
+            btn.classList.toggle('bg-stone-900');
+            btn.classList.toggle('text-white');
+            btn.classList.toggle('border-transparent');
+            // Toggle off hover if active
+            if(btn.classList.contains('bg-stone-900')) {
+                btn.classList.remove('hover:bg-stone-100');
+            } else {
+                btn.classList.add('hover:bg-stone-100');
+            }
+        };
+        
+        window.toggleOther = (type) => {
+            const textarea = document.getElementById(`user-config-${type}-other`);
+            const btn = document.getElementById(`btn-${type}-other`);
+            
+            textarea.classList.toggle('hidden');
+            if(!textarea.classList.contains('hidden')) {
+                btn.classList.add('bg-blue-100', 'border-blue-300');
+                textarea.focus();
+            } else {
+                btn.classList.remove('bg-blue-100', 'border-blue-300');
+            }
+        };
+        
+        // Render tags from saved string
+        function renderBouquetTags(savedString, type) {
+            // Reset all
+            const container = document.getElementById(`${type}-tags`);
+            const btns = container.querySelectorAll('button');
+            btns.forEach(b => {
+                b.classList.remove('bg-stone-900', 'text-white', 'border-transparent');
+                b.classList.add('hover:bg-stone-100');
+            });
+            
+            if(!savedString) return;
+            
+            // Check for tags
+            btns.forEach(b => {
+                if(savedString.includes(b.innerText)) {
+                    toggleTag(b, type, b.innerText); // Re-activate visually
+                }
+            });
+            
+            // Check for "Other" content (text after "Notes: ")
+            const noteSplit = savedString.split('Notes: ');
+            if(noteSplit.length > 1 && noteSplit[1].trim() !== '') {
+                const textarea = document.getElementById(`user-config-${type}-other`);
+                textarea.value = noteSplit[1];
+                toggleOther(type);
+            }
+        }
+        
+        // Compile tags for saving
+        function getBouquetString(type) {
+            const container = document.getElementById(`${type}-tags`);
+            const activeBtns = Array.from(container.querySelectorAll('.bg-stone-900')).map(b => b.innerText);
+            
+            const textarea = document.getElementById(`user-config-${type}-other`);
+            const notes = (!textarea.classList.contains('hidden') && textarea.value) ? ` Notes: ${textarea.value}` : '';
+            
+            return activeBtns.join(', ') + notes;
+        }
+
+        window.handleUserConfigSave = async (e) => {
+            e.preventDefault();
+            // Gather devices
+            const rows = document.querySelectorAll('.device-row');
+            // Check both select dropdowns (newly added) and hidden inputs (loaded from db)
+            const devices = Array.from(rows).map(row => {
+                const select = row.querySelector('select');
+                const hidden = row.querySelector('input.device-type-value');
+                return { type: select ? select.value : (hidden ? hidden.value : 'firestick') };
+            });
+
+            const updates = {
+                devices: devices,
+                pvrPreference: document.getElementById('user-config-pvr').value,
+                screenPreference: document.getElementById('user-config-screens').value,
+                liveBouquet: getBouquetString('live'),
+                vodBouquet: getBouquetString('vod'),
+                supporterRequest: document.getElementById('user-config-supporter-req').checked
+            };
+            
+            try {
+                await updateDoc(doc(db, "users", auth.currentUser.uid), updates);
+                showToast(); // NEW TOAST
+                const btn = document.getElementById('btn-notify-elliot');
+                btn.classList.remove('hidden');
+                btn.onclick = () => window.open(FB_LINK, '_blank');
+            } catch(err) { alert("Error saving: " + err.message); }
+        };
+        
+        window.showToast = () => {
+            const toast = document.getElementById('toast-container');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        };
+        
+        window.notifyElliot = () => window.open(FB_LINK, '_blank');
+
+        // --- ADMIN & LOGIC ---
+        let allClients = []; let allSupplyBatches = [];
+
+        window.loadAdminData = async () => {
+            const list = document.getElementById('admin-user-list');
+            list.innerHTML = '<div class="p-8 text-center text-stone-500">Loading roster...</div>';
+            try {
+                const supplyDoc = await getDoc(doc(db, "business_data", "supply_ledger"));
+                const oldDoc = await getDoc(doc(db, "users", "meta_supply"));
+                allSupplyBatches = supplyDoc.exists() ? (supplyDoc.data().batches || []) : (oldDoc.exists() ? oldDoc.data().batches : [{ credits: 120, cost: 403.42, date: "2026-01-01" }]);
+
+                const snap = await getDocs(collection(db, "users"));
+                allClients = [];
+                snap.forEach(doc => { if (doc.id !== 'meta_supply') allClients.push({ id: doc.id, ...doc.data() }); });
+
+                renderRoster();
+                renderStats();
+            } catch (e) { console.error(e); }
+        };
+
+        window.renderRoster = () => {
+            const list = document.getElementById('admin-user-list');
+            const search = document.getElementById('filter-search').value.toLowerCase();
+            const statusFilter = document.getElementById('filter-status').value;
+            const sortMode = document.getElementById('filter-sort').value;
+
+            let filtered = allClients.filter(u => {
+                if (u.deleted) return false;
+                const matchesSearch = (u.realName || '').toLowerCase().includes(search) || (u.email || '').toLowerCase().includes(search);
+                const matchesStatus = statusFilter === 'All' || u.status === statusFilter;
+                return matchesSearch && matchesStatus;
+            });
+
+            filtered.sort((a, b) => {
+                if (sortMode === 'name') return (a.realName || '').localeCompare(b.realName || '');
+                if (sortMode === 'expiry_soon') return (a.expiry || 'Z').localeCompare(b.expiry || 'Z');
+                return (b.created || '').localeCompare(a.created || '');
+            });
+
+            let html = '';
+            filtered.forEach(u => {
+                const statusColor = u.status === 'Active' ? 'text-green-600' : 'text-yellow-600';
+                const realName = u.realName ? `<span class="text-stone-900 font-bold">${u.realName}</span>` : `<span class="italic text-stone-400">No Name</span>`;
+                html += `
+                    <div class="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-stone-50 border-b border-stone-50 transition md:grid hidden">
+                        <div class="col-span-3">${realName}<div class="text-xs text-stone-400 mt-0.5 truncate">${u.email || 'Manual Entry'}</div></div>
+                        <div class="col-span-2"><span class="bg-stone-100 text-stone-600 px-2 py-1 rounded text-xs font-medium">${u.product || '---'}</span></div>
+                        <div class="col-span-2 text-stone-500 text-xs">${u.expiry || '---'}</div>
+                        <div class="col-span-2 text-stone-500 text-xs">${u.payDate || '---'}</div>
+                        <div class="col-span-3 text-right"><div class="text-xs font-bold ${statusColor} mb-1 uppercase tracking-wider">${u.status || 'Pending'}</div><button onclick="openEditModal('${u.id}')" class="text-xs bg-stone-900 text-white px-3 py-1.5 rounded hover:bg-stone-700 transition shadow-sm">Edit</button></div>
+                    </div>
+                    <div class="md:hidden p-4 border-b border-stone-100">
+                        <div class="flex justify-between mb-2">${realName}<span class="text-xs font-bold ${statusColor}">${u.status || 'Pending'}</span></div>
+                        <div class="text-xs text-stone-500 mb-2">${u.product || '-'} | Exp: ${u.expiry || '-'}</div>
+                        <button onclick="openEditModal('${u.id}')" class="text-xs bg-stone-100 w-full py-2 rounded">Edit Details</button>
+                    </div>
+                `;
+            });
+            list.innerHTML = html || '<div class="p-8 text-center">No clients match filters.</div>';
+        };
+
+        window.renderStats = () => {
+            let usedCredits = 0; let totalRevenue = 0;
+            allClients.forEach(u => {
+                if (u.deleted) return;
+                const prod = PRODUCTS[u.product] || { credits: 0, price: 0 };
+                if (u.status === 'Active') { usedCredits += prod.credits; totalRevenue += prod.price; }
+            });
+            const totalCreditsBought = allSupplyBatches.reduce((sum, b) => sum + Number(b.credits), 0);
+            const totalCostBasis = allSupplyBatches.reduce((sum, b) => sum + Number(b.cost), 0);
+            const avgCostPerCredit = totalCreditsBought > 0 ? (totalCostBasis / totalCreditsBought) : 0;
+            const remaining = totalCreditsBought - usedCredits;
+            const realNetProfit = totalRevenue - totalCostBasis;
+            const profitOnSold = totalRevenue - (usedCredits * avgCostPerCredit);
+            const avgProfit = usedCredits > 0 ? (profitOnSold / usedCredits) : 0;
+            const percentUsed = totalCreditsBought > 0 ? (usedCredits / totalCreditsBought) * 100 : 0;
+            
+            document.getElementById('stat-bar').style.width = `${percentUsed}%`;
+            document.getElementById('stat-credits-left').innerText = remaining;
+            document.getElementById('stat-credits-total').innerText = `/ ${totalCreditsBought}`;
+            document.getElementById('stat-revenue').innerText = `$${totalRevenue.toFixed(2)}`;
+            const profEl = document.getElementById('stat-profit');
+            profEl.innerText = `$${realNetProfit.toFixed(2)}`;
+            profEl.className = realNetProfit >= 0 ? "text-3xl font-bold text-green-600" : "text-3xl font-bold text-red-600";
+            document.getElementById('stat-avg').innerText = `$${avgProfit.toFixed(2)}`;
+            document.getElementById('stat-cost-basis').innerText = `Cost Basis: $${avgCostPerCredit.toFixed(2)}/credit`;
+        };
+
+        window.saveSupply = async (e) => {
+            e.preventDefault();
+            const newBatch = { credits: Number(document.getElementById('supply-credits').value), cost: Number(document.getElementById('supply-cost').value), btc: document.getElementById('supply-btc').value, date: document.getElementById('supply-date').value };
+            const metaRef = doc(db, "business_data", "supply_ledger");
+            const snap = await getDoc(metaRef);
+            if (snap.exists()) await updateDoc(metaRef, { batches: arrayUnion(newBatch) });
+            else await setDoc(metaRef, { batches: [{ credits: 120, cost: 403.42, date: "2026-01-01" }, newBatch] });
+            closeModal('supply'); loadAdminData();
+        };
+
+        window.renderSupplyHistory = () => {
+            const list = document.getElementById('supply-history-list');
+            let html = '';
+            allSupplyBatches.forEach((batch, index) => {
+                const btcBadge = batch.btc ? `<span class="bg-orange-100 text-orange-800 text-[10px] px-1 rounded ml-1"><i class="fab fa-bitcoin"></i> ${batch.btc}</span>` : '';
+                html += `<div class="flex justify-between items-center p-3 bg-stone-50 rounded-lg border border-stone-100"><div><div class="text-sm font-bold text-stone-700">${batch.credits} Credits</div><div class="text-xs text-stone-500">${batch.date}</div></div><div class="text-right"><div class="text-sm font-mono">$${batch.cost}</div>${btcBadge}</div><button onclick="deleteSupply(${index})" class="text-red-400 hover:text-red-600 ml-3"><i class="fas fa-trash"></i></button></div>`;
+            });
+            list.innerHTML = html || '<p class="text-center text-sm text-stone-400">No history found.</p>';
+        };
+
+        window.deleteSupply = async (index) => {
+            if(!confirm("Remove this entry?")) return;
+            allSupplyBatches.splice(index, 1);
+            await setDoc(doc(db, "business_data", "supply_ledger"), { batches: allSupplyBatches });
+            renderSupplyHistory(); loadAdminData(); 
+        };
+
+        window.openEditModal = async (uid) => {
+            if (uid) {
+                const data = allClients.find(c => c.id === uid);
+                if (!data) return;
+                document.getElementById('modal-edit-title').innerText = "Edit User";
+                document.getElementById('edit-uid').value = uid;
+                ['realName', 'email', 'status', 'product', 'expiry', 'payDate', 'buyDate', 'username', 'password', 'epgeniusM3u', 'm3uUrl', 'serverUrl'].forEach(key => {
+                    const el = document.getElementById('edit-' + (key === 'serverUrl' ? 'server' : (key === 'username' ? 'user' : (key === 'password' ? 'pass' : key.toLowerCase()))));
+                    if(el) {
+                        if(key === 'serverUrl') {
+                            el.value = data[key] || 'http://cf.taty.website';
+                        } else {
+                            el.value = data[key] || '';
+                        }
+                        if(key === 'email') el.readOnly = true; // Lock email for existing users
+                    }
+                });
+                
+                // Show User Prefs in Admin
+                const deviceList = (data.devices || []).map(d => getDeviceName(d.type)).join(', ') || 'None';
+                document.getElementById('edit-pref-devices').innerHTML = deviceList;
+                document.getElementById('edit-pref-pvr').innerText = data.pvrPreference || '---';
+                document.getElementById('edit-pref-bouquet').innerText = data.bouquetPreference || '---';
+                document.getElementById('edit-pref-live-note').innerText = data.liveBouquet || '---';
+                document.getElementById('edit-pref-vod-note').innerText = data.vodBouquet || '---';
+                // Show supporter interest
+                const isInterested = data.supporterRequest ? "Yes, Requested" : "No";
+                const interestColor = data.supporterRequest ? "text-green-600 font-bold" : "text-stone-400";
+                document.getElementById('edit-pref-supporter-interest').innerHTML = `<span class="${interestColor}">${isInterested}</span>`;
+                
+                // Load supporter status dropdown
+                document.getElementById('edit-supporter-status').value = data.supporterStatus || 'Not Requested';
+
+            } else {
+                document.getElementById('modal-edit-title').innerText = "Add Manual Client";
+                document.getElementById('edit-uid').value = "";
+                document.querySelectorAll('#modal-edit input').forEach(i => i.value = '');
+                document.getElementById('edit-status').value = 'Active';
+                document.getElementById('edit-product').value = '1 Month';
+                document.getElementById('edit-server').value = 'http://cf.taty.website';
+                document.getElementById('edit-email').readOnly = false; // Unlock for new
+                document.getElementById('edit-is-supporter').checked = false;
+                
+                document.getElementById('edit-pref-devices').innerHTML = '---';
+                document.getElementById('edit-pref-pvr').innerText = '---';
+                document.getElementById('edit-pref-bouquet').innerText = '---';
+                document.getElementById('edit-pref-live-note').innerText = '---';
+                document.getElementById('edit-pref-vod-note').innerText = '---';
+                document.getElementById('edit-pref-supporter-interest').innerText = '---';
+            }
+            openModal('edit');
+        };
+
+        window.softDeleteUser = async () => {
+            const uid = document.getElementById('edit-uid').value;
+            if (!uid) { closeModal('edit'); return; }
+            if (!confirm("Are you sure? This will hide the user and DISABLE their login.")) return;
+            await updateDoc(doc(db, "users", uid), { deleted: true, deletedAt: new Date().toISOString() });
+            closeModal('edit'); loadAdminData();
+        };
+
+        window.saveUserChanges = async (e) => {
+            e.preventDefault();
+            const uid = document.getElementById('edit-uid').value;
+            const data = {
+                realName: document.getElementById('edit-realname').value,
+                status: document.getElementById('edit-status').value,
+                product: document.getElementById('edit-product').value,
+                expiry: document.getElementById('edit-expiry').value,
+                payDate: document.getElementById('edit-paydate').value,
+                buyDate: document.getElementById('edit-buydate').value,
+                serverUrl: document.getElementById('edit-server').value,
+                username: document.getElementById('edit-user').value,
+                password: document.getElementById('edit-pass').value,
+                epgeniusM3u: document.getElementById('edit-epgenius').value,
+                m3uUrl: document.getElementById('edit-m3u').value,
+                isSupporter: document.getElementById('edit-is-supporter').checked
+            };
+            
+            // Only update email if it's a new manual entry to avoid breaking auth mapping
+            if(!uid) data.email = document.getElementById('edit-email').value;
+
+            if (uid) {
+                await updateDoc(doc(db, "users", uid), data);
+                showToast(); // Admin toast
+            } else {
+                await addDoc(collection(db, "users"), { ...data, created: new Date().toISOString() });
+                showToast();
+            }
+            closeModal('edit'); loadAdminData(); 
+        };
+
+        // --- SHARED MODALS ---
+        window.openModal = (id) => document.getElementById('modal-' + id).classList.remove('hidden');
+        window.closeModal = (id) => document.getElementById('modal-' + id).classList.add('hidden');
+        window.openSupplyModal = () => openModal('supply');
+        window.openSupplyHistory = () => { openModal('supply-history'); renderSupplyHistory(); };
+        window.openChangePasswordModal = () => {
+            if (!auth || !auth.currentUser) return;
+            if (auth.currentUser.providerData.some(p => p.providerId === 'google.com')) return alert("Please change your password via Google.");
+            document.getElementById('new-password').value = "";
+            document.getElementById('password-modal').classList.remove('hidden');
+        };
+        window.closePasswordModal = () => document.getElementById('password-modal').classList.add('hidden');
+
+        window.handleChangePasswordSubmit = async (e) => {
+            e.preventDefault();
+            try {
+                await updatePassword(auth.currentUser, document.getElementById('new-password').value);
+                alert("Success!"); closePasswordModal();
+            } catch (err) { 
+                if (err.code === 'auth/requires-recent-login') { alert("Please re-login to change password."); handleLogout(); }
+                else alert(err.message); 
+            }
+        };
+
+        function updateNav(user) {
+            const nav = document.getElementById('desktop-nav');
+            const mob = document.getElementById('mobile-nav');
+            let html = '';
+            let mobHtml = '';
+            
+            if (user) {
+                const isAdmin = user.email === ADMIN_EMAIL;
+                
+                if (isAdmin) {
+                    html += `<button onclick="switchView('admin')" class="text-stone-600 hover:text-blue-600 font-bold transition-colors text-sm uppercase tracking-widest mr-4">Admin</button>`;
+                    mobHtml += `<button onclick="switchView('admin')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-bold text-blue-600 hover:bg-stone-100">Admin Console</button>`;
+                }
+
+                html += `
+                    <button onclick="switchView('dashboard')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">Dashboard</button>
+                    <button onclick="switchView('guides')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">Guides</button>
+                    <button onclick="switchView('config')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">My Config</button>
+                    <button onclick="switchView('faq')" class="text-stone-600 hover:text-stone-900 font-medium transition-colors text-sm uppercase tracking-widest">FAQ</button>
+                `;
+                
+                mobHtml += `
+                    <button onclick="switchView('dashboard')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">Dashboard</button>
+                    <button onclick="switchView('guides')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">Setup Guides</button>
+                    <button onclick="switchView('config')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">My Config</button>
+                    <button onclick="switchView('faq')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100">FAQ</button>
+                `;
+
+                html += `
+                    <div class="relative group ml-2 pt-2">
+                        <button class="px-4 py-2 bg-stone-900 text-stone-50 font-medium rounded-full hover:bg-stone-700 transition rustic-shadow text-sm flex items-center gap-2">
+                            Account <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="absolute right-0 top-full pt-2 w-48 hidden group-hover:block z-50">
+                            <div class="bg-white rounded-xl shadow-lg border border-stone-100 overflow-hidden">
+                                <button onclick="openChangePasswordModal()" class="block w-full text-left px-4 py-3 text-sm text-stone-600 hover:bg-stone-50 border-b border-stone-50">Change Password</button>
+                                <button onclick="handleLogout()" class="block w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50">Sign Out</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                mobHtml += `
+                    <button onclick="openChangePasswordModal()" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-600 hover:bg-stone-100 border-t border-stone-100 mt-2">Change Password</button>
+                    <button onclick="handleLogout()" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-red-600 bg-red-50 mt-2">Sign Out</button>
+                `;
+
+           } else {
+                html = `<button onclick="openModal('login')" class="px-6 py-2 bg-stone-900 text-stone-50 font-medium rounded-full hover:bg-stone-700 transition rustic-shadow text-sm">Client Login</button>`;
+                mobHtml = `<button onclick="openModal('login')" class="block w-full text-left px-3 py-3 rounded-lg text-base font-medium text-stone-900 bg-stone-200 mt-4">Client Login</button>`;
+           }
+           
+           if (nav) nav.innerHTML = html;
+           if (mob) mob.innerHTML = mobHtml;
+        }
+
+        // --- HELPERS ---
+        window.getDeviceIcon = (code) => {
+            const map = { 'firestick': 'tv', 'shield': 'microchip', 'appletv': 'apple', 'mobile_ios': 'mobile-alt', 'mobile_android': 'robot', 'windows': 'desktop', 'mac': 'laptop', 'smarttv': 'tv' };
+            return map[code] || 'tv';
+        };
+        window.getDeviceName = (code) => {
+            const map = { 'firestick': 'Firestick 4K', 'shield': 'Nvidia Shield', 'appletv': 'Apple TV', 'mobile_ios': 'iOS Device', 'mobile_android': 'Android Device', 'windows': 'Windows PC', 'mac': 'Mac Computer', 'smarttv': 'Smart TV' };
+            return map[code] || 'Device';
+        };
+        window.getDeviceGuideId = (code) => {
+            if(code === 'firestick' || code === 'shield' || code === 'mobile_android' || code === 'smarttv') return 'android';
+            if(code === 'appletv' || code === 'mobile_ios') return 'ios';
+            return 'windows';
+        };
+        window.showSpecificGuide = () => { 
+            switchView('guides'); showGuide('android'); 
+        };
+        window.showGuide = (os) => {
+            document.querySelectorAll('.guide-tab').forEach(t => { t.classList.remove('bg-stone-800', 'text-white'); t.classList.add('bg-white', 'text-stone-600'); });
+            document.getElementById('tab-' + os).classList.add('bg-stone-800', 'text-white');
+            document.querySelectorAll('.guide-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('guide-' + os).classList.remove('hidden');
+        };
+        window.updateDeviceRecommendation = () => {
+             // Optional logic for dynamic updates if needed
+        };
+        window.copyToClipboard = (id) => { document.getElementById(id).select(); document.execCommand('copy'); alert('Copied!'); };
+        window.copyToClipboardText = (id) => { 
+            const text = document.getElementById(id).innerText; 
+            navigator.clipboard.writeText(text).then(() => alert('Copied!')).catch(() => alert('Failed to copy')); 
+        };
+        document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
+
+        // --- AUTH & REGISTER HANDLERS FOR NEW USERS ---
+        // (Existing handleRegister and handleGoogleLogin already included above)
     </script>
 </body>
 </html>
