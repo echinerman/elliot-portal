@@ -21,12 +21,24 @@
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Tooltip Styles */
         .tooltip-trigger:hover .tooltip-content { visibility: visible; opacity: 1; }
         .tooltip-content { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
         details > summary { list-style: none; }
         details > summary::-webkit-details-marker { display: none; }
-        #toast-container { visibility: hidden; opacity: 0; transform: translateY(20px); transition: all 0.3s ease-in-out; }
-        #toast-container.show { visibility: visible; opacity: 1; transform: translateY(0); }
+        
+        /* Toast Notification */
+        #toast-container {
+            visibility: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease-in-out;
+        }
+        #toast-container.show {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="font-sans text-stone-800 antialiased bg-stone-50">
@@ -52,7 +64,10 @@
     <div id="toast-container" class="fixed bottom-6 right-6 z-[100] max-w-sm w-full">
         <div class="bg-stone-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
             <div class="text-green-400 text-xl"><i class="fas fa-check-circle"></i></div>
-            <div><h4 class="font-bold text-sm">Changes Saved</h4><p class="text-xs text-stone-400">Configuration updated successfully.</p></div>
+            <div>
+                <h4 class="font-bold text-sm">Changes Saved</h4>
+                <p class="text-xs text-stone-400">Your update was successful.</p>
+            </div>
         </div>
     </div>
 
@@ -74,6 +89,7 @@
     <!-- VIEW: DASHBOARD (Unified) -->
     <main id="view-dashboard" class="view-section pt-32 pb-24 min-h-screen">
         <div class="max-w-6xl mx-auto px-4">
+            <!-- Header -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                 <div>
                     <h1 class="font-serif text-3xl text-stone-900">My Dashboard</h1>
@@ -82,18 +98,21 @@
                 <button onclick="handleLogout()" class="text-sm bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 font-medium">Sign Out</button>
             </div>
 
+            <!-- Disabled/Deleted State -->
             <div id="user-disabled" class="hidden bg-red-50 border border-red-200 rounded-2xl p-8 text-center max-w-2xl mx-auto">
                 <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-ban text-2xl"></i></div>
                 <h2 class="text-xl font-bold text-red-800 mb-2">Account Disabled</h2>
                 <p class="text-red-700">This account has been deactivated. Please contact Elliot for assistance.</p>
             </div>
 
+            <!-- Pending State -->
             <div id="user-pending" class="hidden bg-yellow-50 border border-yellow-200 rounded-2xl p-8 text-center max-w-2xl mx-auto">
                 <div class="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-clock text-2xl"></i></div>
                 <h2 class="text-xl font-bold text-yellow-800 mb-2">Account Pending</h2>
                 <p class="text-yellow-700">Your account is being set up. Please check back shortly.</p>
             </div>
 
+            <!-- Active State -->
             <div id="user-active" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
                 <!-- Left Column -->
@@ -179,7 +198,7 @@
                             <div id="dash-supporter-list" class="h-32 overflow-y-auto bg-stone-50 rounded border border-stone-100 p-2 text-[10px] font-mono text-stone-600 leading-tight"></div>
                         </div>
                         
-                        <div id="dash-supporter-info" class="text-xs text-stone-500">
+                        <div id="dash-supporter-inactive" class="text-xs text-stone-500">
                              <p class="mb-3 leading-relaxed">
                                 GanjaRelease is the dedicated curator who maintains the EPG on EPGenius as a passion project.
                                 <br><br>
@@ -375,7 +394,6 @@
 
     <!-- VIEW: ADMIN DASHBOARD -->
     <main id="view-admin" class="view-section pt-32 pb-24 min-h-screen bg-stone-100">
-        <!-- (Same Admin Dashboard Layout) -->
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between items-center mb-8">
                 <h1 class="font-serif text-3xl text-stone-900">Admin Console</h1>
@@ -494,6 +512,7 @@
                             <div><span class="block text-stone-400">Live TV Request:</span><p id="edit-pref-live-note" class="italic">---</p></div>
                             <div><span class="block text-stone-400">VOD Request:</span><p id="edit-pref-vod-note" class="italic">---</p></div>
                         </div>
+                        <span class="block text-stone-400 mt-2">Supporter Interest:</span><p id="edit-pref-supporter-interest" class="italic font-bold text-green-700">---</p>
                     </div>
                 </div>
                 <div class="flex gap-3 mt-6 sticky bottom-0 bg-white pt-2 border-t border-stone-100">
@@ -1059,7 +1078,10 @@
                 document.getElementById('edit-pref-bouquet').innerText = data.bouquetPreference || '---';
                 document.getElementById('edit-pref-live-note').innerText = data.liveBouquet || '---';
                 document.getElementById('edit-pref-vod-note').innerText = data.vodBouquet || '---';
-                document.getElementById('edit-pref-supporter-interest').innerHTML = `<span class="${data.supporterRequest ? "text-green-600 font-bold" : "text-stone-400"}">${data.supporterRequest ? "Yes, Requested" : "No"}</span>`;
+                // Show supporter interest
+                const isInterested = data.supporterRequest ? "Yes, Requested" : "No";
+                const interestColor = data.supporterRequest ? "text-green-600 font-bold" : "text-stone-400";
+                document.getElementById('edit-pref-supporter-interest').innerHTML = `<span class="${interestColor}">${isInterested}</span>`;
                 
                 // Load supporter status dropdown
                 document.getElementById('edit-supporter-status').value = data.supporterStatus || 'Not Requested';
