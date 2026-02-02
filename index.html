@@ -31,7 +31,6 @@
 </head>
 <body class="font-sans text-stone-800 antialiased bg-stone-50">
 
-    <!-- NAV -->
     <nav class="fixed w-full bg-stone-50/90 backdrop-blur-md border-b border-stone-200 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20 items-center">
@@ -46,19 +45,18 @@
         <div id="mobile-menu" class="hidden md:hidden bg-stone-50 border-t border-stone-200 absolute w-full px-4 pt-4 pb-6 space-y-2 shadow-xl"></div>
     </nav>
 
-    <!-- TOAST -->
     <div id="toast" class="toast fixed bottom-6 right-6 z-[100] max-w-sm w-full bg-stone-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4">
         <div class="text-green-400 text-xl"><i class="fas fa-check-circle"></i></div>
-        <div><h4 class="font-bold text-sm">Success</h4><p class="text-xs text-stone-400" id="toast-msg">Changes saved.</p></div>
+        <div><h4 class="font-bold text-sm">Success</h4><p class="text-xs text-stone-400" id="toast-msg">Updated successfully.</p></div>
     </div>
 
-    <!-- VIEW: HOME (Public) -->
+    <!-- VIEW: HOME -->
     <main id="view-home" class="view-section active">
         <section class="min-h-screen flex items-center justify-center text-center px-4">
             <div class="max-w-3xl -mt-20">
                 <span class="inline-block py-1 px-4 border border-stone-300 rounded-full text-stone-600 text-sm mb-8 bg-white/50 backdrop-blur">Members Only</span>
                 <h1 class="font-serif text-5xl md:text-7xl text-stone-900 mb-8">Private Viewing Infrastructure</h1>
-                <p class="text-xl text-stone-600 mb-12 max-w-xl mx-auto">A curated 4K experience for friends and family.</p>
+                <p class="text-xl text-stone-600 mb-12 max-w-xl mx-auto">Premium 4K streaming access for friends and family.</p>
                 <div class="flex justify-center gap-4">
                     <button type="button" onclick="UI.openModal('login')" class="px-8 py-3 bg-stone-900 text-white rounded-full hover:bg-stone-700 transition shadow-lg">Log In</button>
                     <button type="button" onclick="UI.openModal('register')" class="px-8 py-3 border border-stone-300 bg-white rounded-full hover:bg-stone-50 transition shadow-sm">Register</button>
@@ -67,381 +65,213 @@
         </section>
     </main>
 
-    <!-- VIEW: DASHBOARD (Client) -->
+    <!-- VIEW: DASHBOARD -->
     <main id="view-dashboard" class="view-section pt-32 pb-24 min-h-screen">
         <div class="max-w-6xl mx-auto px-4">
             <div class="flex justify-between items-end mb-10">
-                <div><h1 class="font-serif text-3xl text-stone-900">My Dashboard</h1><p class="text-stone-500 text-sm mt-1" id="dash-welcome">Welcome back.</p></div>
+                <div>
+                    <h1 class="font-serif text-3xl text-stone-900">My Dashboard</h1>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span id="account-status-badge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Loading...</span>
+                        <p class="text-stone-500 text-sm" id="dash-welcome">Welcome back.</p>
+                    </div>
+                </div>
                 <button type="button" onclick="Auth.logout()" class="text-sm text-red-600 hover:text-red-800 font-medium">Sign Out</button>
             </div>
 
-            <!-- STATES -->
-            <div id="state-disabled" class="hidden bg-red-50 border border-red-200 rounded-2xl p-8 text-center"><i class="fas fa-ban text-3xl text-red-600 mb-4"></i><h2 class="text-xl font-bold text-red-800">Account Disabled</h2><p class="text-red-700 mt-2">Please contact Elliot for assistance.</p></div>
-            <div id="state-pending" class="hidden bg-yellow-50 border border-yellow-200 rounded-2xl p-8 text-center"><i class="fas fa-clock text-3xl text-yellow-600 mb-4"></i><h2 class="text-xl font-bold text-yellow-800">Account Pending</h2><p class="text-yellow-700 mt-2">Your account is being set up. Check back shortly.</p></div>
+            <div id="state-disabled" class="hidden bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+                <i class="fas fa-ban text-3xl text-red-600 mb-4"></i>
+                <h2 class="text-xl font-bold text-red-800">Account Deactivated</h2>
+                <p class="text-red-700 mt-2">Access to this portal has been restricted. Please contact Elliot directly.</p>
+            </div>
 
-            <!-- ACTIVE CONTENT -->
             <div id="state-active" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Col 1 -->
+                <!-- Col 1: Licenses & Billing -->
                 <div class="space-y-6">
-                    <!-- Status -->
-                    <div class="bg-stone-900 text-stone-50 p-8 rounded-3xl shadow-xl relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-stone-800 rounded-full blur-2xl opacity-50 -mr-10 -mt-10"></div>
-                        <div class="relative z-10">
-                            <div class="flex justify-between items-start mb-6">
-                                <div><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Status</p><div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div><span class="text-xl font-bold">Active</span></div></div>
-                            </div>
-                            <div class="border-t border-stone-800 pt-4"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Plan</p><p id="dash-product" class="font-serif text-lg text-white">Standard</p></div>
-                            <div class="pt-4"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Expires</p><p id="dash-expiry" class="font-mono text-lg text-white">---</p></div>
-                        </div>
+                    <div id="license-container" class="space-y-4">
+                        <!-- Licenses will be rendered here dynamically -->
                     </div>
 
-                    <!-- Calculator -->
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
                         <h3 class="font-bold text-stone-900 mb-4 text-sm uppercase tracking-wider border-b border-stone-100 pb-2">Renewal Calculator</h3>
                         <div id="pricing-rows" class="space-y-2 mb-4"></div> 
-                        <div class="flex justify-between items-center py-2 border-t border-stone-100 mb-2">
-                            <span class="text-xs font-bold text-stone-500">Supporter (+$20)</span>
-                            <input type="checkbox" id="calc-supporter" onchange="Calc.updateTotal()" class="w-4 h-4 text-green-600 rounded">
-                        </div>
                         <div class="bg-stone-50 p-3 rounded-lg flex justify-between items-center mb-4">
                             <span class="font-bold text-stone-700">Total:</span><span id="calc-total" class="font-bold text-xl text-blue-600">$0.00</span>
                         </div>
-                        
-                        <label class="text-xs font-bold text-stone-400 uppercase block mb-2">Payment Method</label>
-                        <select id="pay-method" onchange="Calc.toggleMethod()" class="w-full px-3 py-2 border rounded-lg text-sm mb-3">
-                            <option value="interac">Interac e-Transfer</option>
-                            <option value="bitcoin">Bitcoin</option>
-                        </select>
-                        <div id="pay-details" class="text-xs bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4"></div>
-
-                        <button type="button" onclick="Calc.sendRequest()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-lg"><i class="fab fa-facebook-messenger"></i> Request License</button>
-                    </div>
-
-                    <!-- Supporter -->
-                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold text-stone-900 text-sm">GanjaRelease Supporter</h3>
-                            <span id="dash-supporter-badge" class="px-2 py-1 bg-stone-100 text-stone-500 text-xs rounded font-bold">Inactive</span>
-                        </div>
-                        <div id="dash-supporter-active" class="hidden mt-2">
-                             <div id="dash-supporter-list" class="h-32 overflow-y-auto bg-stone-50 rounded border border-stone-100 p-2 text-[10px] font-mono text-stone-600 leading-tight"></div>
-                        </div>
-                        <div id="dash-supporter-inactive" class="mt-2 text-xs text-stone-500 hidden">
-                             <p>Support the creator (+$20) to unlock premium EPG updates.</p>
-                        </div>
+                        <button type="button" onclick="Calc.sendRequest()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-lg">
+                            <i class="fab fa-facebook-messenger"></i> Request Renewal
+                        </button>
                     </div>
                 </div>
 
-                <!-- Col 2&3 -->
+                <!-- Col 2&3: Configuration -->
                 <div class="lg:col-span-2 space-y-8">
-                    <!-- Connections -->
                     <div class="bg-white p-8 rounded-3xl shadow-sm border border-stone-200">
-                        <h2 class="font-bold text-2xl font-serif text-stone-900 mb-6">Connection Details</h2>
-                        
-                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 relative">
-                            <div class="flex items-start gap-4">
-                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0"><i class="fas fa-star"></i></div>
-                                <div class="flex-1">
-                                    <h3 class="font-bold text-blue-900 mb-1">Recommended: EPGenius (GanjaRelease #6)</h3>
-                                    <p class="text-sm text-blue-800/80 mb-3">Smart M3U Playlist with built-in EPG.</p>
-                                    <div class="flex bg-white rounded-lg border border-blue-200 p-1">
-                                        <input id="dash-epgenius" type="text" readonly class="flex-1 px-3 py-2 text-sm font-mono text-stone-600 outline-none bg-transparent" value="...">
-                                        <button type="button" onclick="UI.copy('dash-epgenius')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-md text-sm font-medium transition">Copy</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <h3 class="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4 border-b border-stone-100 pb-2">Strong 8K Credentials</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><label class="text-xs text-stone-500 block mb-1">Server URL</label><div class="flex bg-stone-50 rounded border"><code id="dash-server" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button type="button" onclick="UI.copyText('dash-server')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
-                                <div><label class="text-xs text-stone-500 block mb-1">Username</label><div class="flex bg-stone-50 rounded border"><code id="dash-user" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button type="button" onclick="UI.copyText('dash-user')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
-                                <div><label class="text-xs text-stone-500 block mb-1">Password</label><div class="flex bg-stone-50 rounded border"><code id="dash-pass" class="flex-1 px-3 py-2 text-sm font-bold text-stone-700 truncate">...</code><button type="button" onclick="UI.copyText('dash-pass')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
-                            </div>
-                        </div>
-                        
-                        <div class="pt-4 border-t border-stone-100">
-                            <details class="group">
-                                <summary class="flex items-center gap-2 cursor-pointer text-xs font-bold text-stone-400 uppercase hover:text-stone-600 transition"><i class="fas fa-chevron-right group-open:rotate-90 transition-transform"></i> Backup / Raw M3U</summary>
-                                <div class="mt-4 flex bg-stone-50 rounded border p-1"><input id="dash-m3u" readonly class="flex-1 px-3 py-2 text-xs font-mono bg-transparent outline-none text-stone-500" value="..."><button type="button" onclick="UI.copy('dash-m3u')" class="text-xs bg-stone-200 px-3 rounded hover:bg-stone-300">Copy</button></div>
-                            </details>
-                        </div>
-                    </div>
-
-                    <!-- Config Form -->
-                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-stone-200">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="font-bold text-2xl font-serif text-stone-900">My Configuration</h2>
-                            <span id="device-counter" class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">Active: 0</span>
-                        </div>
+                        <h2 class="font-bold text-2xl font-serif text-stone-900 mb-6">Device Configuration</h2>
                         <form onsubmit="Client.saveConfig(event)">
-                            <!-- Devices -->
-                            <div class="mb-8">
-                                <div class="grid grid-cols-3 gap-3 mb-4">
-                                    <button type="button" onclick="Client.addDevice('tv')" class="p-3 border rounded-xl hover:bg-stone-50 flex flex-col items-center gap-1"><i class="fas fa-tv text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500">TV Device</span></button>
-                                    <button type="button" onclick="Client.addDevice('mobile')" class="p-3 border rounded-xl hover:bg-stone-50 flex flex-col items-center gap-1"><i class="fas fa-mobile-alt text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500">Phone/Tablet</span></button>
-                                    <button type="button" onclick="Client.addDevice('computer')" class="p-3 border rounded-xl hover:bg-stone-50 flex flex-col items-center gap-1"><i class="fas fa-laptop text-xl text-stone-400 group-hover:text-stone-800"></i><span class="text-[10px] font-bold uppercase text-stone-500">PC/Mac</span></button>
+                            <div class="mb-10">
+                                <h3 class="font-bold text-sm uppercase text-stone-400 tracking-wider mb-4">My Roster</h3>
+                                <div id="device-selection-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                                    <!-- Dynamic Device Tag Buttons -->
                                 </div>
                                 <div id="device-list" class="space-y-2 mb-2 p-4 bg-stone-50 rounded-xl min-h-[50px] text-xs"></div>
                             </div>
 
                             <hr class="border-stone-100 mb-8">
 
-                            <!-- Prefs -->
                             <div class="mb-8">
-                                <div class="mb-6">
-                                    <label class="text-xs font-bold text-stone-500 mb-2 uppercase flex items-center gap-2">Concurrent Connections <i class="fas fa-info-circle text-stone-400 tooltip-trigger relative"><div class="tooltip-content absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-stone-800 text-white text-xs rounded shadow-xl normal-case font-normal z-10">1 License = 1 Device at a time.</div></i></label>
-                                    <select id="cfg-screens" onchange="Client.checkScreens()" class="w-full px-4 py-3 bg-stone-50 border rounded-lg text-sm"><option value="1">1 Connection</option><option value="2">2 Connections</option><option value="3">3 Connections</option><option value="4">4 Connections</option></select>
-                                    <p id="screens-warn" class="hidden text-xs text-amber-600 mt-2 bg-amber-50 p-2 rounded border border-amber-100"><i class="fas fa-exclamation-triangle mr-1"></i> Requires additional license purchase.</p>
-                                </div>
+                                <label class="text-xs font-bold text-stone-500 mb-2 uppercase block">Live TV Preferences</label>
+                                <div class="flex flex-wrap gap-2 mb-4" id="tags-live"></div>
                                 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                    <div>
-                                        <label class="text-xs font-bold text-stone-500 mb-2 uppercase block">Live TV Bouquet</label>
-                                        <div class="flex flex-wrap gap-2 mb-2" id="tags-live"></div>
-                                        <textarea id="cfg-live-note" rows="2" class="hidden w-full px-3 py-2 bg-stone-50 border rounded-lg text-sm" placeholder="Details..."></textarea>
-                                    </div>
-                                    <div>
-                                        <label class="text-xs font-bold text-stone-500 mb-2 uppercase block">VOD Bouquet</label>
-                                        <div class="flex flex-wrap gap-2 mb-2" id="tags-vod"></div>
-                                        <div class="flex gap-2 mt-2"><button type="button" onclick="AI.suggestVOD()" class="flex-1 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs font-bold rounded-lg hover:shadow-md transition flex items-center justify-center gap-1"><i class="fas fa-magic"></i> Inspire Me</button></div>
-                                        <textarea id="cfg-vod-note" rows="2" class="hidden w-full mt-2 px-3 py-2 bg-stone-50 border rounded-lg text-sm" placeholder="Details..."></textarea>
-                                    </div>
-                                </div>
+                                <label class="text-xs font-bold text-stone-500 mb-2 uppercase block mt-6">VOD Preferences</label>
+                                <div class="flex flex-wrap gap-2 mb-4" id="tags-vod"></div>
                                 
-                                <div class="flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-100">
-                                    <input type="checkbox" id="cfg-supporter" class="w-4 h-4 text-green-600 rounded">
-                                    <div><label for="cfg-supporter" class="text-sm font-bold text-green-900 block">Interest in Supporter Status (+$20)</label></div>
-                                </div>
+                                <textarea id="cfg-custom-note" rows="3" class="w-full px-3 py-2 bg-stone-50 border rounded-lg text-sm mt-4 outline-none focus:ring-2 focus:ring-stone-200" placeholder="Any specific channel requests or notes for Elliot..."></textarea>
                             </div>
                             
                             <button type="submit" class="w-full bg-stone-900 text-stone-50 font-bold py-4 rounded-xl hover:bg-stone-700 transition shadow-lg">Save Configuration</button>
                         </form>
                     </div>
-
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- VIEW: ADMIN, GUIDES, FAQ -->
-    <div id="dynamic-views"></div>
+    <!-- ADMIN -->
+    <main id="view-admin" class="view-section pt-32 pb-24 min-h-screen bg-stone-100">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="font-serif text-3xl text-stone-900">Admin Console</h1>
+                <div class="flex gap-2">
+                    <button type="button" onclick="Config.seed()" class="text-xs bg-yellow-600 text-white px-3 py-2 rounded-lg hover:bg-yellow-700 font-bold">⚠️ Initialize DB</button>
+                    <button type="button" onclick="UI.openModal('edit'); Admin.hydrateEdit(null)" class="text-xs bg-stone-900 text-white px-3 py-2 rounded-lg hover:bg-stone-700 font-bold">Add Client</button>
+                    <button type="button" onclick="window.loadAdminData()" class="text-xs bg-white border px-3 py-2 rounded-lg"><i class="fas fa-sync-alt"></i></button>
+                </div>
+            </div>
+            <div id="admin-user-list" class="bg-white rounded-2xl shadow-sm border overflow-hidden divide-y"></div>
+        </div>
+    </main>
 
-    <!-- MODALS CONTAINER -->
-    <div id="modals">
-        <div id="modal-login" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
-                <button type="button" onclick="UI.closeModal('login')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
-                <h2 class="text-2xl font-serif font-bold text-center mb-6">Log In</h2>
-                <button type="button" onclick="Auth.loginGoogle()" class="w-full bg-white border border-stone-300 py-3 rounded-lg mb-4 flex justify-center gap-2 font-bold text-stone-700"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5"> Google</button>
-                <div class="text-center text-stone-400 text-sm mb-4">- OR -</div>
-                <form onsubmit="Auth.loginEmail(event)"><input id="login-email" type="email" placeholder="Email" class="w-full mb-3 px-4 py-3 bg-stone-50 border rounded-lg" required><input id="login-pass" type="password" placeholder="Password" class="w-full mb-6 px-4 py-3 bg-stone-50 border rounded-lg" required><button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Log In</button></form>
-            </div>
+    <!-- MODALS -->
+    <div id="modal-login" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full relative shadow-2xl">
+            <button type="button" onclick="UI.closeModal('login')" class="absolute top-4 right-4 text-stone-400 hover:text-stone-600"><i class="fas fa-times"></i></button>
+            <h2 class="text-2xl font-serif font-bold text-center mb-6">Log In</h2>
+            <form onsubmit="Auth.loginEmail(event)" class="space-y-4">
+                <input id="login-email" type="email" placeholder="Email" class="w-full px-4 py-3 bg-stone-50 border rounded-lg outline-none" required>
+                <input id="login-pass" type="password" placeholder="Password" class="w-full px-4 py-3 bg-stone-50 border rounded-lg outline-none" required>
+                <button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg hover:bg-stone-800 transition">Enter Portal</button>
+            </form>
         </div>
-        
-        <div id="modal-register" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
-                <button type="button" onclick="UI.closeModal('register')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
-                <h2 class="text-2xl font-serif font-bold text-center mb-2">New Account</h2>
-                <p class="text-center text-stone-500 text-sm mb-6">Enter the invite code from Elliot.</p>
-                <form onsubmit="Auth.register(event)"><input id="reg-code" type="text" placeholder="Invite Code" class="w-full mb-4 px-4 py-3 bg-stone-50 border rounded-lg uppercase tracking-widest" required><input id="reg-email" type="email" placeholder="Email" class="w-full mb-4 px-4 py-3 bg-stone-50 border rounded-lg" required><input id="reg-pass" type="password" placeholder="Password" class="w-full mb-6 px-4 py-3 bg-stone-50 border rounded-lg" required minlength="6"><button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Create Account</button></form>
-            </div>
+    </div>
+    
+    <div id="modal-register" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full relative shadow-2xl">
+            <button type="button" onclick="UI.closeModal('register')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <h2 class="text-2xl font-serif font-bold text-center mb-2">Join Network</h2>
+            <p class="text-center text-stone-500 text-sm mb-6">Enter invite code for automatic activation.</p>
+            <form onsubmit="Auth.register(event)" class="space-y-4">
+                <input id="reg-code" type="text" placeholder="Invite Code" class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg outline-none uppercase tracking-widest" required>
+                <input id="reg-email" type="email" placeholder="Your Email" class="w-full px-4 py-3 bg-stone-50 border rounded-lg outline-none" required>
+                <input id="reg-pass" type="password" placeholder="Create Password" class="w-full px-4 py-3 bg-stone-50 border rounded-lg outline-none" required minlength="6">
+                <button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg hover:bg-stone-800 transition">Create Account</button>
+            </form>
         </div>
-        
-        <!-- Admin Edit Modal -->
-        <div id="modal-edit" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 overflow-y-auto">
-            <div class="bg-white rounded-2xl p-8 max-w-2xl w-full relative my-8">
-                <button type="button" onclick="UI.closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
-                <h2 id="modal-edit-title" class="text-xl font-serif font-bold mb-6">Edit User</h2>
-                <form onsubmit="Admin.saveUser(event)">
-                    <input type="hidden" id="edit-uid">
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <input id="edit-realname" placeholder="Real Name" class="border p-2 rounded">
-                        <input id="edit-email" placeholder="Email" class="border p-2 rounded">
-                    </div>
-                     <div class="grid grid-cols-3 gap-4 mb-4">
-                        <select id="edit-status" class="border p-2 rounded"><option>Active</option><option>Pending</option></select>
-                        <select id="edit-product" class="border p-2 rounded"><option>1 Month</option></select>
-                        <input id="edit-expiry" placeholder="Expiry" class="border p-2 rounded">
-                     </div>
-                     <div class="grid grid-cols-2 gap-4 mb-4">
-                         <input id="edit-paydate" type="date" class="border p-2 rounded">
-                         <input id="edit-buydate" type="date" class="border p-2 rounded">
-                     </div>
-                     <div class="grid grid-cols-2 gap-4 mb-4">
-                        <input id="edit-user" placeholder="User" class="border p-2 rounded">
-                        <input id="edit-pass" placeholder="Pass" class="border p-2 rounded">
-                     </div>
-                     <input id="edit-server" placeholder="Server" class="border p-2 rounded w-full mb-2">
-                     <input id="edit-epgenius" placeholder="EPGenius" class="border p-2 rounded w-full mb-2">
-                     <input id="edit-m3u" placeholder="M3U" class="border p-2 rounded w-full mb-2">
-                     <div class="mb-4"><label>Supporter:</label> <select id="edit-supporter-status" class="border p-2 rounded"><option>Not Requested</option><option>Enabled</option></select></div>
-                     
-                    <button type="submit" class="bg-blue-600 text-white p-3 rounded w-full">Save</button>
-                    
-                    <div class="mt-4 pt-4 border-t border-stone-100 bg-gray-50 p-4 rounded-lg max-h-32 overflow-y-auto text-xs">
-                        <h3 class="font-bold text-stone-500 mb-2">USER REQUESTED SETUP</h3>
-                        <div class="grid grid-cols-2 gap-4 text-stone-700">
-                            <div><span class="block text-stone-400">Devices:</span><ul id="edit-pref-devices" class="list-disc pl-4 mt-1 font-mono"><li>None listed</li></ul></div>
-                            <div><span class="block text-stone-400">PVR:</span> <span id="edit-pref-pvr" class="font-mono">---</span><br><span class="block text-stone-400 mt-1">Bouquet:</span> <span id="edit-pref-bouquet" class="font-mono">---</span></div>
-                        </div>
-                        <div class="mt-2 pt-2 border-t border-stone-200">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><span class="block text-stone-400">Live TV:</span><p id="edit-pref-live-note" class="italic mb-1">---</p></div>
-                                <div><span class="block text-stone-400">VOD:</span><p id="edit-pref-vod-note" class="italic">---</p></div>
-                            </div>
-                            <span class="block text-stone-400 mt-1">Supporter Interest:</span><p id="edit-pref-supporter-interest" class="font-bold">---</p>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div id="modal-supply" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button type="button" onclick="UI.closeModal('supply')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Record New Supply</h2><form onsubmit="Renderer.saveSupply(event)"><input id="supply-credits" type="number" placeholder="Credits" class="w-full px-3 py-2 border rounded mb-2" required><input id="supply-cost" type="number" step="0.01" placeholder="Cost" class="w-full px-3 py-2 border rounded mb-2" required><input id="supply-btc" placeholder="BTC" class="w-full px-3 py-2 border rounded mb-2"><input id="supply-date" type="date" class="w-full px-3 py-2 border rounded mb-2" required><button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Add</button></form></div></div>
-        <div id="modal-supply-history" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-lg w-full relative"><button type="button" onclick="UI.closeModal('supply-history')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Supply History</h2><div id="supply-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div></div></div>
-        <div id="password-modal" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button type="button" onclick="UI.closePasswordModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold text-center mb-6">Change Password</h2><form onsubmit="UI.handleChangePasswordSubmit(event)"><input type="password" id="new-password" placeholder="New Password" class="w-full mb-6 px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg"><button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg">Update</button></form></div></div>
     </div>
 
-    <!-- APP LOGIC -->
+    <div id="modal-edit" class="hidden fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl w-full relative my-8 shadow-2xl">
+            <button type="button" onclick="UI.closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <h2 id="modal-edit-title" class="text-xl font-serif font-bold mb-6">Edit Client & Licenses</h2>
+            <form onsubmit="Admin.saveUser(event)" class="space-y-4">
+                <input type="hidden" id="edit-uid">
+                <div class="grid grid-cols-2 gap-4">
+                    <input id="edit-realname" placeholder="Client Name" class="border p-2 rounded outline-none">
+                    <input id="edit-email" placeholder="Email" class="border p-2 rounded outline-none bg-stone-50">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-stone-400 uppercase">Account Status</label>
+                    <select id="edit-account-status" class="w-full border p-2 rounded bg-white outline-none">
+                        <option value="Active">Active</option>
+                        <option value="Disabled">Disabled</option>
+                    </select>
+                </div>
+                <hr>
+                <div id="admin-licenses-list" class="space-y-4">
+                    <!-- License management UI injected here -->
+                </div>
+                <button type="button" onclick="Admin.addLicenseRow()" class="text-xs text-blue-600 font-bold">+ Add License Slot</button>
+                <hr>
+                <button type="submit" class="bg-stone-900 text-white p-3 rounded-lg w-full font-bold">Update Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP SCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, getDocs, query, where, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // --- CONSTANTS ---
         const CONFIG = {
             ADMIN_EMAIL: "e.chinerman@gmail.com",
             INVITE_CODE: "FAMILY8K",
-            FB_LINK: "https://m.me/rds.ca",
-            GEMINI_API_KEY: "AIzaSyArqgmwplxIykH9ctwjQeKP_qP44BffeHE", 
-            PAY_INTERAC: ["e.chinerman@gmail.com", "514-943-5664"],
-            PAY_BTC: { lightning: "gogobonobo@shakepay.me", chain: "bc1q6fu87a280v4g6wcjgu2kewv8qyuh3vl93deta8v297r4prswu4dqqxx3xw" }
+            FB_LINK: "https://m.me/rds.ca"
         };
-
-        const SUPPORTER_CATS = ["✅CA| SPORTSNET+ PPV", "✅CA| WHL PPV", "✅CA| TSN+ PPV", "✅CA| PRIME PPV", "✅NFL Sunday Ticket", "✅NBA League Pass", "✅UFC Fight Pass", "✅F1 TV", "✅DAZN PPV", "✅Peacock PPV", "✅Flo Sports"]; 
 
         const firebaseConfig = { apiKey: "AIzaSyAH5CRCJoktmY6baXshDnOVgylHldcPa3E", authDomain: "elliotvip.firebaseapp.com", projectId: "elliotvip", storageBucket: "elliotvip.firebasestorage.app", messagingSenderId: "223494244969", appId: "1:223494244969:web:edcf227f756ac76ba170f8" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- CONFIG SERVICE ---
+        // --- CONFIG SERVICE (Pulls from Firestore app_config/settings) ---
         window.Config = {
             data: {
-                PRODUCTS: { 'Demo': {c:0,p:0}, '1 Month': {c:1,p:10}, '3 Months': {c:3,p:25}, '6 Months': {c:6,p:40}, '1 Year': {c:12,p:60} },
-                TAGS: { live: ['All English', 'All French', 'Sports', 'News', 'Kids', 'Other'], vod: ['All Movies', 'All Series', 'English Only', 'French Only', 'No Horror', 'Other'] }
+                PRODUCTS: { '1 Month': {p:10}, '3 Months': {p:25}, '1 Year': {p:60} },
+                DEVICE_TYPES: ['Firestick', 'Apple TV', 'iPhone', 'Android Phone', 'iPad', 'Windows PC', 'Mac', 'Nvidia Shield'],
+                TAGS: { 
+                    live: ['All English', 'All French', 'Sports', 'News', 'Kids', 'UK Channels'], 
+                    vod: ['All Movies', 'All Series', 'English Only', 'French Only', 'No Horror'] 
+                }
             },
             load: async () => {
                 try {
                     const snap = await getDoc(doc(db, "app_config", "settings"));
                     if(snap.exists()) window.Config.data = snap.data();
-                } catch(e) { console.warn("Using default config"); }
-                // Re-render dependent UI
+                } catch(e) { console.warn("Using local fallback config"); }
                 Renderer.renderPricing();
                 Renderer.renderTags();
+                Renderer.renderDeviceGrid();
             },
             seed: async () => {
-                if(!confirm("Initialize DB Config? This overwrites existing config.")) return;
+                if(!confirm("Push current settings to Database? This will define your dropdowns and prices.")) return;
                 await setDoc(doc(db, "app_config", "settings"), window.Config.data);
-                UI.showToast("DB Initialized");
+                UI.showToast("Database Synced!");
             }
         };
 
-        // --- AI SERVICE ---
-        window.AI = {
-            toggle: () => {
-                const w = document.getElementById('ai-window');
-                w.classList.toggle('hidden');
-                if(!w.classList.contains('hidden') && document.getElementById('ai-messages').children.length === 0) {
-                     AI.addMsg("Hi! I'm Elliot's AI Assistant. I can help with TiviMate setup, buffering fixes, or general questions. What's up?", 'ai');
-                }
-            },
-            addMsg: (text, sender) => {
-                const div = document.createElement('div');
-                div.className = sender === 'user' ? "bg-stone-900 text-white p-3 rounded-lg rounded-tr-none self-end max-w-[85%]" : "bg-white p-3 rounded-lg rounded-tl-none shadow-sm border border-stone-100 self-start max-w-[85%]";
-                div.innerText = text;
-                document.getElementById('ai-messages').appendChild(div);
-            },
-            callGemini: async (prompt) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
-                try {
-                    const response = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await response.json();
-                    AI.addMsg(data.candidates?.[0]?.content?.parts?.[0]?.text || "Error", 'ai');
-                } catch(e) { AI.addMsg("Connection error.", 'ai'); }
-            },
-            handleChatSubmit: async (e) => {
-                e.preventDefault();
-                const input = document.getElementById('ai-input');
-                const text = input.value.trim();
-                if(!text) return;
-                AI.addMsg(text, 'user');
-                input.value = '';
-                await AI.callGemini(text); 
-            },
-            suggestVOD: async () => {
-                const box = document.getElementById('cfg-vod-note');
-                const userPrefs = box.value || "General movies";
-                box.classList.remove('hidden'); box.value = "Thinking...";
-                const prompt = `Suggest 5 specific movies for someone who likes: ${userPrefs}. Just titles.`;
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
-                try {
-                    const response = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await response.json();
-                    box.value = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                } catch(e) { box.value = userPrefs; }
-            }
-        };
-
-        // --- GLOBAL SERVICES ---
-        window.UI = {
-            switchView: (view) => {
-                document.querySelectorAll('.view-section').forEach(el => { el.classList.remove('active'); el.style.display = 'none'; });
-                const target = document.getElementById('view-' + view);
-                target.style.display = 'block';
-                target.classList.add('active');
-                document.getElementById('mobile-menu').classList.add('hidden');
-                
-                if(view === 'admin' || view === 'guides' || view === 'faq') Renderer.loadView(view);
-                if(view === 'admin' && auth.currentUser?.email === CONFIG.ADMIN_EMAIL) Admin.loadData();
-            },
-            toggleAiChat: AI.toggle,
-            showToast: (msg) => { const t = document.getElementById('toast'); document.getElementById('toast-msg').innerText = msg || "Saved"; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); },
-            openModal: (id) => { if(!document.getElementById('modal-' + id)) Renderer.renderModal(id); document.getElementById('modal-' + id).classList.remove('hidden'); },
-            closeModal: (id) => document.getElementById('modal-' + id).classList.add('hidden'),
-            copy: (id) => { document.getElementById(id).select(); document.execCommand('copy'); UI.showToast("Copied!"); },
-            copyText: (text) => { navigator.clipboard.writeText(text).then(() => UI.showToast(`Copied!`)); },
-            openChangePasswordModal: () => { document.getElementById('password-modal').classList.remove('hidden'); },
-            closePasswordModal: () => document.getElementById('password-modal').classList.add('hidden'),
-            handleChangePasswordSubmit: async (e) => { e.preventDefault(); try { await updatePassword(auth.currentUser, document.getElementById('new-password').value); UI.closePasswordModal(); } catch(e){alert(e.message)} }
-        };
-
-        window.App = {
-            init: () => {
-                Config.load();
-                Renderer.initNav();
-                Renderer.renderPricing();
-                Renderer.renderTags();
-                onAuthStateChanged(auth, async (user) => {
-                    Renderer.updateNav(user);
-                    if (user) {
-                        UI.closeModal('login'); UI.closeModal('register');
-                        await Auth.ensureDoc(user);
-                        const currentView = document.querySelector('.view-section.active')?.id.replace('view-', '') || 'home';
-                        if(currentView === 'home') UI.switchView(user.email === CONFIG.ADMIN_EMAIL ? 'admin' : 'dashboard');
-                        if(currentView === 'dashboard') Client.loadData(user.uid);
-                    } else { UI.switchView('home'); }
-                });
-            },
-            handleTitleClick: () => auth.currentUser ? UI.switchView('dashboard') : UI.switchView('home')
-        };
-
-        // --- AUTH SERVICE ---
+        // --- AUTH ---
         window.Auth = {
-            loginEmail: async (e) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value); } catch(e){alert(e.message)} },
-            loginGoogle: async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e){alert(e.message)} },
-            register: async (e) => { e.preventDefault(); if(document.getElementById('reg-code').value.toUpperCase() !== CONFIG.INVITE_CODE) return alert("Invalid Code"); try { const cred = await createUserWithEmailAndPassword(auth, document.getElementById('reg-email').value, document.getElementById('reg-pass').value); await setDoc(doc(db, "users", cred.user.uid), { email: cred.user.email, status: "Pending", created: new Date().toISOString() }); } catch(e){alert(e.message)} },
+            loginEmail: async (e) => {
+                e.preventDefault();
+                try {
+                    await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value);
+                } catch(e) { alert("Access Denied: Check credentials."); }
+            },
+            register: async (e) => {
+                e.preventDefault();
+                const code = document.getElementById('reg-code').value.toUpperCase();
+                if(code !== CONFIG.INVITE_CODE) return alert("Invalid Invite Code.");
+                try {
+                    const cred = await createUserWithEmailAndPassword(auth, document.getElementById('reg-email').value, document.getElementById('reg-pass').value);
+                    await setDoc(doc(db, "users", cred.user.uid), {
+                        email: cred.user.email.toLowerCase(),
+                        accountStatus: "Active",
+                        licenses: [],
+                        created: new Date().toISOString()
+                    });
+                } catch(e) { alert(e.message); }
+            },
             logout: () => signOut(auth),
             ensureDoc: async (user) => {
                 const ref = doc(db, "users", user.uid);
@@ -454,330 +284,273 @@
                         await setDoc(ref, { ...oldDoc.data(), uid: user.uid, mergedAt: new Date().toISOString() });
                         await deleteDoc(oldDoc.ref);
                     } else {
-                        await setDoc(ref, { email: user.email, status: "Pending", created: new Date().toISOString() });
+                        await setDoc(ref, { email: user.email.toLowerCase(), accountStatus: "Active", licenses: [], created: new Date().toISOString() });
                     }
                 }
             }
         };
 
-        // --- CLIENT LOGIC ---
+        window.UI = {
+            switchView: (view) => {
+                document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+                document.getElementById('view-' + view).classList.add('active');
+                document.getElementById('mobile-menu').classList.add('hidden');
+                if(view === 'admin') window.loadAdminData();
+            },
+            showToast: (msg) => {
+                const t = document.getElementById('toast');
+                document.getElementById('toast-msg').innerText = msg || "Success";
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 3000);
+            },
+            openModal: (id) => document.getElementById('modal-' + id).classList.remove('hidden'),
+            closeModal: (id) => document.getElementById('modal-' + id).classList.add('hidden'),
+            copyText: (text) => {
+                navigator.clipboard.writeText(text).then(() => UI.showToast("Copied!"));
+            }
+        };
+
+        // --- CLIENT DASHBOARD ---
         window.Client = {
-            calcState: { '1 Month': 0, '3 Months': 0, '6 Months': 0, '1 Year': 0 },
             loadData: async (uid) => {
                 const snap = await getDoc(doc(db, "users", uid));
                 if (snap.exists()) {
                     const d = snap.data();
-                    if(d.deleted) return document.getElementById('user-disabled').classList.remove('hidden');
-                    if(d.status === "Pending") return document.getElementById('user-pending').classList.remove('hidden');
+                    const badge = document.getElementById('account-status-badge');
+                    badge.innerText = d.accountStatus || 'Active';
+                    badge.className = (d.accountStatus === 'Disabled') ? 'bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase' : 'bg-green-100 text-green-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase';
                     
-                    document.getElementById('user-active').classList.remove('hidden');
-                    document.getElementById('dash-welcome').innerText = `Welcome back, ${d.realName || 'User'}.`;
-                    document.getElementById('dash-product').innerText = d.product || 'Standard';
-                    document.getElementById('dash-expiry').innerText = d.expiry || '---';
-                    
-                    ['server','user','pass','epgenius','m3u'].forEach(k => document.getElementById(`dash-${k}`).innerText = d[k==='server'?'serverUrl':k==='user'?'username':k==='pass'?'password':k==='epgenius'?'epgeniusM3u':'m3uUrl'] || '...');
-                    document.getElementById(`dash-epgenius`).value = d.epgeniusM3u || '';
-                    document.getElementById(`dash-m3u`).value = d.m3uUrl || '';
-                    
-                    const sStatus = d.supporterStatus || "Not Requested";
-                    const sActive = document.getElementById('dash-supporter-active');
-                    const sInactive = document.getElementById('dash-supporter-inactive');
-                    if(sStatus === "Enabled") {
-                        document.getElementById('dash-supporter-badge').innerText = "Active";
-                        sActive.classList.remove('hidden'); sInactive.classList.add('hidden');
-                        document.getElementById('dash-supporter-list').innerHTML = SUPPORTER_CATS.map(c => `<div>${c}</div>`).join('');
-                    } else {
-                        document.getElementById('dash-supporter-badge').innerText = sStatus;
-                        sActive.classList.add('hidden'); sInactive.classList.remove('hidden');
+                    if(d.accountStatus === "Disabled") {
+                        document.getElementById('state-disabled').classList.remove('hidden');
+                        document.getElementById('state-active').classList.add('hidden');
+                        return;
                     }
 
-                    Client.renderDevices(d.devices || []);
-                    document.getElementById('cfg-screens').value = d.screenPreference || '1';
-                    Client.renderTagsState(d.liveBouquet || '', 'live');
-                    Client.renderTagsState(d.vodBouquet || '', 'vod');
-                    document.getElementById('user-config-supporter-req').checked = (sStatus !== "Not Requested");
-                    document.getElementById('user-config-pvr').value = d.pvrPreference || 'No';
+                    document.getElementById('state-active').classList.remove('hidden');
+                    document.getElementById('dash-welcome').innerText = d.realName ? `Welcome, ${d.realName}.` : "Welcome back.";
+                    
+                    // Render Licenses
+                    const container = document.getElementById('license-container');
+                    container.innerHTML = d.licenses?.length ? '' : '<div class="bg-stone-100 p-4 rounded-xl text-xs text-stone-500 text-center italic">No active licenses found. Use the calculator to request one.</div>';
+                    
+                    d.licenses?.forEach((lic, i) => {
+                        const div = document.createElement('div');
+                        div.className = "bg-white p-6 rounded-2xl border border-stone-200 shadow-sm";
+                        div.innerHTML = `
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-[10px] font-bold uppercase text-stone-400 tracking-widest">License #${i+1}</span>
+                                <span class="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold rounded uppercase">${lic.status || 'Active'}</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div><p class="text-[10px] text-stone-400 uppercase font-bold">Plan</p><p class="text-sm font-semibold">${lic.product || 'Standard'}</p></div>
+                                <div><p class="text-[10px] text-stone-400 uppercase font-bold">Expiry</p><p class="text-sm font-mono">${lic.expiry || '---'}</p></div>
+                            </div>
+                            <div class="space-y-2 pt-3 border-t border-stone-50">
+                                <div class="flex justify-between text-xs"><span class="text-stone-400">User:</span><code class="font-bold">${lic.username || '---'}</code></div>
+                                <div class="flex justify-between text-xs"><span class="text-stone-400">Pass:</span><code class="font-bold">${lic.password || '---'}</code></div>
+                                <button type="button" onclick="UI.copyText('${lic.epgeniusM3u}')" class="w-full mt-2 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase hover:bg-blue-100 transition">Copy EPGenius M3U</button>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
 
-                    renderPricing(); 
-                    updatePaymentDetails();
+                    // Load preferences
+                    document.getElementById('cfg-custom-note').value = d.customNote || '';
+                    Client.renderSavedDevices(d.devices || []);
+                    Client.renderSavedTags(d.liveTags || [], 'live');
+                    Client.renderSavedTags(d.vodTags || [], 'vod');
                 }
             },
-            addDevice: (type) => {
+            addDevice: (name) => {
                 const list = document.getElementById('device-list');
-                document.getElementById('empty-device-msg').classList.add('hidden');
                 const row = document.createElement('div');
                 row.className = "flex justify-between items-center bg-white border p-2 rounded mb-2 device-row";
-                row.innerHTML = `
-                    <div class="flex items-center gap-2"><i class="fas fa-${window.getIcon(type)} text-stone-400"></i> <span class="text-xs font-bold uppercase text-stone-500">${type}</span></div>
-                    <input type="hidden" value="${type}" class="device-value">
-                    <button type="button" onclick="this.parentElement.remove(); Client.updateCount()" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
-                `;
+                row.innerHTML = `<span class="device-name">${name}</span><button type="button" onclick="this.parentElement.remove()" class="text-red-400"><i class="fas fa-trash"></i></button>`;
                 list.appendChild(row);
-                Client.updateCount();
             },
-            renderDevices: (devices) => {
-                const list = document.getElementById('device-list');
-                list.innerHTML = '<p class="text-xs text-stone-400 text-center italic hidden" id="empty-device-msg">No devices added.</p>';
-                if(!devices.length) document.getElementById('empty-device-msg').classList.remove('hidden');
-                devices.forEach(d => Client.addDevice(d.type));
+            renderSavedDevices: (list) => {
+                document.getElementById('device-list').innerHTML = '';
+                list.forEach(name => Client.addDevice(name));
             },
-            updateCount: () => {
-                 document.getElementById('device-counter').innerText = `Active: ${document.querySelectorAll('.device-row').length}`;
-            },
-            checkScreens: () => {
-                const val = document.getElementById('cfg-screens').value;
-                document.getElementById('screens-warn').classList.toggle('hidden', val === '1');
-            },
-            renderTagsState: (str, type) => {
+            renderSavedTags: (tags, type) => {
                 const container = document.getElementById(`tags-${type}`);
-                container.querySelectorAll('button').forEach(b => {
-                    if(str.includes(b.innerText)) { b.classList.add('bg-stone-800', 'text-white'); b.classList.remove('bg-white', 'text-stone-600'); }
-                    else { b.classList.remove('bg-stone-800', 'text-white'); b.classList.add('bg-white', 'text-stone-600'); }
+                container.querySelectorAll('button').forEach(btn => {
+                    if(tags.includes(btn.innerText)) btn.classList.add('bg-stone-900', 'text-white');
+                    else btn.classList.remove('bg-stone-900', 'text-white');
                 });
-                const note = str.split('Note: ')[1];
-                if(note) { 
-                    const txt = document.getElementById(`cfg-${type}-note`);
-                    txt.value = note; txt.classList.remove('hidden'); 
-                }
             },
             saveConfig: async (e) => {
                 e.preventDefault();
-                const devices = Array.from(document.querySelectorAll('.device-value')).map(i => ({type: i.value}));
-                const getTags = (t) => {
-                    const active = Array.from(document.querySelectorAll(`#tags-${t} button.bg-stone-800`)).map(b => b.innerText).join(', ');
-                    const note = document.getElementById(`cfg-${t}-note`).value;
-                    return active + (note ? ` Note: ${note}` : '');
-                };
+                const devices = Array.from(document.querySelectorAll('.device-name')).map(el => el.innerText);
+                const liveTags = Array.from(document.querySelectorAll('#tags-live button.bg-stone-900')).map(b => b.innerText);
+                const vodTags = Array.from(document.querySelectorAll('#tags-vod button.bg-stone-900')).map(b => b.innerText);
                 
                 await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                    devices,
-                    screenPreference: document.getElementById('cfg-screens').value,
-                    liveBouquet: getTags('live'),
-                    vodBouquet: getTags('vod'),
-                    supporterRequest: document.getElementById('cfg-supporter').checked
+                    devices, liveTags, vodTags,
+                    customNote: document.getElementById('cfg-custom-note').value
                 });
-                UI.showToast();
+                UI.showToast("Configuration Saved");
             }
         };
 
         // --- CALCULATOR ---
         window.Calc = {
-            update: (plan, delta) => {
-                const s = Client.calcState;
-                s[plan] = Math.max(0, (s[plan] || 0) + delta);
-                document.getElementById(`qty-${plan.replace(' ', '')}`).innerText = s[plan];
+            state: {},
+            update: (name, delta) => {
+                const current = window.Calc.state[name] || 0;
+                window.Calc.state[name] = Math.max(0, current + delta);
+                document.getElementById(`qty-${name.replace(/\s+/g, '')}`).innerText = window.Calc.state[name];
                 Calc.total();
             },
             total: () => {
                 let t = 0;
-                for(let p in Client.calcState) t += Client.calcState[p] * Config.data.PRODUCTS[p].p;
-                if(document.getElementById('calc-supporter').checked) t += 20;
+                Object.entries(window.Calc.state).forEach(([name, qty]) => {
+                    t += (Config.data.PRODUCTS[name]?.p || 0) * qty;
+                });
                 document.getElementById('calc-total').innerText = `$${t.toFixed(2)}`;
             },
-            toggleMethod: () => {
-                const m = document.getElementById('pay-method').value;
-                document.getElementById('pay-details').innerHTML = m === 'interac' ? 
-                    `<div class="space-y-1"><p>Send to:</p><div class="flex justify-between bg-white p-1 rounded border"><span class="font-mono">${CONFIG.PAY_INTERAC[0]}</span><button type="button" onclick="UI.copyText('${CONFIG.PAY_INTERAC[0]}')"><i class="fas fa-copy"></i></button></div></div>` :
-                    `<div class="space-y-1"><p>Lightning:</p><div class="flex justify-between bg-white p-1 rounded border"><span class="font-mono truncate w-48">${CONFIG.PAY_BTC.lightning}</span><button type="button" onclick="UI.copyText('${CONFIG.PAY_BTC.lightning}')"><i class="fas fa-copy"></i></button></div></div>`;
-            },
             sendRequest: () => {
-                const total = document.getElementById('calc-total').innerText;
-                const plans = Object.entries(Client.calcState).filter(([k,v]) => v>0).map(([k,v]) => `${v}x ${k}`).join(', ');
-                const msg = `New License Request:%0A%0AItems: ${plans}%0ATotal: ${total}%0APayment: ${document.getElementById('pay-method').value}`;
-                window.open(`${CONFIG.FB_LINK}?text=${msg}`, '_blank');
+                const summary = Object.entries(window.Calc.state).filter(([n,q]) => q > 0).map(([n,q]) => `${q}x ${n}`).join(', ');
+                const msg = `License Request: ${summary} (Total: ${document.getElementById('calc-total').innerText})`;
+                window.open(`${CONFIG.FB_LINK}?text=${encodeURIComponent(msg)}`, '_blank');
             }
         };
 
-        // --- ADMIN FUNCTIONS ---
+        // --- ADMIN ---
         window.loadAdminData = async () => {
             const list = document.getElementById('admin-user-list');
-            list.innerHTML = 'Loading...';
-            try {
-                let supplyBatches = [];
-                const supplyDoc = await getDoc(doc(db, "business_data", "supply_ledger"));
-                if(supplyDoc.exists()) supplyBatches = supplyDoc.data().batches || supplyBatches;
-                
-                const snap = await getDocs(collection(db, "users"));
-                let html = '';
-                // Add "Initialize" Button for Admin convenience
-                document.getElementById('admin-user-list').innerHTML += `<div class="p-4 bg-yellow-50 text-center"><button onclick="Config.seed()" class="text-xs bg-yellow-600 text-white px-3 py-1 rounded">⚠️ Initialize DB Config</button></div>`;
-                
-                snap.forEach(d => {
-                     const u = d.data();
-                     if(d.id !== 'meta_supply' && !u.deleted) {
-                         html += `<div class="p-4 border-b flex justify-between"><div><span class="font-bold">${u.realName || 'No Name'}</span><br><span class="text-xs text-stone-500">${u.email}</span></div><button onclick="UI.openModal('edit'); Admin.hydrateEdit('${d.id}')" class="text-xs bg-stone-900 text-white px-2 py-1 rounded">Edit</button></div>`;
-                     }
-                });
-                list.innerHTML = html;
-            } catch(e) { console.error(e); list.innerHTML = "Error loading admin data"; }
+            list.innerHTML = '<div class="p-8 text-center text-stone-400">Fetching client roster...</div>';
+            const snap = await getDocs(collection(db, "users"));
+            let html = '';
+            snap.forEach(d => {
+                const u = d.data();
+                if(d.id === 'app_config') return;
+                const statusColor = u.accountStatus === 'Disabled' ? 'text-red-600' : 'text-green-600';
+                html += `
+                    <div class="p-4 flex justify-between items-center hover:bg-stone-50 transition">
+                        <div>
+                            <p class="font-bold text-stone-900">${u.realName || 'New Client'}</p>
+                            <p class="text-xs text-stone-400">${u.email}</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-[10px] font-bold uppercase ${statusColor}">${u.accountStatus || 'Active'}</span>
+                            <button type="button" onclick="UI.openModal('edit'); Admin.hydrateEdit('${d.id}')" class="text-xs bg-stone-100 px-3 py-1.5 rounded-lg font-bold">Manage</button>
+                        </div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html || '<p class="p-8 text-center text-stone-400">No clients found.</p>';
         };
-        
+
         window.Admin = {
-             hydrateEdit: async (uid) => {
-                 if(uid) {
-                     const d = (await getDoc(doc(db, "users", uid))).data();
-                     document.getElementById('modal-edit-title').innerText = "Edit User";
-                     document.getElementById('edit-uid').value = uid;
-                     // Map fields
-                     document.getElementById('edit-realname').value = d.realName || '';
-                     document.getElementById('edit-email').value = d.email || '';
-                     document.getElementById('edit-email').readOnly = true;
-                     document.getElementById('edit-status').value = d.status || 'Pending';
-                     document.getElementById('edit-product').value = d.product || 'Demo';
-                     document.getElementById('edit-expiry').value = d.expiry || '';
-                     document.getElementById('edit-paydate').value = d.payDate || '';
-                     document.getElementById('edit-buydate').value = d.buyDate || '';
-                     document.getElementById('edit-server').value = d.serverUrl || 'http://cf.taty.website';
-                     document.getElementById('edit-user').value = d.username || '';
-                     document.getElementById('edit-pass').value = d.password || '';
-                     document.getElementById('edit-epgenius').value = d.epgeniusM3u || '';
-                     document.getElementById('edit-m3u').value = d.m3uUrl || '';
-                     document.getElementById('edit-supporter-status').value = d.supporterStatus || 'Not Requested';
-                     
-                     const deviceList = (d.devices || []).map(dev => window.getDeviceName(dev.type)).join(', ') || 'None';
-                     document.getElementById('edit-pref-devices').innerHTML = deviceList;
-                     document.getElementById('edit-pref-pvr').innerText = d.pvrPreference || '---';
-                     document.getElementById('edit-pref-bouquet').innerText = d.bouquetPreference || '---';
-                     document.getElementById('edit-pref-live-note').innerText = d.liveBouquet || '---';
-                     document.getElementById('edit-pref-vod-note').innerText = d.vodBouquet || '---';
-                     document.getElementById('edit-pref-supporter-interest').innerText = d.supporterRequest ? "Yes, Requested" : "No";
-                 } else {
-                     // Add New
-                     document.getElementById('modal-edit-title').innerText = "Add Manual Client";
-                     document.getElementById('edit-uid').value = "";
-                     document.querySelectorAll('#modal-edit input').forEach(i => i.value = '');
-                     document.getElementById('edit-status').value = 'Active';
-                     document.getElementById('edit-product').value = '1 Month';
-                     document.getElementById('edit-server').value = 'http://cf.taty.website';
-                     document.getElementById('edit-email').readOnly = false;
-                 }
-             },
-             saveUser: async (e) => {
-                 e.preventDefault();
-                 const uid = document.getElementById('edit-uid').value;
-                 const data = {
-                    realName: document.getElementById('edit-realname').value,
-                    status: document.getElementById('edit-status').value,
-                    product: document.getElementById('edit-product').value,
-                    expiry: document.getElementById('edit-expiry').value,
-                    payDate: document.getElementById('edit-paydate').value,
-                    buyDate: document.getElementById('edit-buydate').value,
-                    serverUrl: document.getElementById('edit-server').value,
-                    username: document.getElementById('edit-user').value,
-                    password: document.getElementById('edit-pass').value,
-                    epgeniusM3u: document.getElementById('edit-epgenius').value,
-                    m3uUrl: document.getElementById('edit-m3u').value,
-                    supporterStatus: document.getElementById('edit-supporter-status').value,
-                    isSupporter: document.getElementById('edit-supporter-status').value === "Enabled"
-                 };
-                 
-                 if(!uid) data.email = document.getElementById('edit-email').value;
+            hydrateEdit: async (uid) => {
+                const form = document.getElementById('admin-licenses-list');
+                form.innerHTML = '';
+                if(!uid) {
+                    document.getElementById('modal-edit-title').innerText = "Add New Client";
+                    document.getElementById('edit-uid').value = '';
+                    document.getElementById('edit-realname').value = '';
+                    document.getElementById('edit-email').value = '';
+                    document.getElementById('edit-email').readOnly = false;
+                    return;
+                }
+                const d = (await getDoc(doc(db, "users", uid))).data();
+                document.getElementById('edit-uid').value = uid;
+                document.getElementById('edit-realname').value = d.realName || '';
+                document.getElementById('edit-email').value = d.email;
+                document.getElementById('edit-email').readOnly = true;
+                document.getElementById('edit-account-status').value = d.accountStatus || 'Active';
+                
+                (d.licenses || []).forEach((lic, i) => Admin.addLicenseRow(lic));
+            },
+            addLicenseRow: (data = {}) => {
+                const container = document.getElementById('admin-licenses-list');
+                const div = document.createElement('div');
+                div.className = "license-row p-4 bg-stone-50 rounded-xl border border-stone-200 relative";
+                div.innerHTML = `
+                    <button type="button" onclick="this.parentElement.remove()" class="absolute top-2 right-2 text-stone-300 hover:text-red-500 text-xs"><i class="fas fa-trash"></i></button>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <input class="lic-product border p-2 rounded text-xs" placeholder="Plan (1 Year)" value="${data.product || ''}">
+                        <input class="lic-expiry border p-2 rounded text-xs" placeholder="Expiry Date" value="${data.expiry || ''}">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <input class="lic-user border p-2 rounded text-xs" placeholder="User" value="${data.username || ''}">
+                        <input class="lic-pass border p-2 rounded text-xs" placeholder="Pass" value="${data.password || ''}">
+                    </div>
+                    <input class="lic-m3u border p-2 rounded text-xs w-full" placeholder="EPGenius M3U URL" value="${data.epgeniusM3u || ''}">
+                `;
+                container.appendChild(div);
+            },
+            saveUser: async (e) => {
+                e.preventDefault();
+                const uid = document.getElementById('edit-uid').value;
+                const licenses = Array.from(document.querySelectorAll('.license-row')).map(row => ({
+                    product: row.querySelector('.lic-product').value,
+                    expiry: row.querySelector('.lic-expiry').value,
+                    username: row.querySelector('.lic-user').value,
+                    password: row.querySelector('.lic-pass').value,
+                    epgeniusM3u: row.querySelector('.lic-m3u').value,
+                    status: 'Active'
+                }));
 
-                 if(uid) await updateDoc(doc(db, "users", uid), data);
-                 else await addDoc(collection(db, "users"), { ...data, created: new Date().toISOString() });
-                 
-                 UI.closeModal('edit'); window.loadAdminData();
-                 UI.showToast("User saved.");
-             },
-             softDeleteUser: async () => {
-                 const uid = document.getElementById('edit-uid').value;
-                 if (!uid) { UI.closeModal('edit'); return; }
-                 if (!confirm("Are you sure? This will hide the user.")) return;
-                 await updateDoc(doc(db, "users", uid), { deleted: true, deletedAt: new Date().toISOString() });
-                 UI.closeModal('edit'); window.loadAdminData();
-             }
+                const data = {
+                    realName: document.getElementById('edit-realname').value,
+                    accountStatus: document.getElementById('edit-account-status').value,
+                    licenses
+                };
+
+                if(uid) await updateDoc(doc(db, "users", uid), data);
+                else {
+                    const email = document.getElementById('edit-email').value.toLowerCase();
+                    await addDoc(collection(db, "users"), { ...data, email, created: new Date().toISOString() });
+                }
+                
+                UI.closeModal('edit'); window.loadAdminData();
+                UI.showToast("Account Updated");
+            }
         };
 
-        // --- RENDERER (Clean HTML Generation) ---
+        // --- RENDERERS ---
         window.Renderer = {
-            initNav: () => {
-                document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
-            },
+            initNav: () => { document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden'); },
             updateNav: (user) => {
                 const nav = document.getElementById('desktop-nav');
-                if(user) {
-                    const isAdmin = user.email === CONFIG.ADMIN_EMAIL;
-                    nav.innerHTML = `
-                        ${isAdmin ? `<button type="button" onclick="UI.switchView('admin')" class="font-bold text-blue-600 mr-4">ADMIN</button>` : ''}
-                        <button type="button" onclick="UI.switchView('dashboard')" class="font-medium hover:text-stone-600">Dashboard</button>
-                        <button type="button" onclick="UI.switchView('guides')" class="font-medium hover:text-stone-600">Guides</button>
-                        <button type="button" onclick="UI.switchView('faq')" class="font-medium hover:text-stone-600">FAQ</button>
-                    `;
-                } else {
-                    nav.innerHTML = `<button type="button" onclick="UI.openModal('login')" class="font-medium">Log In</button>`;
-                }
+                nav.innerHTML = user ? `${user.email === CONFIG.ADMIN_EMAIL ? `<button type="button" onclick="UI.switchView('admin')" class="font-bold text-blue-600 mr-4">ADMIN</button>` : ''}<button type="button" onclick="UI.switchView('dashboard')" class="font-medium hover:text-stone-900 transition">Dashboard</button>` : `<button type="button" onclick="UI.openModal('login')" class="font-medium">Log In</button>`;
             },
             renderPricing: () => {
                 const c = document.getElementById('pricing-rows');
-                if(!c) return; 
-                c.innerHTML = Object.entries(Config.data.PRODUCTS).filter(([k])=>k!=='Demo').map(([k,v]) => `
+                c.innerHTML = Object.entries(Config.data.PRODUCTS).map(([name, v]) => `
                     <div class="flex justify-between items-center bg-stone-50 p-2 rounded">
-                        <span class="text-xs font-bold">${k} ($${v.p})</span>
-                        <div class="flex items-center gap-2">
-                            <button type="button" onclick="Calc.update('${k}',-1)" class="w-5 h-5 bg-stone-200 rounded hover:bg-stone-300">-</button>
-                            <span id="qty-${k.replace(' ','')}" class="text-xs w-3 text-center">0</span>
-                            <button type="button" onclick="Calc.update('${k}',1)" class="w-5 h-5 bg-stone-800 text-white rounded hover:bg-stone-600">+</button>
+                        <span class="text-xs font-bold">${name} ($${v.p})</span>
+                        <div class="flex items-center gap-3">
+                            <button type="button" onclick="Calc.update('${name}', -1)" class="w-6 h-6 bg-stone-200 rounded hover:bg-stone-300">-</button>
+                            <span id="qty-${name.replace(/\s+/g, '')}" class="text-xs font-mono w-4 text-center">0</span>
+                            <button type="button" onclick="Calc.update('${name}', 1)" class="w-6 h-6 bg-stone-900 text-white rounded hover:bg-stone-700">+</button>
                         </div>
                     </div>`).join('');
             },
             renderTags: () => {
-                ['live', 'vod'].forEach(t => {
-                    const c = document.getElementById(`tags-${t}`);
-                    if(!c) return;
-                    c.innerHTML = Config.data.TAGS[t].map(tag => {
-                        const isOther = tag === 'Other';
-                        const action = isOther ? `document.getElementById('cfg-${t}-note').classList.toggle('hidden')` : `this.classList.toggle('bg-stone-800'); this.classList.toggle('text-white');`;
-                        return `<button type="button" onclick="${action}" class="px-3 py-1 border rounded-full text-xs bg-white text-stone-600 transition hover:bg-stone-50">${tag}</button>`;
-                    }).join('');
+                ['live', 'vod'].forEach(type => {
+                    const c = document.getElementById(`tags-${type}`);
+                    c.innerHTML = Config.data.TAGS[type].map(tag => `<button type="button" onclick="this.classList.toggle('bg-stone-900'); this.classList.toggle('text-white')" class="px-3 py-1 border rounded-full text-xs hover:bg-stone-100 transition">${tag}</button>`).join('');
                 });
             },
-            renderModal: (id) => { },
-            loadView: (view) => {
-                if(view === 'faq') {
-                    document.getElementById('view-faq').innerHTML = `
-                        <div class="max-w-3xl mx-auto px-4"><h1 class="text-3xl font-serif mb-8 text-center">FAQ</h1>
-                        <div class="space-y-4">
-                            ${[['How do I set up?', 'Use the Guides tab.'], ['Buffering?', 'Check internet/CDN.'], ['Multi-room?', 'Requires extra license.']].map(([q,a]) => `
-                                <details class="group bg-white p-4 rounded-xl border border-stone-200 shadow-sm"><summary class="font-bold cursor-pointer flex justify-between">${q} <i class="fas fa-chevron-down group-open:rotate-180"></i></summary><p class="mt-2 text-sm text-stone-600">${a}</p></details>
-                            `).join('')}
-                        </div></div>`;
-                }
-                if(view === 'guides') {
-                    // Re-inject static HTML here if needed, but it's hardcoded for stability now
-                }
-            },
-            saveSupply: async (e) => {
-                e.preventDefault();
-                const newBatch = { credits: Number(document.getElementById('supply-credits').value), cost: Number(document.getElementById('supply-cost').value), btc: document.getElementById('supply-btc').value, date: document.getElementById('supply-date').value };
-                const metaRef = doc(db, "business_data", "supply_ledger");
-                const snap = await getDoc(metaRef);
-                if (snap.exists()) await updateDoc(metaRef, { batches: arrayUnion(newBatch) });
-                else await setDoc(metaRef, { batches: [newBatch] }); 
-                UI.closeModal('supply'); window.loadAdminData();
-            },
-            renderSupplyHistory: () => {
-                 const list = document.getElementById('supply-history-list');
-                 (async () => {
-                     const supplyDoc = await getDoc(doc(db, "business_data", "supply_ledger"));
-                     const batches = supplyDoc.exists() ? supplyDoc.data().batches : [];
-                     let html = '';
-                     batches.forEach((batch, index) => {
-                         html += `<div class="flex justify-between p-2 border-b"><span>${batch.credits} Creds</span><span>$${batch.cost}</span></div>`;
-                     });
-                     list.innerHTML = html || 'No history';
-                 })();
+            renderDeviceGrid: () => {
+                const c = document.getElementById('device-selection-grid');
+                c.innerHTML = Config.data.DEVICE_TYPES.map(type => `
+                    <button type="button" onclick="Client.addDevice('${type}')" class="p-3 border rounded-xl hover:border-stone-900 text-[10px] font-bold uppercase transition bg-white shadow-sm">
+                        ${type}
+                    </button>`).join('');
             }
         };
 
-        window.getIcon = (t) => ({'tv':'tv','mobile':'mobile-alt','computer':'laptop'}[t.split('_')[0]] || 'question');
+        window.getIcon = (t) => t.includes('TV') ? 'tv' : (t.includes('Phone') ? 'mobile-alt' : 'laptop');
 
         document.addEventListener('DOMContentLoaded', () => {
-             App.init();
+            App.init();
         });
 
-        window.handleEmailLogin = Auth.loginEmail;
-        window.handleGoogleLogin = Auth.loginGoogle;
-        window.handleRegister = Auth.register;
+        window.App = App;
     </script>
 </body>
 </html>
