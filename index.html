@@ -335,11 +335,52 @@
     <main id="view-faq" class="view-section pt-32 pb-24 min-h-screen">
         <div class="max-w-3xl mx-auto px-4">
             <h1 class="font-serif text-4xl text-stone-900 mb-10 text-center">Frequently Asked Questions</h1>
+            
             <div class="space-y-4">
-                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden"><summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">How do I set up my Firestick?<span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span></summary><div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">We recommend using <strong>TiviMate Premium</strong> for Firestick. You can find step-by-step instructions in the <button onclick="switchView('guides')" class="text-blue-600 underline">Setup Guides</button> tab.</div></details>
-                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden"><summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">Why is my stream buffering?<span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span></summary><div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">Buffering is usually caused by local internet issues. <ul class="list-disc pl-5 mt-2 space-y-1"><li>Restart your router and device.</li><li>Ensure you are using the <strong>Cloudflare Optimized</strong> server URL found in your Dashboard.</li><li>If using WiFi, try moving closer to the router or using a hardwired ethernet connection.</li></ul></div></details>
-                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden"><summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">Can I watch on multiple TVs at once?<span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span></summary><div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">A standard license allows for <strong>one connection at a time</strong>. If you want to watch on two TVs simultaneously (e.g., Living Room and Bedroom), you will need to purchase an additional license. Please contact Elliot to upgrade.</div></details>
-                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden"><summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">What is EPGenius?<span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span></summary><div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">EPGenius (GanjaRelease #6) is a smart M3U Playlist link. Unlike the raw link from the server, EPGenius automatically organizes channels better and includes a high-quality Electronic Program Guide (EPG) built-in. Always use this link in your player if possible.</div></details>
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
+                        How do I set up my Firestick?
+                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
+                    </summary>
+                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
+                        We recommend using <strong>TiviMate Premium</strong> for Firestick. You can find step-by-step instructions in the <button onclick="switchView('guides')" class="text-blue-600 underline">Setup Guides</button> tab.
+                    </div>
+                </details>
+
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
+                        Why is my stream buffering?
+                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
+                    </summary>
+                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
+                        Buffering is usually caused by local internet issues. 
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li>Restart your router and device.</li>
+                            <li>Ensure you are using the <strong>Cloudflare Optimized</strong> server URL found in your Dashboard.</li>
+                            <li>If using WiFi, try moving closer to the router or using a hardwired ethernet connection.</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
+                        Can I watch on multiple TVs at once?
+                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
+                    </summary>
+                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
+                        A standard license allows for <strong>one connection at a time</strong>. If you want to watch on two TVs simultaneously (e.g., Living Room and Bedroom), you will need to purchase an additional license. Please contact Elliot to upgrade.
+                    </div>
+                </details>
+
+                <details class="group bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <summary class="flex justify-between items-center font-bold cursor-pointer p-6 bg-stone-50 hover:bg-stone-100 transition">
+                        What is EPGenius?
+                        <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
+                    </summary>
+                    <div class="p-6 text-stone-600 text-sm leading-relaxed border-t border-stone-100">
+                        EPGenius (GanjaRelease #6) is a smart M3U Playlist link. Unlike the raw link from the server, EPGenius automatically organizes channels better and includes a high-quality Electronic Program Guide (EPG) built-in. Always use this link in your player if possible.
+                    </div>
+                </details>
             </div>
         </div>
     </main>
@@ -347,15 +388,18 @@
     <!-- VIEW: GUIDES (Private) -->
     <main id="view-guides" class="view-section pt-32 pb-24 min-h-screen">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16"><h1 class="font-serif text-4xl md:text-6xl text-stone-900 mb-6">Setup Documentation</h1><p class="text-stone-600 text-lg max-w-2xl mx-auto">Follow these guides to connect your device.</p></div>
+            <div class="text-center mb-16">
+                <h1 class="font-serif text-4xl md:text-6xl text-stone-900 mb-6">Setup Documentation</h1>
+                <p class="text-stone-600 text-lg max-w-2xl mx-auto">Follow these guides to connect your device.</p>
+            </div>
+            <!-- OS Tabs -->
             <div class="flex justify-center gap-2 mb-12 flex-wrap">
                 <button onclick="showGuide('android')" id="tab-android" class="guide-tab active px-6 py-2 rounded-full border border-stone-300 bg-stone-800 text-white font-medium transition-all">Firestick / Android TV</button>
                 <button onclick="showGuide('ios')" id="tab-ios" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">iOS / Apple TV</button>
                 <button onclick="showGuide('mobile')" id="tab-mobile" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">Android Mobile</button>
                 <button onclick="showGuide('windows')" id="tab-windows" class="guide-tab px-6 py-2 rounded-full border border-stone-300 bg-white text-stone-600 hover:bg-stone-100 font-medium transition-all">Windows / Mac</button>
             </div>
-            
-            <!-- Android Guide Updated -->
+            <!-- Guides Content -->
             <div id="guide-android" class="guide-content bg-white p-8 md:p-12 rounded-3xl border border-stone-200 shadow-xl">
                 <h2 class="text-2xl font-bold text-stone-900 mb-4">TiviMate Premium (Recommended)</h2>
                 <div class="prose prose-stone max-w-none text-sm">
@@ -392,7 +436,7 @@
         </div>
     </main>
 
-    <!-- VIEW: ADMIN DASHBOARD -->
+    <!-- VIEW: ADMIN DASHBOARD (Unchanged layout, hidden for client) -->
     <main id="view-admin" class="view-section pt-32 pb-24 min-h-screen bg-stone-100">
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between items-center mb-8">
@@ -407,7 +451,11 @@
             </div>
             <!-- Stats -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                <div class="bg-stone-900 text-white p-6 rounded-2xl shadow-lg"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Credits Remaining</p><div class="flex items-end gap-2"><span id="stat-credits-left" class="text-3xl font-bold">---</span><span id="stat-credits-total" class="text-sm text-stone-400 mb-1">/ ---</span></div><div class="w-full bg-stone-800 h-1.5 rounded-full mt-4 overflow-hidden"><div id="stat-bar" class="bg-green-500 h-full rounded-full" style="width: 0%"></div></div></div>
+                <div class="bg-stone-900 text-white p-6 rounded-2xl shadow-lg">
+                    <p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Credits Remaining</p>
+                    <div class="flex items-end gap-2"><span id="stat-credits-left" class="text-3xl font-bold">---</span><span id="stat-credits-total" class="text-sm text-stone-400 mb-1">/ ---</span></div>
+                    <div class="w-full bg-stone-800 h-1.5 rounded-full mt-4 overflow-hidden"><div id="stat-bar" class="bg-green-500 h-full rounded-full" style="width: 0%"></div></div>
+                </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Total Revenue</p><span id="stat-revenue" class="text-3xl font-bold text-stone-800">$0.00</span></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Net Profit</p><span id="stat-profit" class="text-3xl font-bold text-stone-800">$0.00</span></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200"><p class="text-stone-400 text-xs uppercase font-bold tracking-wider mb-1">Avg Profit / Credit</p><span id="stat-avg" class="text-3xl font-bold text-stone-800">$0.00</span><p id="stat-cost-basis" class="text-xs text-stone-400 mt-1">Cost Basis: $---</p></div>
@@ -415,17 +463,24 @@
             <!-- Roster -->
             <div class="bg-white rounded-3xl shadow-sm border border-stone-200 overflow-hidden">
                 <div class="p-4 border-b border-stone-100 bg-stone-50 flex flex-col md:flex-row gap-4 justify-between items-center">
-                    <div class="flex items-center gap-2 w-full md:w-auto"><h2 class="font-bold text-lg text-stone-700 mr-2">Roster</h2><input type="text" id="filter-search" onkeyup="renderRoster()" placeholder="Search..." class="pl-3 pr-4 py-2 border rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-stone-200 outline-none"></div>
-                    <div class="flex gap-2 w-full md:w-auto"><select id="filter-status" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Pending">Pending</option><option value="Expired">Expired</option></select><select id="filter-sort" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="recent">Recent</option><option value="name">Name</option><option value="expiry_soon">Expires Soon</option></select></div>
+                    <div class="flex items-center gap-2 w-full md:w-auto">
+                        <h2 class="font-bold text-lg text-stone-700 mr-2">Roster</h2>
+                        <input type="text" id="filter-search" onkeyup="renderRoster()" placeholder="Search..." class="pl-3 pr-4 py-2 border rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-stone-200 outline-none">
+                    </div>
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <select id="filter-status" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="All">All Status</option><option value="Active">Active</option><option value="Pending">Pending</option><option value="Expired">Expired</option></select>
+                        <select id="filter-sort" onchange="renderRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white"><option value="recent">Recent</option><option value="name">Name</option><option value="expiry_soon">Expires Soon</option></select>
+                    </div>
                 </div>
-                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 bg-white"><div class="col-span-3">User / Name</div><div class="col-span-2">Product</div><div class="col-span-2">Supporter</div><div class="col-span-2">Payment</div><div class="col-span-3 text-right">Action</div></div>
+                <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 bg-white">
+                    <div class="col-span-3">User / Name</div><div class="col-span-2">Product</div><div class="col-span-2">Supporter</div><div class="col-span-2">Payment</div><div class="col-span-3 text-right">Action</div>
+                </div>
                 <div id="admin-user-list" class="divide-y divide-stone-100 text-sm"><div class="p-8 text-center text-stone-500">Loading roster...</div></div>
             </div>
         </div>
     </main>
 
-    <!-- MODALS -->
-    <!-- (Login, Register, Supply, History, Password same as before) -->
+    <!-- MODALS (Login, Register, Edit, Supply, History, Password) -->
     <div id="modal-login" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
             <button onclick="closeModal('login')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
@@ -440,7 +495,7 @@
             <p id="login-error" class="text-red-500 text-center mt-4 text-sm hidden"></p>
         </div>
     </div>
-    
+
     <div id="modal-register" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full relative">
             <button onclick="closeModal('register')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
@@ -459,22 +514,23 @@
         </div>
     </div>
 
-    <!-- Admin Edit Modal (Updated) -->
     <div id="modal-edit" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl p-8 max-w-2xl w-full relative my-8">
             <button onclick="closeModal('edit')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
             <h2 id="modal-edit-title" class="text-xl font-serif font-bold mb-6">Edit User & License</h2>
             <form onsubmit="saveUserChanges(event)">
                 <input type="hidden" id="edit-uid">
-                <div class="grid grid-cols-3 gap-4 mb-4">
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Real Name</label><input id="edit-realname" type="text" placeholder="e.g. Uncle Bob" class="w-full px-3 py-2 border rounded bg-stone-50 text-sm"></div>
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" readonly class="w-full px-3 py-2 border rounded bg-stone-100 text-stone-500 cursor-not-allowed text-sm"></div>
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Status</label><select id="edit-status" class="w-full px-3 py-2 border rounded text-sm"><option>Pending</option><option>Active</option><option>Expired</option></select></div>
+                
+                <!-- Identity -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Real Name</label><input id="edit-realname" type="text" placeholder="e.g. Uncle Bob" class="w-full px-3 py-2 border rounded bg-stone-50 text-sm"></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Email (ID)</label><input id="edit-email" type="text" readonly class="w-full px-3 py-2 border rounded bg-stone-100 text-stone-500 cursor-not-allowed text-sm"></div>
                 </div>
+                <div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Status</label><select id="edit-status" class="w-full px-3 py-2 border rounded text-sm"><option>Pending</option><option>Active</option><option>Expired</option></select></div>
                 <div class="bg-stone-50 p-4 rounded-xl border border-stone-200 mb-6">
                     <h3 class="text-sm font-bold text-stone-700 mb-3">Product & Billing</h3>
                     <div class="grid grid-cols-3 gap-4 mb-3">
-                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Product</label><select id="edit-product" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="Demo">Demo (1 Day)</option><option value="1 Month">1 Month</option><option value="3 Months">3 Months</option><option value="6 Months">6 Months</option><option value="1 Year">1 Year</option></select></div>
+                        <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Product Purchased</label><select id="edit-product" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="Demo">Demo (1 Day)</option><option value="1 Month">1 Month</option><option value="3 Months">3 Months</option><option value="6 Months">6 Months</option><option value="1 Year">1 Year</option></select></div>
                         <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Expiry Date</label><input id="edit-expiry" type="text" placeholder="Dec 31, 2026" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
                         <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Date Paid</label><input id="edit-paydate" type="date" class="w-full px-3 py-2 border rounded bg-white text-sm"></div>
                     </div>
@@ -490,15 +546,16 @@
                         </div>
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-4 mb-4">
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500 mb-1">Server URL</label><select id="edit-server" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="http://cf.taty.website">http://cf.taty.website (Cloudflare)</option><option value="http://taty.website">http://taty.website (Backup)</option></select></div>
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Strong 8K User</label><input id="edit-user" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
-                    <div class="col-span-1"><label class="text-xs font-bold uppercase text-stone-500">Strong 8K Pass</label><input id="edit-pass" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
+                <div class="mb-3">
+                    <label class="text-xs font-bold uppercase text-stone-500 mb-1">Server URL</label>
+                    <select id="edit-server" class="w-full px-3 py-2 border rounded bg-white text-sm"><option value="http://cf.taty.website">http://cf.taty.website (Cloudflare)</option><option value="http://taty.website">http://taty.website (Backup)</option></select>
                 </div>
-                <div class="grid grid-cols-1 gap-4 mb-4">
-                    <div><label class="text-xs font-bold uppercase text-stone-500">EPGenius M3U URL</label><input id="edit-epgenius" type="text" class="w-full px-3 py-2 border rounded font-mono text-xs"></div>
-                    <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K M3U</label><input id="edit-m3u" type="text" class="w-full px-3 py-2 border rounded font-mono text-xs"></div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K Username</label><input id="edit-user" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-500">Strong 8K Password</label><input id="edit-pass" type="text" class="w-full px-3 py-2 border rounded text-sm"></div>
                 </div>
+                <label class="text-xs font-bold uppercase text-stone-500">EPGenius M3U URL</label><input id="edit-epgenius" type="text" class="w-full mb-3 px-3 py-2 border rounded font-mono text-xs">
+                <label class="text-xs font-bold uppercase text-stone-500">Strong 8K M3U</label><input id="edit-m3u" type="text" class="w-full mb-6 px-3 py-2 border rounded font-mono text-xs">
                 
                 <!-- NEW: Read Only User Preferences -->
                 <div class="mt-4 pt-4 border-t border-stone-100 bg-gray-50 p-4 rounded-lg max-h-32 overflow-y-auto">
@@ -515,6 +572,7 @@
                         <span class="block text-stone-400 mt-2">Supporter Interest:</span><p id="edit-pref-supporter-interest" class="italic font-bold text-green-700">---</p>
                     </div>
                 </div>
+
                 <div class="flex gap-3 mt-6 sticky bottom-0 bg-white pt-2 border-t border-stone-100">
                     <button type="button" onclick="softDeleteUser()" class="flex-1 bg-red-50 text-red-600 font-bold py-3 rounded-lg hover:bg-red-100 transition">Archive</button>
                     <button type="submit" class="flex-[2] bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-lg transition">Save</button>
@@ -522,7 +580,7 @@
             </form>
         </div>
     </div>
-    
+
     <div id="modal-supply" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="closeModal('supply')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Record New Supply</h2><form onsubmit="saveSupply(event)"><div class="mb-4"><label class="text-xs font-bold uppercase text-stone-500">Credits</label><input id="supply-credits" type="number" class="w-full px-3 py-2 border rounded" required></div><div class="grid grid-cols-2 gap-4 mb-4"><div><label class="text-xs font-bold uppercase text-stone-500">Cost (CAD)</label><input id="supply-cost" type="number" step="0.01" class="w-full px-3 py-2 border rounded" required></div><div><label class="text-xs font-bold uppercase text-stone-500">BTC</label><input id="supply-btc" type="text" class="w-full px-3 py-2 border rounded"></div></div><div class="mb-6"><label class="text-xs font-bold uppercase text-stone-500">Date</label><input id="supply-date" type="date" class="w-full px-3 py-2 border rounded" required></div><button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">Add to Ledger</button></form></div></div>
     <div id="modal-supply-history" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-lg w-full relative"><button onclick="closeModal('supply-history')" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold mb-4">Supply History</h2><div id="supply-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div></div></div>
     <div id="password-modal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4"><div class="bg-white rounded-2xl p-8 max-w-md w-full relative"><button onclick="closePasswordModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button><h2 class="text-xl font-serif font-bold text-center mb-6">Change Password</h2><form onsubmit="handleChangePasswordSubmit(event)"><div class="mb-6"><label class="block text-xs font-bold text-stone-500 mb-2 uppercase">New Password</label><input type="password" id="new-password" required minlength="6" class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-lg"></div><button type="submit" id="pass-submit-btn" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg hover:bg-stone-800 transition">Update Password</button></form></div></div>
@@ -784,6 +842,7 @@
             const container = document.getElementById('device-list-container');
             const emptyMsg = document.getElementById('empty-device-msg');
             container.innerHTML = '';
+            
             container.appendChild(emptyMsg);
             
             if(!devices || devices.length === 0) {
@@ -848,12 +907,20 @@
             const container = document.getElementById('device-list-container');
             const row = document.createElement('div');
             row.className = "flex gap-2 mb-2 device-row";
+            
             let options = '';
             if(family === 'tv') options = `<option value="firestick">Firestick 4K</option><option value="shield">Nvidia Shield</option><option value="appletv">Apple TV</option><option value="smarttv">Smart TV</option>`;
             if(family === 'mobile') options = `<option value="mobile_ios">iPhone / iPad</option><option value="mobile_android">Android Phone/Tablet</option>`;
             if(family === 'computer') options = `<option value="windows">Windows PC</option><option value="mac">Mac Computer</option>`;
-            row.innerHTML = `<select class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm device-type-select">${options}</select><button type="button" onclick="this.parentElement.remove(); updateDeviceCount();" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>`;
+
+            row.innerHTML = `
+                <select class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm device-type-select">
+                    ${options}
+                </select>
+                <button type="button" onclick="this.parentElement.remove(); updateDeviceCount();" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>
+            `;
             container.appendChild(row);
+            
             document.getElementById('empty-device-msg').classList.add('hidden');
             updateDeviceCount();
         };
@@ -1265,8 +1332,49 @@
         };
         document.getElementById('mobile-menu-btn').onclick = () => document.getElementById('mobile-menu').classList.toggle('hidden');
 
-        // --- AUTH & REGISTER HANDLERS FOR NEW USERS ---
-        // (Existing handleRegister and handleGoogleLogin already included above)
+        // --- AUTH & REGISTER HANDLERS ---
+        window.handleEmailLogin = async (e) => {
+            e.preventDefault();
+            try {
+                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value);
+            } catch (err) { showError('login', "Invalid credentials."); }
+        };
+
+        window.handleGoogleLogin = async () => {
+            try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
+            catch (err) { showError('login', "Google Sign-In failed."); }
+        };
+
+        window.handleRegister = async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('reg-code').value.toUpperCase();
+            if (code !== INVITE_CODE) return showError('register', "Invalid Invite Code.");
+            
+            const btn = document.getElementById('reg-btn');
+            btn.innerText = "Creating...";
+            btn.disabled = true;
+
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, document.getElementById('reg-email').value, document.getElementById('reg-pass').value);
+                await setDoc(doc(db, "users", cred.user.uid), {
+                    email: cred.user.email,
+                    status: "Pending",
+                    created: new Date().toISOString()
+                });
+            } catch (err) {
+                showError('register', err.message);
+                btn.innerText = "Create Account";
+                btn.disabled = false;
+            }
+        };
+
+        window.handleLogout = () => signOut(auth);
+
+        function showError(type, msg) {
+            const el = document.getElementById(type + '-error');
+            el.innerText = msg;
+            el.classList.remove('hidden');
+        }
     </script>
 </body>
 </html>
