@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-stone-100 font-sans text-stone-800 p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold">Admin Console</h1>
+            <div class="flex gap-2">
+                <button onclick="openSupply()" class="bg-white border px-4 py-2 rounded shadow-sm text-sm font-bold">Supply</button>
+                <button onclick="refresh()" class="bg-white border px-4 py-2 rounded shadow-sm text-sm"><i class="fas fa-sync"></i></button>
+            </div>
+        </div>
+
+        <!-- ROSTER -->
+        <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-stone-50 border-b">
+                    <tr>
+                        <th class="p-4">Email / ID</th>
+                        <th class="p-4">Status</th>
+                        <th class="p-4">Expiry</th>
+                        <th class="p-4">Notes</th>
+                        <th class="p-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="roster-list" class="divide-y divide-stone-100">
+                    <tr><td colspan="5" class="p-8 text-center text-stone-400">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- EDIT MODAL -->
+    <div id="modal-edit" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl w-full max-w-lg p-6 relative">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
+            <h2 class="text-xl font-bold mb-6">Edit Client</h2>
+            <form onsubmit="saveUser(event)" class="space-y-4">
+                <input type="hidden" id="e-uid">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-xs font-bold uppercase text-stone-400">Status</label><select id="e-status" class="w-full border p-2 rounded"><option>Active</option><option>Pending</option><option>Disabled</option></select></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-400">Expiry</label><input id="e-expiry" class="w-full border p-2 rounded"></div>
+                </div>
+                <div><label class="text-xs font-bold uppercase text-stone-400">Real Name</label><input id="e-name" class="w-full border p-2 rounded"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-xs font-bold uppercase text-stone-400">User</label><input id="e-user" class="w-full border p-2 rounded"></div>
+                    <div><label class="text-xs font-bold uppercase text-stone-400">Pass</label><input id="e-pass" class="w-full border p-2 rounded"></div>
+                </div>
+                <div><label class="text-xs font-bold uppercase text-stone-400">Server URL</label><input id="e-server" class="w-full border p-2 rounded"></div>
+                <div><label class="text-xs font-bold uppercase text-stone-400">EPGenius URL</label><input id="e-epgenius" class="w-full border p-2 rounded font-mono text-xs"></div>
+                <div><label class="text-xs font-bold uppercase text-stone-400">Raw M3U</label><input id="e-m3u" class="w-full border p-2 rounded font-mono text-xs"></div>
+                
+                <div class="bg-stone-50 p-3 rounded text-xs text-stone-600">
+                    <strong>User Request:</strong> <span id="e-note">---</span>
+                </div>
+
+                <div class="flex gap-2 pt-4">
+                    <button type="button" onclick="archiveUser()" class="px-4 py-2 bg-red-100 text-red-600 rounded font-bold">Archive</button>
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded font-bold">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import CONFIG from './config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const app = initializeApp(CONFIG.FIREBASE);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user || user.email !== CONFIG.ADMIN_EMAIL) {
+                window.location.href = 'index.html'; // Kick out
+            } else {
+                refresh();
+            }
+        });
+
+        window.refresh = async () => {
+            const tbody = document.getElementById('roster-list');
+            tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center">Loading...</td></tr>';
+            
+            const snap = await getDocs(collection(db, "users"));
+            let html = '';
+            snap.forEach(d => {
+                const u = d.data();
+                if(u.deleted) return;
+                html += `
+                    <tr class="hover:bg-stone-50 border-b">
+                        <td class="p-4">
+                            <div class="font-bold">${u.realName || 'Unknown'}</div>
+                            <div class="text-xs text-stone-400">${u.email}</div>
+                        </td>
+                        <td class="p-4"><span class="px-2 py-1 rounded text-xs font-bold uppercase ${u.status==='Active'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}">${u.status || 'Pending'}</span></td>
+                        <td class="p-4 text-xs font-mono">${u.expiry || '-'}</td>
+                        <td class="p-4 text-xs text-stone-500 truncate max-w-xs">${u.notes || '-'}</td>
+                        <td class="p-4 text-right"><button onclick="edit('${d.id}')" class="bg-stone-900 text-white px-3 py-1 rounded text-xs font-bold">Edit</button></td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        };
+
+        window.edit = async (uid) => {
+            const d = (await getDoc(doc(db, "users", uid))).data();
+            document.getElementById('e-uid').value = uid;
+            document.getElementById('e-name').value = d.realName || '';
+            document.getElementById('e-status').value = d.status || 'Active';
+            document.getElementById('e-expiry').value = d.expiry || '';
+            document.getElementById('e-user').value = d.username || '';
+            document.getElementById('e-pass').value = d.password || '';
+            document.getElementById('e-server').value = d.serverUrl || 'http://cf.taty.website';
+            document.getElementById('e-epgenius').value = d.epgeniusM3u || '';
+            document.getElementById('e-m3u').value = d.m3uUrl || '';
+            document.getElementById('e-note').innerText = d.notes || 'None';
+            
+            document.getElementById('modal-edit').classList.remove('hidden');
+        };
+
+        window.saveUser = async (e) => {
+            e.preventDefault();
+            const uid = document.getElementById('e-uid').value;
+            await updateDoc(doc(db, "users", uid), {
+                realName: document.getElementById('e-name').value,
+                status: document.getElementById('e-status').value,
+                expiry: document.getElementById('e-expiry').value,
+                username: document.getElementById('e-user').value,
+                password: document.getElementById('e-pass').value,
+                serverUrl: document.getElementById('e-server').value,
+                epgeniusM3u: document.getElementById('e-epgenius').value,
+                m3uUrl: document.getElementById('e-m3u').value
+            });
+            document.getElementById('modal-edit').classList.add('hidden');
+            refresh();
+        };
+
+        window.closeModal = () => document.getElementById('modal-edit').classList.add('hidden');
+    </script>
+</body>
+</html>
+
