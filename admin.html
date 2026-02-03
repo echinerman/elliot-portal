@@ -2,20 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; background-color: #f5f5f4; }</style>
 </head>
-<body class="bg-stone-100 font-sans text-stone-800 p-8">
+<body class="p-8">
 
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-6xl mx-auto">
         <div class="flex justify-between items-center mb-8">
-            <h1 class="text-2xl font-bold">Admin Console</h1>
+            <h1 class="text-2xl font-bold text-stone-900">Admin Console</h1>
             <div class="flex gap-2">
-                <button onclick="openSupply()" class="bg-white border px-4 py-2 rounded shadow-sm text-sm font-bold">Supply</button>
-                <button onclick="refresh()" class="bg-white border px-4 py-2 rounded shadow-sm text-sm"><i class="fas fa-sync"></i></button>
+                <button onclick="openModal()" class="bg-stone-900 text-white px-4 py-2 rounded-lg font-bold hover:bg-stone-700">+ Add Client</button>
+                <button onclick="loadRoster()" class="bg-white border px-4 py-2 rounded-lg hover:bg-stone-50"><i class="fas fa-sync"></i></button>
+                <button onclick="logout()" class="text-red-600 px-4 py-2 font-bold">Exit</button>
             </div>
         </div>
 
@@ -24,48 +25,50 @@
             <table class="w-full text-left text-sm">
                 <thead class="bg-stone-50 border-b">
                     <tr>
-                        <th class="p-4">Email / ID</th>
+                        <th class="p-4">Name / Email</th>
                         <th class="p-4">Status</th>
                         <th class="p-4">Expiry</th>
                         <th class="p-4">Notes</th>
                         <th class="p-4 text-right">Action</th>
                     </tr>
                 </thead>
-                <tbody id="roster-list" class="divide-y divide-stone-100">
-                    <tr><td colspan="5" class="p-8 text-center text-stone-400">Loading...</td></tr>
-                </tbody>
+                <tbody id="roster-body" class="divide-y divide-stone-100"></tbody>
             </table>
         </div>
     </div>
 
     <!-- EDIT MODAL -->
-    <div id="modal-edit" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl w-full max-w-lg p-6 relative">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-stone-400"><i class="fas fa-times"></i></button>
-            <h2 class="text-xl font-bold mb-6">Edit Client</h2>
+    <div id="modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl w-full max-w-lg p-6 relative shadow-2xl h-[90vh] overflow-y-auto">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-stone-400 hover:text-stone-900"><i class="fas fa-times"></i></button>
+            <h2 id="modal-title" class="text-xl font-bold mb-6">Manage User</h2>
             <form onsubmit="saveUser(event)" class="space-y-4">
-                <input type="hidden" id="e-uid">
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-xs font-bold uppercase text-stone-400">Status</label><select id="e-status" class="w-full border p-2 rounded"><option>Active</option><option>Pending</option><option>Disabled</option></select></div>
-                    <div><label class="text-xs font-bold uppercase text-stone-400">Expiry</label><input id="e-expiry" class="w-full border p-2 rounded"></div>
-                </div>
-                <div><label class="text-xs font-bold uppercase text-stone-400">Real Name</label><input id="e-name" class="w-full border p-2 rounded"></div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-xs font-bold uppercase text-stone-400">User</label><input id="e-user" class="w-full border p-2 rounded"></div>
-                    <div><label class="text-xs font-bold uppercase text-stone-400">Pass</label><input id="e-pass" class="w-full border p-2 rounded"></div>
-                </div>
-                <div><label class="text-xs font-bold uppercase text-stone-400">Server URL</label><input id="e-server" class="w-full border p-2 rounded"></div>
-                <div><label class="text-xs font-bold uppercase text-stone-400">EPGenius URL</label><input id="e-epgenius" class="w-full border p-2 rounded font-mono text-xs"></div>
-                <div><label class="text-xs font-bold uppercase text-stone-400">Raw M3U</label><input id="e-m3u" class="w-full border p-2 rounded font-mono text-xs"></div>
+                <input type="hidden" id="uid">
                 
-                <div class="bg-stone-50 p-3 rounded text-xs text-stone-600">
-                    <strong>User Request:</strong> <span id="e-note">---</span>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-[10px] font-bold uppercase text-stone-400">Real Name</label><input id="name" class="w-full border p-2 rounded"></div>
+                    <div><label class="text-[10px] font-bold uppercase text-stone-400">Email (Key)</label><input id="email" class="w-full border p-2 rounded"></div>
                 </div>
 
-                <div class="flex gap-2 pt-4">
-                    <button type="button" onclick="archiveUser()" class="px-4 py-2 bg-red-100 text-red-600 rounded font-bold">Archive</button>
-                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded font-bold">Save Changes</button>
+                <div class="grid grid-cols-3 gap-4">
+                    <div><label class="text-[10px] font-bold uppercase text-stone-400">Status</label><select id="status" class="w-full border p-2 rounded"><option>Active</option><option>Pending</option><option>Disabled</option></select></div>
+                    <div class="col-span-2"><label class="text-[10px] font-bold uppercase text-stone-400">Expiry</label><input id="expiry" class="w-full border p-2 rounded" placeholder="YYYY-MM-DD"></div>
                 </div>
+
+                <div class="p-4 bg-stone-50 rounded-lg space-y-3">
+                    <h3 class="text-xs font-bold text-stone-500 uppercase">Credentials</h3>
+                    <input id="server" class="w-full border p-2 rounded text-xs" placeholder="Server URL">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input id="username" class="w-full border p-2 rounded text-xs" placeholder="Username">
+                        <input id="password" class="w-full border p-2 rounded text-xs" placeholder="Password">
+                    </div>
+                    <input id="epgenius" class="w-full border p-2 rounded text-xs font-mono" placeholder="EPGenius URL">
+                </div>
+
+                <div><label class="text-[10px] font-bold uppercase text-stone-400">Client Request</label><div id="client-notes" class="p-3 bg-stone-50 border rounded text-xs italic text-stone-600 min-h-[40px]">---</div></div>
+
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700">Save Changes</button>
+                <button type="button" onclick="deleteUser()" class="w-full text-red-500 text-xs font-bold mt-2">Archive User</button>
             </form>
         </div>
     </div>
@@ -73,81 +76,123 @@
     <script type="module">
         import CONFIG from './config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const app = initializeApp(CONFIG.FIREBASE);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Security Check
         onAuthStateChanged(auth, (user) => {
             if (!user || user.email !== CONFIG.ADMIN_EMAIL) {
-                window.location.href = 'index.html'; // Kick out
+                window.location.href = 'index.html';
             } else {
-                refresh();
+                loadRoster();
             }
         });
 
-        window.refresh = async () => {
-            const tbody = document.getElementById('roster-list');
-            tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center">Loading...</td></tr>';
-            
-            const snap = await getDocs(collection(db, "users"));
-            let html = '';
-            snap.forEach(d => {
-                const u = d.data();
-                if(u.deleted) return;
-                html += `
-                    <tr class="hover:bg-stone-50 border-b">
-                        <td class="p-4">
-                            <div class="font-bold">${u.realName || 'Unknown'}</div>
-                            <div class="text-xs text-stone-400">${u.email}</div>
-                        </td>
-                        <td class="p-4"><span class="px-2 py-1 rounded text-xs font-bold uppercase ${u.status==='Active'?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}">${u.status || 'Pending'}</span></td>
-                        <td class="p-4 text-xs font-mono">${u.expiry || '-'}</td>
-                        <td class="p-4 text-xs text-stone-500 truncate max-w-xs">${u.notes || '-'}</td>
-                        <td class="p-4 text-right"><button onclick="edit('${d.id}')" class="bg-stone-900 text-white px-3 py-1 rounded text-xs font-bold">Edit</button></td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = html;
+        window.loadRoster = async () => {
+            const tbody = document.getElementById('roster-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-stone-400">Loading...</td></tr>';
+            try {
+                const snap = await getDocs(collection(db, "users"));
+                let html = '';
+                snap.forEach(d => {
+                    const u = d.data();
+                    if(d.id === 'meta_supply' || u.deleted) return;
+                    
+                    const statusColor = u.status === 'Active' ? 'bg-green-100 text-green-700' : (u.status === 'Disabled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700');
+                    
+                    html += `
+                        <tr class="hover:bg-stone-50 border-b">
+                            <td class="p-4">
+                                <div class="font-bold text-stone-900">${u.realName || 'Unknown'}</div>
+                                <div class="text-xs text-stone-400">${u.email}</div>
+                            </td>
+                            <td class="p-4"><span class="px-2 py-1 rounded text-xs font-bold uppercase ${statusColor}">${u.status || 'Pending'}</span></td>
+                            <td class="p-4 text-xs font-mono">${u.expiry || '-'}</td>
+                            <td class="p-4 text-xs text-stone-500 truncate max-w-xs">${u.notes || '-'}</td>
+                            <td class="p-4 text-right"><button onclick="edit('${d.id}')" class="bg-stone-200 px-3 py-1 rounded text-xs font-bold hover:bg-stone-300">Edit</button></td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html || '<tr><td colspan="5" class="p-8 text-center">No clients.</td></tr>';
+            } catch(e) { console.error(e); }
         };
+
+        window.openModal = () => {
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('uid').value = '';
+            document.getElementById('modal-title').innerText = "Add Client";
+            // Clear inputs
+            document.querySelectorAll('input').forEach(i => i.value = '');
+            document.getElementById('email').readOnly = false;
+        };
+
+        window.closeModal = () => document.getElementById('modal').classList.add('hidden');
 
         window.edit = async (uid) => {
             const d = (await getDoc(doc(db, "users", uid))).data();
-            document.getElementById('e-uid').value = uid;
-            document.getElementById('e-name').value = d.realName || '';
-            document.getElementById('e-status').value = d.status || 'Active';
-            document.getElementById('e-expiry').value = d.expiry || '';
-            document.getElementById('e-user').value = d.username || '';
-            document.getElementById('e-pass').value = d.password || '';
-            document.getElementById('e-server').value = d.serverUrl || 'http://cf.taty.website';
-            document.getElementById('e-epgenius').value = d.epgeniusM3u || '';
-            document.getElementById('e-m3u').value = d.m3uUrl || '';
-            document.getElementById('e-note').innerText = d.notes || 'None';
+            document.getElementById('modal-edit-title').innerText = "Edit Client";
+            document.getElementById('uid').value = uid;
             
-            document.getElementById('modal-edit').classList.remove('hidden');
+            document.getElementById('name').value = d.realName || '';
+            document.getElementById('email').value = d.email || '';
+            document.getElementById('email').readOnly = true; // Cannot change email key
+            document.getElementById('status').value = d.status || 'Active';
+            document.getElementById('expiry').value = d.expiry || '';
+            
+            document.getElementById('server').value = d.serverUrl || '';
+            document.getElementById('username').value = d.username || '';
+            document.getElementById('password').value = d.password || '';
+            document.getElementById('epgenius').value = d.epgeniusM3u || '';
+            
+            document.getElementById('client-notes').innerText = d.notes || 'No requests.';
+            
+            document.getElementById('modal').classList.remove('hidden');
         };
 
         window.saveUser = async (e) => {
             e.preventDefault();
-            const uid = document.getElementById('e-uid').value;
-            await updateDoc(doc(db, "users", uid), {
-                realName: document.getElementById('e-name').value,
-                status: document.getElementById('e-status').value,
-                expiry: document.getElementById('e-expiry').value,
-                username: document.getElementById('e-user').value,
-                password: document.getElementById('e-pass').value,
-                serverUrl: document.getElementById('e-server').value,
-                epgeniusM3u: document.getElementById('e-epgenius').value,
-                m3uUrl: document.getElementById('e-m3u').value
-            });
-            document.getElementById('modal-edit').classList.add('hidden');
-            refresh();
+            const uid = document.getElementById('uid').value;
+            const data = {
+                realName: document.getElementById('name').value,
+                email: document.getElementById('email').value.toLowerCase(),
+                status: document.getElementById('status').value,
+                expiry: document.getElementById('expiry').value,
+                serverUrl: document.getElementById('server').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                epgeniusM3u: document.getElementById('epgenius').value
+            };
+
+            if(uid) {
+                await updateDoc(doc(db, "users", uid), data);
+            } else {
+                // Creating a "Manual" doc. 
+                // Since we don't have the UID yet (client hasn't registered), 
+                // we create a placeholder doc. The client code will find this by email query.
+                await addDoc(collection(db, "users"), { ...data, created: new Date().toISOString() });
+            }
+            closeModal();
+            loadRoster();
         };
 
-        window.closeModal = () => document.getElementById('modal-edit').classList.add('hidden');
+        window.deleteUser = async () => {
+            const uid = document.getElementById('uid').value;
+            if(confirm("Archive this user?")) {
+                await updateDoc(doc(db, "users", uid), { deleted: true });
+                closeModal();
+                loadRoster();
+            }
+        };
+
+        window.logout = () => {
+            signOut(auth).then(() => window.location.href = 'index.html');
+        };
     </script>
 </body>
 </html>
+
 
