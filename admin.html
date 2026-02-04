@@ -2,194 +2,364 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Inter', sans-serif; background-color: #f5f5f4; }</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: { colors: { brand: { 800: '#292524', 900: '#1c1917' } } }
+            }
+        }
+    </script>
 </head>
-<body class="p-8">
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
 
-    <div class="max-w-6xl mx-auto">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-2xl font-bold text-stone-900">Admin Console</h1>
-            <div class="flex gap-2">
-                <button onclick="openModal()" class="bg-stone-900 text-white px-4 py-2 rounded-lg font-bold hover:bg-stone-700">+ Add Client</button>
-                <button onclick="loadRoster()" class="bg-white border px-4 py-2 rounded-lg hover:bg-stone-50"><i class="fas fa-sync"></i></button>
-                <button onclick="logout()" class="text-red-600 px-4 py-2 font-bold">Exit</button>
+    <!-- Navbar -->
+    <nav class="bg-brand-900 text-white p-4 shadow-lg">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold"><i class="fa-solid fa-shield-halved mr-2"></i>Admin Console</h1>
+            <div class="flex gap-4 text-sm">
+                <span id="admin-email">Loading...</span>
+                <button onclick="window.location.href='index.html'" class="hover:text-gray-300">Exit</button>
+            </div>
+        </div>
+    </nav>
+
+    <div id="main-content" class="max-w-7xl mx-auto p-6 space-y-6 opacity-0 transition-opacity duration-500">
+        
+        <!-- Financials Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500">
+                <h3 class="text-xs font-bold text-gray-400 uppercase">Credits Remaining</h3>
+                <p class="text-3xl font-bold mt-2" id="stat-credits">--</p>
+                <button onclick="openSupplyModal()" class="text-xs text-blue-500 font-bold mt-2 hover:underline">+ Add Supply</button>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-green-500">
+                <h3 class="text-xs font-bold text-gray-400 uppercase">Est. Net Profit</h3>
+                <p class="text-3xl font-bold mt-2 text-green-600" id="stat-profit">--</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-purple-500">
+                <h3 class="text-xs font-bold text-gray-400 uppercase">Total Users</h3>
+                <p class="text-3xl font-bold mt-2" id="stat-users">--</p>
+                <div class="mt-2 text-xs">
+                    <span id="stat-active" class="text-green-600 font-bold">0 Active</span> • 
+                    <span id="stat-pending" class="text-yellow-600 font-bold">0 Pending</span>
+                </div>
             </div>
         </div>
 
-        <!-- ROSTER -->
-        <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-            <table class="w-full text-left text-sm">
-                <thead class="bg-stone-50 border-b">
-                    <tr>
-                        <th class="p-4">Name / Email</th>
-                        <th class="p-4">Status</th>
-                        <th class="p-4">Expiry</th>
-                        <th class="p-4">Notes</th>
-                        <th class="p-4 text-right">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="roster-body" class="divide-y divide-stone-100"></tbody>
-            </table>
+        <!-- Roster -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                <h2 class="font-bold text-lg">User Roster</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="search-input" placeholder="Search email..." class="bg-gray-50 p-2 rounded-lg text-sm outline-none border border-gray-200 focus:border-brand-900">
+                    <button onclick="seedData()" class="bg-gray-200 text-gray-600 px-3 py-1 rounded text-xs hover:bg-gray-300">Seed Defaults</button>
+                    <button onclick="openUserModal()" class="bg-brand-900 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-brand-800">+ New User</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3">User / Email</th>
+                            <th class="px-6 py-3">Status</th>
+                            <th class="px-6 py-3">Credits/Expiry</th>
+                            <th class="px-6 py-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roster-body" class="divide-y divide-gray-100">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- User Modal -->
+    <div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl transform transition-all">
+            <h3 class="text-lg font-bold mb-4">Edit / Create User</h3>
+            <form id="user-form" class="space-y-4">
+                <input type="hidden" id="edit-uid">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase">Email</label>
+                        <input type="email" id="edit-email" class="w-full p-2 border rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase">Status</label>
+                        <select id="edit-status" class="w-full p-2 border rounded-lg">
+                            <option value="Pending">Pending</option>
+                            <option value="Active">Active</option>
+                            <option value="Expired">Expired</option>
+                            <option value="Banned">Banned</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase">Expiry Date</label>
+                        <input type="date" id="edit-expiry" class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase">Credits Alloc.</label>
+                        <input type="number" id="edit-credits" value="0" class="w-full p-2 border rounded-lg">
+                    </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-xl space-y-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase">IPTV Credentials</label>
+                    <input type="text" id="edit-url" placeholder="Server URL" class="w-full p-2 border rounded-lg text-sm">
+                    <div class="flex gap-2">
+                        <input type="text" id="edit-user" placeholder="Username" class="w-full p-2 border rounded-lg text-sm">
+                        <input type="text" id="edit-pass" placeholder="Password" class="w-full p-2 border rounded-lg text-sm">
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-6">
+                    <button type="button" onclick="archiveUser()" id="btn-archive" class="text-red-500 text-sm font-bold hover:underline">Archive User</button>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-brand-900 text-white font-bold rounded-lg hover:bg-brand-800">Save</button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- EDIT MODAL -->
-    <div id="modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl w-full max-w-lg p-6 relative shadow-2xl h-[90vh] overflow-y-auto">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-stone-400 hover:text-stone-900"><i class="fas fa-times"></i></button>
-            <h2 id="modal-title" class="text-xl font-bold mb-6">Manage User</h2>
-            <form onsubmit="saveUser(event)" class="space-y-4">
-                <input type="hidden" id="uid">
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-[10px] font-bold uppercase text-stone-400">Real Name</label><input id="name" class="w-full border p-2 rounded"></div>
-                    <div><label class="text-[10px] font-bold uppercase text-stone-400">Email (Key)</label><input id="email" class="w-full border p-2 rounded"></div>
+    <!-- Supply Modal -->
+    <div id="supply-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h3 class="text-lg font-bold mb-4">Add Supply</h3>
+            <form id="supply-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase">Credits Purchased</label>
+                    <input type="number" id="supply-credits" class="w-full p-2 border rounded-lg" required>
                 </div>
-
-                <div class="grid grid-cols-3 gap-4">
-                    <div><label class="text-[10px] font-bold uppercase text-stone-400">Status</label><select id="status" class="w-full border p-2 rounded"><option>Active</option><option>Pending</option><option>Disabled</option></select></div>
-                    <div class="col-span-2"><label class="text-[10px] font-bold uppercase text-stone-400">Expiry</label><input id="expiry" class="w-full border p-2 rounded" placeholder="YYYY-MM-DD"></div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase">Total Cost ($)</label>
+                    <input type="number" id="supply-cost" class="w-full p-2 border rounded-lg" required>
                 </div>
-
-                <div class="p-4 bg-stone-50 rounded-lg space-y-3">
-                    <h3 class="text-xs font-bold text-stone-500 uppercase">Credentials</h3>
-                    <input id="server" class="w-full border p-2 rounded text-xs" placeholder="Server URL">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input id="username" class="w-full border p-2 rounded text-xs" placeholder="Username">
-                        <input id="password" class="w-full border p-2 rounded text-xs" placeholder="Password">
-                    </div>
-                    <input id="epgenius" class="w-full border p-2 rounded text-xs font-mono" placeholder="EPGenius URL">
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" onclick="closeModal('supply-modal')" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Add Entry</button>
                 </div>
-
-                <div><label class="text-[10px] font-bold uppercase text-stone-400">Client Request</label><div id="client-notes" class="p-3 bg-stone-50 border rounded text-xs italic text-stone-600 min-h-[40px]">---</div></div>
-
-                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700">Save Changes</button>
-                <button type="button" onclick="deleteUser()" class="w-full text-red-500 text-xs font-bold mt-2">Archive User</button>
             </form>
         </div>
     </div>
 
     <script type="module">
-        import CONFIG from './config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { CONFIG } from './config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            getDocs, 
+            doc, 
+            setDoc, 
+            updateDoc, 
+            addDoc,
+            arrayUnion,
+            query,
+            where
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const app = initializeApp(CONFIG.FIREBASE);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Security Check
+        let allUsers = [];
+        let supplyData = [];
+
+        // --- AUTH GUARD ---
         onAuthStateChanged(auth, (user) => {
             if (!user || user.email !== CONFIG.ADMIN_EMAIL) {
                 window.location.href = 'index.html';
             } else {
-                loadRoster();
+                document.getElementById('admin-email').textContent = user.email;
+                document.getElementById('main-content').classList.remove('opacity-0');
+                loadData();
             }
         });
 
-        window.loadRoster = async () => {
+        // --- DATA LOADING ---
+        async function loadData() {
+            // 1. Fetch Users
+            // Note: client-side filtering of 'deleted'
+            const userSnap = await getDocs(collection(db, 'users'));
+            allUsers = [];
+            userSnap.forEach(doc => {
+                const data = doc.data();
+                if(!data.deleted) allUsers.push({ id: doc.id, ...data });
+            });
+
+            // 2. Fetch Business Data (Ledger)
+            const bizSnap = await getDocs(collection(db, 'business_data'));
+            supplyData = [];
+            bizSnap.forEach(doc => {
+                if(doc.data().supply_log) supplyData.push(...doc.data().supply_log);
+            });
+
+            // 3. Calculate Stats
+            const totalSupply = supplyData.reduce((sum, item) => sum + Number(item.credits), 0);
+            const totalCost = supplyData.reduce((sum, item) => sum + Number(item.cost), 0);
+            const totalAllocated = allUsers.reduce((sum, u) => sum + (Number(u.credits_allocated) || 0), 0);
+            
+            // Assume Average Retail Price is $10/credit for estimation if no sales data
+            const EST_RETAIL_PRICE = 10; 
+            const estRevenue = totalAllocated * EST_RETAIL_PRICE;
+
+            document.getElementById('stat-credits').textContent = (totalSupply - totalAllocated).toLocaleString();
+            document.getElementById('stat-profit').textContent = CONFIG.CURRENCY_SYMBOL + (estRevenue - totalCost).toLocaleString();
+            
+            document.getElementById('stat-users').textContent = allUsers.length;
+            document.getElementById('stat-active').textContent = `${allUsers.filter(u => u.status === 'Active').length} Active`;
+            document.getElementById('stat-pending').textContent = `${allUsers.filter(u => u.status === 'Pending').length} Pending`;
+
+            renderRoster();
+        }
+
+        // --- ROSTER UI ---
+        function renderRoster(filter = "") {
             const tbody = document.getElementById('roster-body');
-            tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-stone-400">Loading...</td></tr>';
-            try {
-                const snap = await getDocs(collection(db, "users"));
-                let html = '';
-                snap.forEach(d => {
-                    const u = d.data();
-                    if(d.id === 'meta_supply' || u.deleted) return;
-                    
-                    const statusColor = u.status === 'Active' ? 'bg-green-100 text-green-700' : (u.status === 'Disabled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700');
-                    
-                    html += `
-                        <tr class="hover:bg-stone-50 border-b">
-                            <td class="p-4">
-                                <div class="font-bold text-stone-900">${u.realName || 'Unknown'}</div>
-                                <div class="text-xs text-stone-400">${u.email}</div>
-                            </td>
-                            <td class="p-4"><span class="px-2 py-1 rounded text-xs font-bold uppercase ${statusColor}">${u.status || 'Pending'}</span></td>
-                            <td class="p-4 text-xs font-mono">${u.expiry || '-'}</td>
-                            <td class="p-4 text-xs text-stone-500 truncate max-w-xs">${u.notes || '-'}</td>
-                            <td class="p-4 text-right"><button onclick="edit('${d.id}')" class="bg-stone-200 px-3 py-1 rounded text-xs font-bold hover:bg-stone-300">Edit</button></td>
-                        </tr>
-                    `;
-                });
-                tbody.innerHTML = html || '<tr><td colspan="5" class="p-8 text-center">No clients.</td></tr>';
-            } catch(e) { console.error(e); }
+            tbody.innerHTML = '';
+            
+            const filtered = allUsers.filter(u => u.email.toLowerCase().includes(filter.toLowerCase()));
+
+            filtered.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                
+                let statusColor = 'text-gray-500 bg-gray-100';
+                if(u.status === 'Active') statusColor = 'text-green-700 bg-green-100';
+                if(u.status === 'Pending') statusColor = 'text-yellow-700 bg-yellow-100';
+                if(u.status === 'Expired') statusColor = 'text-red-700 bg-red-100';
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-gray-900">${u.email}</div>
+                        <div class="text-xs text-gray-400">${u.id.substring(0,8)}...</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold ${statusColor}">${u.status}</span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-600">
+                        <div>Alloc: ${u.credits_allocated || 0}</div>
+                        <div class="text-xs text-gray-400">Exp: ${u.expiry_date || 'N/A'}</div>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="editUser('${u.id}')" class="text-brand-900 font-bold hover:underline">Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('search-input').addEventListener('input', (e) => renderRoster(e.target.value));
+
+        // --- ACTIONS ---
+
+        window.openUserModal = () => {
+            document.getElementById('user-form').reset();
+            document.getElementById('edit-uid').value = ''; // Empty = New
+            document.getElementById('btn-archive').classList.add('hidden');
+            document.getElementById('user-modal').classList.remove('hidden');
         };
 
-        window.openModal = () => {
-            document.getElementById('modal').classList.remove('hidden');
-            document.getElementById('uid').value = '';
-            document.getElementById('modal-title').innerText = "Add Client";
-            // Clear inputs
-            document.querySelectorAll('input').forEach(i => i.value = '');
-            document.getElementById('email').readOnly = false;
+        window.editUser = (id) => {
+            const u = allUsers.find(user => user.id === id);
+            if(!u) return;
+            document.getElementById('edit-uid').value = u.id;
+            document.getElementById('edit-email').value = u.email;
+            document.getElementById('edit-status').value = u.status || 'Pending';
+            document.getElementById('edit-expiry').value = u.expiry_date || '';
+            document.getElementById('edit-credits').value = u.credits_allocated || 0;
+            document.getElementById('edit-url').value = u.portal_url || '';
+            document.getElementById('edit-user').value = u.username || '';
+            document.getElementById('edit-pass').value = u.password || '';
+            
+            document.getElementById('btn-archive').classList.remove('hidden');
+            document.getElementById('user-modal').classList.remove('hidden');
         };
 
-        window.closeModal = () => document.getElementById('modal').classList.add('hidden');
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
 
-        window.edit = async (uid) => {
-            const d = (await getDoc(doc(db, "users", uid))).data();
-            document.getElementById('modal-edit-title').innerText = "Edit Client";
-            document.getElementById('uid').value = uid;
-            
-            document.getElementById('name').value = d.realName || '';
-            document.getElementById('email').value = d.email || '';
-            document.getElementById('email').readOnly = true; // Cannot change email key
-            document.getElementById('status').value = d.status || 'Active';
-            document.getElementById('expiry').value = d.expiry || '';
-            
-            document.getElementById('server').value = d.serverUrl || '';
-            document.getElementById('username').value = d.username || '';
-            document.getElementById('password').value = d.password || '';
-            document.getElementById('epgenius').value = d.epgeniusM3u || '';
-            
-            document.getElementById('client-notes').innerText = d.notes || 'No requests.';
-            
-            document.getElementById('modal').classList.remove('hidden');
-        };
-
-        window.saveUser = async (e) => {
+        document.getElementById('user-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const uid = document.getElementById('uid').value;
+            const uid = document.getElementById('edit-uid').value;
             const data = {
-                realName: document.getElementById('name').value,
-                email: document.getElementById('email').value.toLowerCase(),
-                status: document.getElementById('status').value,
-                expiry: document.getElementById('expiry').value,
-                serverUrl: document.getElementById('server').value,
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value,
-                epgeniusM3u: document.getElementById('epgenius').value
+                email: document.getElementById('edit-email').value,
+                status: document.getElementById('edit-status').value,
+                expiry_date: document.getElementById('edit-expiry').value,
+                credits_allocated: Number(document.getElementById('edit-credits').value),
+                portal_url: document.getElementById('edit-url').value,
+                username: document.getElementById('edit-user').value,
+                password: document.getElementById('edit-pass').value
             };
 
-            if(uid) {
-                await updateDoc(doc(db, "users", uid), data);
-            } else {
-                // Creating a "Manual" doc. 
-                // Since we don't have the UID yet (client hasn't registered), 
-                // we create a placeholder doc. The client code will find this by email query.
-                await addDoc(collection(db, "users"), { ...data, created: new Date().toISOString() });
-            }
-            closeModal();
-            loadRoster();
+            try {
+                if (uid) {
+                    await updateDoc(doc(db, 'users', uid), data);
+                } else {
+                    // Create NEW user (Pre-creation logic)
+                    // We allow the admin to create a doc. We use a new random ID.
+                    // Important: The client migration looks for where('email', '==', email).
+                    await addDoc(collection(db, 'users'), { ...data, devices: [], bouquets: [], created_at: new Date().toISOString() });
+                }
+                closeModal('user-modal');
+                loadData();
+            } catch (err) { alert(err.message); }
+        });
+
+        window.archiveUser = async () => {
+            const uid = document.getElementById('edit-uid').value;
+            if(!uid || !confirm('Are you sure? This hides the user from the list.')) return;
+            await updateDoc(doc(db, 'users', uid), { deleted: true });
+            closeModal('user-modal');
+            loadData();
         };
 
-        window.deleteUser = async () => {
-            const uid = document.getElementById('uid').value;
-            if(confirm("Archive this user?")) {
-                await updateDoc(doc(db, "users", uid), { deleted: true });
-                closeModal();
-                loadRoster();
-            }
-        };
+        // --- SUPPLY ACTIONS ---
+        window.openSupplyModal = () => document.getElementById('supply-modal').classList.remove('hidden');
 
-        window.logout = () => {
-            signOut(auth).then(() => window.location.href = 'index.html');
+        document.getElementById('supply-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const credits = document.getElementById('supply-credits').value;
+            const cost = document.getElementById('supply-cost').value;
+            
+            const ledgerRef = doc(db, 'business_data', 'ledger');
+            try {
+                // Ensure doc exists or update
+                // Using setDoc with merge to ensure creation if missing, then arrayUnion
+                await setDoc(ledgerRef, {
+                    supply_log: arrayUnion({
+                        credits: Number(credits),
+                        cost: Number(cost),
+                        date: new Date().toISOString()
+                    })
+                }, { merge: true });
+                closeModal('supply-modal');
+                loadData();
+            } catch (err) { alert(err.message); }
+        });
+
+        // --- UTILITY ---
+        window.seedData = async () => {
+            if(!confirm("Create default configs and products?")) return;
+            // 1. App Config
+            await setDoc(doc(db, 'app_config', 'devices'), { list: ['Firestick 4K', 'Nvidia Shield', 'Formuler Z8', 'Apple TV', 'Android Phone'] });
+            await setDoc(doc(db, 'app_config', 'bouquets'), { list: ['Sports', 'Movies', 'International', 'Adult', 'Kids'] });
+            
+            // 2. Products
+            await setDoc(doc(db, 'products', '1_month'), { name: '1 Month Access', price: 15, credits: 1 });
+            await setDoc(doc(db, 'products', '3_month'), { name: '3 Months Bundle', price: 40, credits: 3 });
+            await setDoc(doc(db, 'products', '12_month'), { name: '1 Year VIP', price: 100, credits: 12 });
+            
+            alert("Seeded!");
+            loadData();
         };
     </script>
 </body>
