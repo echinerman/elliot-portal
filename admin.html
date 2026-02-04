@@ -107,7 +107,7 @@
 
     <!-- User Modal (Expanded for Licenses) -->
     <div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 overflow-y-auto py-10">
-        <div class="bg-white rounded-2xl w-full max-w-3xl p-6 shadow-2xl transform transition-all my-auto relative">
+        <div class="bg-white rounded-2xl w-full max-w-4xl p-6 shadow-2xl transform transition-all my-auto relative">
             <button onclick="closeModal('user-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
             <h3 class="text-lg font-bold mb-4 border-b pb-2">Edit / Create User</h3>
             
@@ -117,8 +117,8 @@
                 <!-- Section 1: Identity & Global Status -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="col-span-1">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status (Master)</label>
-                        <select id="edit-status" class="w-full p-2 border rounded-lg text-sm bg-white">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status (Account Level)</label>
+                        <select id="edit-status" class="w-full p-2 border rounded-lg text-sm bg-white font-bold">
                             <option value="Pending">Pending</option>
                             <option value="Active">Active</option>
                             <option value="Expired">Expired</option>
@@ -136,13 +136,17 @@
                 </div>
 
                 <!-- Section 2: Global Configuration -->
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Global 8K Domain</label>
                         <input type="text" id="edit-domain-8k" placeholder="http://domain.com:port" class="w-full p-2 border rounded-lg text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Credits Allocated</label>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Backup 8K Domain</label>
+                        <input type="text" id="edit-domain-backup-8k" placeholder="http://backup.com:port" class="w-full p-2 border rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Total Credits (Wallet)</label>
                         <input type="number" id="edit-credits" value="0" class="w-full p-2 border rounded-lg text-sm bg-white">
                     </div>
                 </div>
@@ -153,7 +157,7 @@
                         <h4 class="text-xs font-bold text-brand-900 uppercase flex items-center gap-2">
                             <i class="fa-solid fa-server"></i> License Manager
                         </h4>
-                        <span class="text-[10px] text-gray-500 uppercase font-bold">Manage multiple lines</span>
+                        <span class="text-[10px] text-gray-500 uppercase font-bold">Manage individual lines</span>
                     </div>
 
                     <!-- Licenses List -->
@@ -162,9 +166,10 @@
                             <thead class="bg-gray-50 text-gray-400 uppercase font-bold">
                                 <tr>
                                     <th class="p-2">Label</th>
-                                    <th class="p-2">Username</th>
-                                    <th class="p-2">Password</th>
+                                    <th class="p-2">Credentials</th>
                                     <th class="p-2">Expiry</th>
+                                    <th class="p-2">Cost</th>
+                                    <th class="p-2">Status</th>
                                     <th class="p-2 text-right">Action</th>
                                 </tr>
                             </thead>
@@ -175,49 +180,77 @@
                         <div id="no-licenses-msg" class="p-4 text-center text-gray-400 text-sm italic hidden">No active licenses.</div>
                     </div>
 
-                    <!-- Add License Form -->
-                    <div class="bg-gray-100 p-3 rounded-lg grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
-                        <div class="md:col-span-1">
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Label (Device)</label>
-                            <input type="text" id="new-lic-label" placeholder="Living Room" class="w-full p-1.5 border rounded text-xs">
+                    <!-- Add License Control Panel -->
+                    <div class="bg-gray-100 p-4 rounded-lg space-y-3">
+                        <div class="flex justify-between items-end">
+                            <h5 class="text-[10px] font-bold text-gray-500 uppercase">Add New License</h5>
                         </div>
-                        <div class="md:col-span-1">
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Username</label>
-                            <input type="text" id="new-lic-user" placeholder="user_123" class="w-full p-1.5 border rounded text-xs">
+                        
+                        <!-- Row 1: Core Details -->
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-2">
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Label</label>
+                                <input type="text" id="new-lic-label" placeholder="Living Room" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Status</label>
+                                <select id="new-lic-status" class="w-full p-1.5 border rounded text-xs font-bold">
+                                    <option value="Active">Active</option>
+                                    <option value="Trial">Trial</option>
+                                    <option value="Banned">Banned</option>
+                                    <option value="Expired">Expired</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Username</label>
+                                <input type="text" id="new-lic-user" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Password</label>
+                                <input type="text" id="new-lic-pass" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Expiry</label>
+                                <input type="date" id="new-lic-expiry" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Credits Cost</label>
+                                <input type="number" id="new-lic-credits" value="0" class="w-full p-1.5 border rounded text-xs">
+                            </div>
                         </div>
-                        <div class="md:col-span-1">
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Password</label>
-                            <input type="text" id="new-lic-pass" placeholder="pass_123" class="w-full p-1.5 border rounded text-xs">
+
+                        <!-- Row 2: Technical Config -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">M3U URL</label>
+                                <input type="text" id="new-lic-m3u" class="w-full p-1.5 border rounded text-xs font-mono text-[10px]">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">EPG URL</label>
+                                <input type="text" id="new-lic-epg" class="w-full p-1.5 border rounded text-xs font-mono text-[10px]">
+                            </div>
                         </div>
-                        <div class="md:col-span-1">
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Expiry Date</label>
-                            <input type="date" id="new-lic-expiry" class="w-full p-1.5 border rounded text-xs">
-                        </div>
-                        <div class="md:col-span-1">
-                            <button type="button" onclick="addLicense()" class="w-full bg-brand-900 text-white text-xs font-bold py-2 rounded hover:bg-brand-800">
-                                <i class="fa-solid fa-plus mr-1"></i> Add Line
-                            </button>
+
+                        <!-- Row 3: EPGenius -->
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-blue-400 uppercase">EPGenius Key</label>
+                                <input type="number" id="new-lic-epg-key" class="w-full p-1.5 border rounded text-xs border-blue-200">
+                            </div>
+                            <div class="md:col-span-4">
+                                <label class="block text-[9px] font-bold text-blue-400 uppercase">EPGenius GDrive URL</label>
+                                <input type="text" id="new-lic-drive" class="w-full p-1.5 border rounded text-xs font-mono text-[10px] border-blue-200">
+                            </div>
+                            <div class="md:col-span-1">
+                                <button type="button" onclick="addLicense()" class="w-full bg-brand-900 text-white text-xs font-bold py-2 rounded hover:bg-brand-800">
+                                    <i class="fa-solid fa-plus mr-1"></i> Add
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Section 4: URLs & EPGenius -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="space-y-2">
-                        <label class="block text-xs font-bold text-gray-500 uppercase">Global M3U / EPG URLs</label>
-                        <input type="text" id="edit-m3u-8k" placeholder="M3U URL" class="w-full p-2 border rounded-lg text-sm font-mono text-xs">
-                        <input type="text" id="edit-epg-8k" placeholder="EPG URL" class="w-full p-2 border rounded-lg text-sm font-mono text-xs">
-                    </div>
-                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 space-y-2">
-                        <h4 class="text-xs font-bold text-blue-900 uppercase flex items-center gap-2"><i class="fa-solid fa-bolt"></i> EPGenius</h4>
-                        <div class="grid grid-cols-3 gap-2">
-                            <input type="number" id="edit-epg-key" placeholder="Key #" class="col-span-1 w-full p-2 border rounded-lg text-sm">
-                            <input type="text" id="edit-epg-drive" placeholder="GDrive URL" class="col-span-2 w-full p-2 border rounded-lg text-sm font-mono text-xs">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 5: Preferences & Notes -->
+                <!-- Section 4: Preferences & Notes -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Internal Notes</label>
@@ -398,7 +431,15 @@
 
                 // Icons
                 const has8K = licCount > 0 ? `<span class="text-brand-900 font-bold text-xs"><i class="fa-solid fa-server mr-1"></i>${licCount} Line(s)</span>` : '';
-                const hasEPG = u.epgenius_key ? '<i class="fa-solid fa-bolt text-blue-600 mr-1" title="EPGenius"></i>' : '';
+                
+                // Check new license structure for EPGenius
+                let hasEPG = false;
+                if (u.licenses) {
+                    hasEPG = u.licenses.some(l => l.epgenius_key);
+                } else {
+                    hasEPG = !!u.epgenius_key; // Legacy check
+                }
+                const epgIcon = hasEPG ? '<i class="fa-solid fa-bolt text-blue-600 mr-1" title="EPGenius"></i>' : '';
                 const hasNotes = u.internal_notes ? '<i class="fa-regular fa-note-sticky text-yellow-500" title="Notes"></i>' : '';
 
                 tr.innerHTML = `
@@ -410,9 +451,9 @@
                         <span class="px-2 py-1 rounded-full text-xs font-bold ${statusColor}">${u.status}</span>
                     </td>
                     <td class="px-6 py-4 text-gray-600">
-                        <div class="flex items-center gap-2 mb-1">${has8K} ${hasEPG} ${hasNotes}</div>
+                        <div class="flex items-center gap-2 mb-1">${has8K} ${epgIcon} ${hasNotes}</div>
                         <div class="text-xs">
-                            <span class="font-bold">Exp:</span> ${expiryDisplay}
+                            <span class="font-bold">Latest Exp:</span> ${expiryDisplay}
                         </div>
                     </td>
                     <td class="px-6 py-4 text-right">
@@ -438,11 +479,25 @@
             currentLicenses.forEach((lic, index) => {
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-gray-100 hover:bg-gray-50';
+                
+                let badgeClass = 'bg-gray-100 text-gray-600';
+                if(lic.status === 'Active') badgeClass = 'bg-green-100 text-green-700';
+                if(lic.status === 'Expired') badgeClass = 'bg-red-100 text-red-700';
+
                 tr.innerHTML = `
-                    <td class="p-2 font-medium">${lic.label || 'Main'}</td>
-                    <td class="p-2 text-gray-600">${lic.username_8k}</td>
-                    <td class="p-2 font-mono text-gray-500">••••</td>
-                    <td class="p-2 text-gray-600">${lic.expiry_date}</td>
+                    <td class="p-2 font-medium">
+                        ${lic.label || 'Line '+(index+1)}
+                        ${lic.epgenius_key ? '<i class="fa-solid fa-bolt text-blue-400 ml-1 text-[10px]" title="EPGenius"></i>' : ''}
+                    </td>
+                    <td class="p-2 text-gray-600 text-[11px]">
+                        <div>${lic.username_8k}</div>
+                        <div class="text-[9px] text-gray-400 font-mono">••••••</div>
+                    </td>
+                    <td class="p-2 text-gray-600 text-[11px]">${lic.expiry_date}</td>
+                    <td class="p-2 text-gray-600 text-[11px]">${lic.credits || 0}</td>
+                    <td class="p-2">
+                         <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${lic.status}</span>
+                    </td>
                     <td class="p-2 text-right">
                         <button type="button" onclick="removeLicense(${index})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
                     </td>
@@ -452,10 +507,21 @@
         };
 
         window.addLicense = () => {
+            // Core
             const label = document.getElementById('new-lic-label').value;
+            const status = document.getElementById('new-lic-status').value;
             const user = document.getElementById('new-lic-user').value;
             const pass = document.getElementById('new-lic-pass').value;
             const expiry = document.getElementById('new-lic-expiry').value;
+            const credits = document.getElementById('new-lic-credits').value;
+            
+            // Technical
+            const m3u = document.getElementById('new-lic-m3u').value;
+            const epg = document.getElementById('new-lic-epg').value;
+            
+            // EPGenius
+            const epgKey = document.getElementById('new-lic-epg-key').value;
+            const drive = document.getElementById('new-lic-drive').value;
 
             if(!user || !pass || !expiry) {
                 alert("Username, Password, and Expiry are required.");
@@ -464,18 +530,23 @@
 
             currentLicenses.push({
                 id: crypto.randomUUID(),
-                label: label || 'Line ' + (currentLicenses.length + 1),
+                label: label,
+                status: status,
                 username_8k: user,
                 password_8k: pass,
                 expiry_date: expiry,
-                status: 'Active'
+                credits: Number(credits) || 0,
+                m3u_url_8k: m3u,
+                epg_url_8k: epg,
+                epgenius_key: epgKey,
+                epgenius_url: drive
             });
 
             // Clear inputs
-            document.getElementById('new-lic-label').value = '';
-            document.getElementById('new-lic-user').value = '';
-            document.getElementById('new-lic-pass').value = '';
-            document.getElementById('new-lic-expiry').value = '';
+            const ids = ['new-lic-label', 'new-lic-user', 'new-lic-pass', 'new-lic-expiry', 'new-lic-credits', 
+                        'new-lic-m3u', 'new-lic-epg', 'new-lic-epg-key', 'new-lic-drive'];
+            ids.forEach(id => document.getElementById(id).value = '');
+            document.getElementById('new-lic-status').value = 'Active';
 
             window.renderLicenseList();
         };
@@ -509,16 +580,11 @@
             document.getElementById('edit-name').value = u.full_name || '';
             document.getElementById('edit-email').value = u.email;
             document.getElementById('edit-status').value = u.status || 'Pending';
-            document.getElementById('edit-credits').value = u.credits_allocated || 0;
+            document.getElementById('edit-credits').value = u.credits_allocated || 0; // Wallet
             
             // Global 8K Details
             document.getElementById('edit-domain-8k').value = u.domain_8k || '';
-            document.getElementById('edit-m3u-8k').value = u.m3u_url_8k || '';
-            document.getElementById('edit-epg-8k').value = u.epg_url_8k || '';
-
-            // EPGenius
-            document.getElementById('edit-epg-key').value = u.epgenius_key || '';
-            document.getElementById('edit-epg-drive').value = u.epgenius_url || '';
+            document.getElementById('edit-domain-backup-8k').value = u.domain_8k_backup || '';
 
             // Notes
             document.getElementById('edit-notes').value = u.internal_notes || '';
@@ -531,10 +597,16 @@
                 currentLicenses.push({
                     id: crypto.randomUUID(),
                     label: "Primary (Legacy)",
+                    status: 'Active',
                     username_8k: u.username_8k,
                     password_8k: u.password_8k,
                     expiry_date: u.expiry_date || '',
-                    status: 'Active'
+                    credits: 0,
+                    // Legacy moves to License
+                    m3u_url_8k: u.m3u_url_8k || '',
+                    epg_url_8k: u.epg_url_8k || '',
+                    epgenius_key: u.epgenius_key || '',
+                    epgenius_url: u.epgenius_url || ''
                 });
             }
             window.renderLicenseList();
@@ -566,28 +638,19 @@
                 // Identity
                 full_name: document.getElementById('edit-name').value,
                 email: document.getElementById('edit-email').value,
-                status: document.getElementById('edit-status').value,
-                credits_allocated: Number(document.getElementById('edit-credits').value),
+                status: document.getElementById('edit-status').value, // Global Status
+                credits_allocated: Number(document.getElementById('edit-credits').value), // Global Wallet
                 
                 // Global Config
                 domain_8k: document.getElementById('edit-domain-8k').value,
-                m3u_url_8k: document.getElementById('edit-m3u-8k').value,
-                epg_url_8k: document.getElementById('edit-epg-8k').value,
+                domain_8k_backup: document.getElementById('edit-domain-backup-8k').value,
 
                 // Licenses Array (The New Schema)
                 licenses: currentLicenses,
 
-                // EPGenius
-                epgenius_key: document.getElementById('edit-epg-key').value,
-                epgenius_url: document.getElementById('edit-epg-drive').value,
-
                 // Internal
                 internal_notes: document.getElementById('edit-notes').value
             };
-
-            // Remove legacy fields if they exist to clean up DB (Optional, but good practice)
-            // Note: Firestore update doesn't delete fields unless we use FieldValue.delete(), 
-            // but overwriting with the new object structure usually suffices for the app logic.
 
             try {
                 if (uid) {
