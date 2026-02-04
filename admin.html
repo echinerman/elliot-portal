@@ -37,8 +37,9 @@
                 <button onclick="openSupplyModal()" class="text-xs text-blue-500 font-bold mt-2 hover:underline">+ Add Supply</button>
             </div>
             <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-green-500">
-                <h3 class="text-xs font-bold text-gray-400 uppercase">Est. Net Profit</h3>
+                <h3 class="text-xs font-bold text-gray-400 uppercase">Est. Total Profit</h3>
                 <p class="text-3xl font-bold mt-2 text-green-600" id="stat-profit">--</p>
+                <p class="text-xs text-gray-400 mt-1">*Based on historical supply cost</p>
             </div>
             <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-purple-500">
                 <h3 class="text-xs font-bold text-gray-400 uppercase">Total Users</h3>
@@ -47,6 +48,31 @@
                     <span id="stat-active" class="text-green-600 font-bold">0 Active</span> • 
                     <span id="stat-pending" class="text-yellow-600 font-bold">0 Pending</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- Profit Analysis Table -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-100">
+                <h2 class="font-bold text-lg">Product Unit Economics</h2>
+                <p class="text-xs text-gray-400">Profit calculation based on Credit Cost: <span class="font-mono text-brand-900">$3.36 CAD</span></p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3">Product Name</th>
+                            <th class="px-6 py-3">Price (CAD)</th>
+                            <th class="px-6 py-3">Credits</th>
+                            <th class="px-6 py-3">Cost ($3.36/cr)</th>
+                            <th class="px-6 py-3">Net Profit</th>
+                            <th class="px-6 py-3">Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody id="profit-body" class="divide-y divide-gray-100">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -171,8 +197,12 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // --- CONSTANTS ---
+        const COST_PER_CREDIT = 3.36; // CAD
+
         let allUsers = [];
         let supplyData = [];
+        let products = [];
 
         // --- AUTH GUARD ---
         onAuthStateChanged(auth, (user) => {
@@ -188,7 +218,6 @@
         // --- DATA LOADING ---
         async function loadData() {
             // 1. Fetch Users
-            // Note: client-side filtering of 'deleted'
             const userSnap = await getDocs(collection(db, 'users'));
             allUsers = [];
             userSnap.forEach(doc => {
@@ -196,21 +225,36 @@
                 if(!data.deleted) allUsers.push({ id: doc.id, ...data });
             });
 
-            // 2. Fetch Business Data (Ledger)
+            // 2. Fetch Supply (Ledger)
             const bizSnap = await getDocs(collection(db, 'business_data'));
             supplyData = [];
             bizSnap.forEach(doc => {
                 if(doc.data().supply_log) supplyData.push(...doc.data().supply_log);
             });
 
-            // 3. Calculate Stats
+            // 3. Fetch Products for Profit Analysis
+            const prodSnap = await getDocs(collection(db, 'products'));
+            products = [];
+            prodSnap.forEach(doc => products.push({id: doc.id, ...doc.data()}));
+            
+            // Sort products by price
+            products.sort((a,b) => a.price - b.price);
+
+            calculateStats();
+            renderRoster();
+            renderProfitTable();
+        }
+
+        function calculateStats() {
             const totalSupply = supplyData.reduce((sum, item) => sum + Number(item.credits), 0);
             const totalCost = supplyData.reduce((sum, item) => sum + Number(item.cost), 0);
             const totalAllocated = allUsers.reduce((sum, u) => sum + (Number(u.credits_allocated) || 0), 0);
             
-            // Assume Average Retail Price is $10/credit for estimation if no sales data
-            const EST_RETAIL_PRICE = 10; 
-            const estRevenue = totalAllocated * EST_RETAIL_PRICE;
+            // Est. Revenue based on average price (simple assumption of $10/credit)
+            // For a more accurate "Total Profit", we'd need to know exactly which packages were sold.
+            // Currently using a blended average for the dashboard total.
+            const BLENDED_REV_PER_CREDIT = 8; 
+            const estRevenue = totalAllocated * BLENDED_REV_PER_CREDIT;
 
             document.getElementById('stat-credits').textContent = (totalSupply - totalAllocated).toLocaleString();
             document.getElementById('stat-profit').textContent = CONFIG.CURRENCY_SYMBOL + (estRevenue - totalCost).toLocaleString();
@@ -218,8 +262,36 @@
             document.getElementById('stat-users').textContent = allUsers.length;
             document.getElementById('stat-active').textContent = `${allUsers.filter(u => u.status === 'Active').length} Active`;
             document.getElementById('stat-pending').textContent = `${allUsers.filter(u => u.status === 'Pending').length} Pending`;
+        }
 
-            renderRoster();
+        // --- PROFIT TABLE UI ---
+        function renderProfitTable() {
+            const tbody = document.getElementById('profit-body');
+            tbody.innerHTML = '';
+
+            products.forEach(p => {
+                const creditCost = p.credits * COST_PER_CREDIT;
+                const netProfit = p.price - creditCost;
+                const margin = p.price > 0 ? ((netProfit / p.price) * 100).toFixed(1) : 0;
+                
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-bold text-gray-900">${p.name}</td>
+                    <td class="px-6 py-4">${CONFIG.CURRENCY_SYMBOL}${p.price}</td>
+                    <td class="px-6 py-4">${p.credits}</td>
+                    <td class="px-6 py-4 text-gray-500">${CONFIG.CURRENCY_SYMBOL}${creditCost.toFixed(2)}</td>
+                    <td class="px-6 py-4 font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}">
+                        ${CONFIG.CURRENCY_SYMBOL}${netProfit.toFixed(2)}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded text-xs font-bold ${margin > 30 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                            ${margin}%
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
         // --- ROSTER UI ---
@@ -264,7 +336,7 @@
 
         window.openUserModal = () => {
             document.getElementById('user-form').reset();
-            document.getElementById('edit-uid').value = ''; // Empty = New
+            document.getElementById('edit-uid').value = ''; 
             document.getElementById('btn-archive').classList.add('hidden');
             document.getElementById('user-modal').classList.remove('hidden');
         };
@@ -304,10 +376,16 @@
                 if (uid) {
                     await updateDoc(doc(db, 'users', uid), data);
                 } else {
-                    // Create NEW user (Pre-creation logic)
-                    // We allow the admin to create a doc. We use a new random ID.
-                    // Important: The client migration looks for where('email', '==', email).
-                    await addDoc(collection(db, 'users'), { ...data, devices: [], bouquets: [], created_at: new Date().toISOString() });
+                    // Create NEW user - Initialize with new split categories
+                    await addDoc(collection(db, 'users'), { 
+                        ...data, 
+                        devices: [], 
+                        // New fields initialized here for future UI compatibility:
+                        live_preferences: ["Elliot's Default (QC + Sports + English)"], 
+                        vod_preferences: ["Elliot's Default (Movies & Series)"], 
+                        custom_request: "",
+                        created_at: new Date().toISOString() 
+                    });
                 }
                 closeModal('user-modal');
                 loadData();
@@ -332,8 +410,6 @@
             
             const ledgerRef = doc(db, 'business_data', 'ledger');
             try {
-                // Ensure doc exists or update
-                // Using setDoc with merge to ensure creation if missing, then arrayUnion
                 await setDoc(ledgerRef, {
                     supply_log: arrayUnion({
                         credits: Number(credits),
@@ -346,20 +422,72 @@
             } catch (err) { alert(err.message); }
         });
 
-        // --- UTILITY ---
+        // --- UTILITY (SEED DATA) ---
         window.seedData = async () => {
-            if(!confirm("Create default configs and products?")) return;
-            // 1. App Config
-            await setDoc(doc(db, 'app_config', 'devices'), { list: ['Firestick 4K', 'Nvidia Shield', 'Formuler Z8', 'Apple TV', 'Android Phone'] });
-            await setDoc(doc(db, 'app_config', 'bouquets'), { list: ['Sports', 'Movies', 'International', 'Adult', 'Kids'] });
+            if(!confirm("Warning: This will reset Devices, Categories, and Product Pricing. Continue?")) return;
             
-            // 2. Products
-            await setDoc(doc(db, 'products', '1_month'), { name: '1 Month Access', price: 15, credits: 1 });
-            await setDoc(doc(db, 'products', '3_month'), { name: '3 Months Bundle', price: 40, credits: 3 });
-            await setDoc(doc(db, 'products', '12_month'), { name: '1 Year VIP', price: 100, credits: 12 });
-            
-            alert("Seeded!");
-            loadData();
+            try {
+                // 1. App Config - Devices
+                const devices = [
+                    'Stick: Amazon Fire TV 4K',
+                    'Stick: Chromecast w/ Google TV',
+                    'Stick: Roku 4K (Limited)',
+                    'Box: Formuler Z11 Pro',
+                    'Box: Nvidia Shield Pro',
+                    'Box: BuzzTV X5',
+                    'Box: MAG 524 (Legacy)',
+                    'TV: Samsung Tizen',
+                    'TV: LG WebOS',
+                    'TV: Android Native (Sony/Hisense)',
+                    'Mobile: Android Phone',
+                    'Mobile: iPhone (iOS)',
+                    'Tablet: iPad',
+                    'Tablet: Android Tablet',
+                    'PC: Windows',
+                    'PC: Mac OS'
+                ];
+                await setDoc(doc(db, 'app_config', 'devices'), { list: devices });
+
+                // 2. App Config - Content Categories (Live & VOD)
+                // Split per request, including "Other" for custom text scenarios
+                const live_cats = [
+                    "Elliot's Default (QC + Sports + English)",
+                    "Quebec Premium (French)",
+                    "Canada & USA (English)",
+                    "International (Europe/Latino)",
+                    "Adult 18+",
+                    "Other / Custom Request"
+                ];
+
+                const vod_cats = [
+                    "Elliot's Default (Movies & Series)",
+                    "French Content Only",
+                    "English Content Only",
+                    "International",
+                    "Adult",
+                    "None",
+                    "Other / Custom Request"
+                ];
+
+                // Using a new document 'content_options' to store both lists
+                await setDoc(doc(db, 'app_config', 'content_options'), { 
+                    live_list: live_cats,
+                    vod_list: vod_cats
+                });
+                
+                // 3. Products
+                await setDoc(doc(db, 'products', 'demo_1day'), { name: 'Demo (1 Day)', price: 0, credits: 0 });
+                await setDoc(doc(db, 'products', '1_month'), { name: '1 Month Access', price: 10, credits: 1 });
+                await setDoc(doc(db, 'products', '3_month'), { name: '3 Months Bundle', price: 25, credits: 3 });
+                await setDoc(doc(db, 'products', '6_month'), { name: '6 Months Deal', price: 40, credits: 6 });
+                await setDoc(doc(db, 'products', '12_month'), { name: '1 Year VIP', price: 60, credits: 12 });
+                
+                alert("Database Seeded Successfully! Refresh to see changes.");
+                loadData();
+            } catch (err) {
+                console.error(err);
+                alert("Error seeding data: " + err.message);
+            }
         };
     </script>
 </body>
