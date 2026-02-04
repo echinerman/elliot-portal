@@ -105,31 +105,19 @@
 
     </div>
 
-    <!-- User Modal (Expanded) -->
+    <!-- User Modal (Expanded for Licenses) -->
     <div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 overflow-y-auto py-10">
-        <div class="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-2xl transform transition-all my-auto relative">
+        <div class="bg-white rounded-2xl w-full max-w-3xl p-6 shadow-2xl transform transition-all my-auto relative">
             <button onclick="closeModal('user-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
             <h3 class="text-lg font-bold mb-4 border-b pb-2">Edit / Create User</h3>
             
             <form id="user-form" class="space-y-6">
                 <input type="hidden" id="edit-uid">
                 
-                <!-- Section 1: Identity -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
-                        <input type="text" id="edit-name" class="w-full p-2 border rounded-lg text-sm bg-gray-50" placeholder="John Doe">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
-                        <input type="email" id="edit-email" class="w-full p-2 border rounded-lg text-sm bg-gray-50" required>
-                    </div>
-                </div>
-
-                <!-- Section 2: Status & Expiry -->
-                <div class="grid grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status</label>
+                <!-- Section 1: Identity & Global Status -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="col-span-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status (Master)</label>
                         <select id="edit-status" class="w-full p-2 border rounded-lg text-sm bg-white">
                             <option value="Pending">Pending</option>
                             <option value="Active">Active</option>
@@ -137,75 +125,107 @@
                             <option value="Banned">Banned</option>
                         </select>
                     </div>
+                    <div class="col-span-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+                        <input type="text" id="edit-name" class="w-full p-2 border rounded-lg text-sm bg-gray-50" placeholder="John Doe">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
+                        <input type="email" id="edit-email" class="w-full p-2 border rounded-lg text-sm bg-gray-50" required>
+                    </div>
+                </div>
+
+                <!-- Section 2: Global Configuration -->
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">8K Expiration</label>
-                        <input type="date" id="edit-expiry" class="w-full p-2 border rounded-lg text-sm bg-white">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Global 8K Domain</label>
+                        <input type="text" id="edit-domain-8k" placeholder="http://domain.com:port" class="w-full p-2 border rounded-lg text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Credits Alloc.</label>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Credits Allocated</label>
                         <input type="number" id="edit-credits" value="0" class="w-full p-2 border rounded-lg text-sm bg-white">
                     </div>
                 </div>
 
-                <!-- Section 3: 8K Service Info -->
-                <div class="bg-brand-50 p-4 rounded-xl space-y-3 border border-brand-100">
-                    <h4 class="text-xs font-bold text-brand-900 uppercase flex items-center gap-2">
-                        <i class="fa-solid fa-server"></i> 8K Service Details
-                    </h4>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">8K Domain</label>
-                        <input type="text" id="edit-domain-8k" placeholder="http://domain.com:port" class="w-full p-2 border rounded-lg text-sm">
+                <!-- Section 3: License Manager (NEW) -->
+                <div class="bg-brand-50 p-4 rounded-xl space-y-4 border border-brand-100">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-xs font-bold text-brand-900 uppercase flex items-center gap-2">
+                            <i class="fa-solid fa-server"></i> License Manager
+                        </h4>
+                        <span class="text-[10px] text-gray-500 uppercase font-bold">Manage multiple lines</span>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">8K Username</label>
-                            <input type="text" id="edit-user-8k" class="w-full p-2 border rounded-lg text-sm">
+
+                    <!-- Licenses List -->
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-gray-50 text-gray-400 uppercase font-bold">
+                                <tr>
+                                    <th class="p-2">Label</th>
+                                    <th class="p-2">Username</th>
+                                    <th class="p-2">Password</th>
+                                    <th class="p-2">Expiry</th>
+                                    <th class="p-2 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="license-list-body" class="divide-y divide-gray-100">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                        <div id="no-licenses-msg" class="p-4 text-center text-gray-400 text-sm italic hidden">No active licenses.</div>
+                    </div>
+
+                    <!-- Add License Form -->
+                    <div class="bg-gray-100 p-3 rounded-lg grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+                        <div class="md:col-span-1">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Label (Device)</label>
+                            <input type="text" id="new-lic-label" placeholder="Living Room" class="w-full p-1.5 border rounded text-xs">
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">8K Password</label>
-                            <input type="text" id="edit-pass-8k" class="w-full p-2 border rounded-lg text-sm">
+                        <div class="md:col-span-1">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Username</label>
+                            <input type="text" id="new-lic-user" placeholder="user_123" class="w-full p-1.5 border rounded text-xs">
                         </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">8K M3U URL</label>
-                        <input type="text" id="edit-m3u-8k" class="w-full p-2 border rounded-lg text-sm font-mono text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">8K EPG URL</label>
-                        <input type="text" id="edit-epg-8k" class="w-full p-2 border rounded-lg text-sm font-mono text-xs">
+                        <div class="md:col-span-1">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Password</label>
+                            <input type="text" id="new-lic-pass" placeholder="pass_123" class="w-full p-1.5 border rounded text-xs">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase">Expiry Date</label>
+                            <input type="date" id="new-lic-expiry" class="w-full p-1.5 border rounded text-xs">
+                        </div>
+                        <div class="md:col-span-1">
+                            <button type="button" onclick="addLicense()" class="w-full bg-brand-900 text-white text-xs font-bold py-2 rounded hover:bg-brand-800">
+                                <i class="fa-solid fa-plus mr-1"></i> Add Line
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Section 4: EPGenius -->
-                <div class="bg-blue-50 p-4 rounded-xl space-y-3 border border-blue-100">
-                    <h4 class="text-xs font-bold text-blue-900 uppercase flex items-center gap-2">
-                        <i class="fa-solid fa-bolt"></i> EPGenius Integration
-                    </h4>
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="col-span-1">
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Key (Number)</label>
-                            <input type="number" id="edit-epg-key" class="w-full p-2 border rounded-lg text-sm">
-                        </div>
-                        <div class="col-span-2">
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Google Drive Playlist URL</label>
-                            <input type="text" id="edit-epg-drive" class="w-full p-2 border rounded-lg text-sm font-mono text-xs">
+                <!-- Section 4: URLs & EPGenius -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase">Global M3U / EPG URLs</label>
+                        <input type="text" id="edit-m3u-8k" placeholder="M3U URL" class="w-full p-2 border rounded-lg text-sm font-mono text-xs">
+                        <input type="text" id="edit-epg-8k" placeholder="EPG URL" class="w-full p-2 border rounded-lg text-sm font-mono text-xs">
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 space-y-2">
+                        <h4 class="text-xs font-bold text-blue-900 uppercase flex items-center gap-2"><i class="fa-solid fa-bolt"></i> EPGenius</h4>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="number" id="edit-epg-key" placeholder="Key #" class="col-span-1 w-full p-2 border rounded-lg text-sm">
+                            <input type="text" id="edit-epg-drive" placeholder="GDrive URL" class="col-span-2 w-full p-2 border rounded-lg text-sm font-mono text-xs">
                         </div>
                     </div>
                 </div>
 
-                <!-- Section 5: Preferences (Read Only) & Notes -->
+                <!-- Section 5: Preferences & Notes -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Internal Notes</label>
-                        <textarea id="edit-notes" rows="4" class="w-full p-2 border rounded-lg text-sm bg-yellow-50 focus:bg-white transition" placeholder="Private admin notes..."></textarea>
+                        <textarea id="edit-notes" rows="3" class="w-full p-2 border rounded-lg text-sm bg-yellow-50 focus:bg-white transition" placeholder="Private admin notes..."></textarea>
                     </div>
-                    <div class="space-y-2">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Selections (Read Only)</label>
-                            <div class="p-2 bg-gray-100 rounded-lg text-xs text-gray-600 h-24 overflow-y-auto" id="read-selections">
-                                <!-- Populated by JS -->
-                            </div>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Selections (Read Only)</label>
+                        <div class="p-2 bg-gray-100 rounded-lg text-xs text-gray-600 h-20 overflow-y-auto" id="read-selections"></div>
                     </div>
                 </div>
 
@@ -214,7 +234,7 @@
                     <button type="button" onclick="archiveUser()" id="btn-archive" class="text-red-500 text-sm font-bold hover:underline">Archive User</button>
                     <div class="flex gap-2">
                         <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Cancel</button>
-                        <button type="submit" class="px-6 py-2 bg-brand-900 text-white font-bold rounded-lg hover:bg-brand-800 shadow-lg">Save User</button>
+                        <button type="submit" class="px-6 py-2 bg-brand-900 text-white font-bold rounded-lg hover:bg-brand-800 shadow-lg">Save Changes</button>
                     </div>
                 </div>
             </form>
@@ -269,6 +289,7 @@
         let allUsers = [];
         let supplyData = [];
         let products = [];
+        let currentLicenses = []; // Global state for modal
 
         // --- AUTH GUARD ---
         onAuthStateChanged(auth, (user) => {
@@ -302,8 +323,6 @@
             const prodSnap = await getDocs(collection(db, 'products'));
             products = [];
             prodSnap.forEach(doc => products.push({id: doc.id, ...doc.data()}));
-            
-            // Sort products by price
             products.sort((a,b) => a.price - b.price);
 
             calculateStats();
@@ -315,13 +334,11 @@
             const totalSupply = supplyData.reduce((sum, item) => sum + Number(item.credits), 0);
             const totalCost = supplyData.reduce((sum, item) => sum + Number(item.cost), 0);
             const totalAllocated = allUsers.reduce((sum, u) => sum + (Number(u.credits_allocated) || 0), 0);
-            
             const BLENDED_REV_PER_CREDIT = 8; 
             const estRevenue = totalAllocated * BLENDED_REV_PER_CREDIT;
 
             document.getElementById('stat-credits').textContent = (totalSupply - totalAllocated).toLocaleString();
             document.getElementById('stat-profit').textContent = CONFIG.CURRENCY_SYMBOL + (estRevenue - totalCost).toLocaleString();
-            
             document.getElementById('stat-users').textContent = allUsers.length;
             document.getElementById('stat-active').textContent = `${allUsers.filter(u => u.status === 'Active').length} Active`;
             document.getElementById('stat-pending').textContent = `${allUsers.filter(u => u.status === 'Pending').length} Pending`;
@@ -331,12 +348,10 @@
         function renderProfitTable() {
             const tbody = document.getElementById('profit-body');
             tbody.innerHTML = '';
-
             products.forEach(p => {
                 const creditCost = p.credits * COST_PER_CREDIT;
                 const netProfit = p.price - creditCost;
                 const margin = p.price > 0 ? ((netProfit / p.price) * 100).toFixed(1) : 0;
-                
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-gray-50';
                 tr.innerHTML = `
@@ -344,14 +359,8 @@
                     <td class="px-6 py-4">${CONFIG.CURRENCY_SYMBOL}${p.price}</td>
                     <td class="px-6 py-4">${p.credits}</td>
                     <td class="px-6 py-4 text-gray-500">${CONFIG.CURRENCY_SYMBOL}${creditCost.toFixed(2)}</td>
-                    <td class="px-6 py-4 font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}">
-                        ${CONFIG.CURRENCY_SYMBOL}${netProfit.toFixed(2)}
-                    </td>
-                    <td class="px-6 py-4">
-                        <span class="px-2 py-1 rounded text-xs font-bold ${margin > 30 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
-                            ${margin}%
-                        </span>
-                    </td>
+                    <td class="px-6 py-4 font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}">${CONFIG.CURRENCY_SYMBOL}${netProfit.toFixed(2)}</td>
+                    <td class="px-6 py-4"><span class="px-2 py-1 rounded text-xs font-bold ${margin > 30 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${margin}%</span></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -361,7 +370,6 @@
         function renderRoster(filter = "") {
             const tbody = document.getElementById('roster-body');
             tbody.innerHTML = '';
-            
             const filtered = allUsers.filter(u => 
                 (u.email && u.email.toLowerCase().includes(filter.toLowerCase())) || 
                 (u.full_name && u.full_name.toLowerCase().includes(filter.toLowerCase()))
@@ -376,10 +384,22 @@
                 if(u.status === 'Pending') statusColor = 'text-yellow-700 bg-yellow-100';
                 if(u.status === 'Expired') statusColor = 'text-red-700 bg-red-100';
 
-                // Icons for services
-                const has8K = u.username_8k ? '<i class="fa-solid fa-server text-brand-900 mr-1" title="8K Configured"></i>' : '';
-                const hasEPG = u.epgenius_key ? '<i class="fa-solid fa-bolt text-blue-600 mr-1" title="EPGenius Configured"></i>' : '';
-                const hasNotes = u.internal_notes ? '<i class="fa-regular fa-note-sticky text-yellow-500" title="Has Notes"></i>' : '';
+                // Check licenses count
+                const licCount = u.licenses ? u.licenses.length : (u.username_8k ? 1 : 0);
+                
+                // Expiry Logic: Find latest expiry date from licenses
+                let expiryDisplay = 'N/A';
+                if (u.licenses && u.licenses.length > 0) {
+                    const dates = u.licenses.map(l => l.expiry_date).sort();
+                    expiryDisplay = dates[dates.length-1]; // Latest date
+                } else if (u.expiry_date) {
+                    expiryDisplay = u.expiry_date; // Legacy fallback
+                }
+
+                // Icons
+                const has8K = licCount > 0 ? `<span class="text-brand-900 font-bold text-xs"><i class="fa-solid fa-server mr-1"></i>${licCount} Line(s)</span>` : '';
+                const hasEPG = u.epgenius_key ? '<i class="fa-solid fa-bolt text-blue-600 mr-1" title="EPGenius"></i>' : '';
+                const hasNotes = u.internal_notes ? '<i class="fa-regular fa-note-sticky text-yellow-500" title="Notes"></i>' : '';
 
                 tr.innerHTML = `
                     <td class="px-6 py-4">
@@ -390,13 +410,9 @@
                         <span class="px-2 py-1 rounded-full text-xs font-bold ${statusColor}">${u.status}</span>
                     </td>
                     <td class="px-6 py-4 text-gray-600">
-                        <div class="flex items-center gap-2 mb-1">
-                            ${has8K} ${hasEPG} ${hasNotes}
-                        </div>
+                        <div class="flex items-center gap-2 mb-1">${has8K} ${hasEPG} ${hasNotes}</div>
                         <div class="text-xs">
-                            <span class="font-bold">Alloc:</span> ${u.credits_allocated || 0}
-                            <span class="mx-1">|</span>
-                            <span class="font-bold">Exp:</span> ${u.expiry_date || 'N/A'}
+                            <span class="font-bold">Exp:</span> ${expiryDisplay}
                         </div>
                     </td>
                     <td class="px-6 py-4 text-right">
@@ -406,16 +422,81 @@
                 tbody.appendChild(tr);
             });
         }
-
         document.getElementById('search-input').addEventListener('input', (e) => renderRoster(e.target.value));
+
+        // --- LICENSE MANAGER LOGIC ---
+
+        window.renderLicenseList = () => {
+            const tbody = document.getElementById('license-list-body');
+            tbody.innerHTML = '';
+            if (currentLicenses.length === 0) {
+                document.getElementById('no-licenses-msg').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('no-licenses-msg').classList.add('hidden');
+
+            currentLicenses.forEach((lic, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-100 hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="p-2 font-medium">${lic.label || 'Main'}</td>
+                    <td class="p-2 text-gray-600">${lic.username_8k}</td>
+                    <td class="p-2 font-mono text-gray-500">••••</td>
+                    <td class="p-2 text-gray-600">${lic.expiry_date}</td>
+                    <td class="p-2 text-right">
+                        <button type="button" onclick="removeLicense(${index})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.addLicense = () => {
+            const label = document.getElementById('new-lic-label').value;
+            const user = document.getElementById('new-lic-user').value;
+            const pass = document.getElementById('new-lic-pass').value;
+            const expiry = document.getElementById('new-lic-expiry').value;
+
+            if(!user || !pass || !expiry) {
+                alert("Username, Password, and Expiry are required.");
+                return;
+            }
+
+            currentLicenses.push({
+                id: crypto.randomUUID(),
+                label: label || 'Line ' + (currentLicenses.length + 1),
+                username_8k: user,
+                password_8k: pass,
+                expiry_date: expiry,
+                status: 'Active'
+            });
+
+            // Clear inputs
+            document.getElementById('new-lic-label').value = '';
+            document.getElementById('new-lic-user').value = '';
+            document.getElementById('new-lic-pass').value = '';
+            document.getElementById('new-lic-expiry').value = '';
+
+            window.renderLicenseList();
+        };
+
+        window.removeLicense = (index) => {
+            currentLicenses.splice(index, 1);
+            window.renderLicenseList();
+        };
 
         // --- ACTIONS ---
 
         window.openUserModal = () => {
             document.getElementById('user-form').reset();
             document.getElementById('edit-uid').value = ''; 
-            document.getElementById('read-selections').innerHTML = '<span class="italic text-gray-400">New user (No selections yet)</span>';
+            document.getElementById('read-selections').innerHTML = '<span class="italic text-gray-400">New user</span>';
             document.getElementById('btn-archive').classList.add('hidden');
+            
+            // Reset Licenses
+            currentLicenses = [];
+            window.renderLicenseList();
+            
             document.getElementById('user-modal').classList.remove('hidden');
         };
 
@@ -428,13 +509,10 @@
             document.getElementById('edit-name').value = u.full_name || '';
             document.getElementById('edit-email').value = u.email;
             document.getElementById('edit-status').value = u.status || 'Pending';
-            document.getElementById('edit-expiry').value = u.expiry_date || '';
             document.getElementById('edit-credits').value = u.credits_allocated || 0;
             
-            // 8K Details
+            // Global 8K Details
             document.getElementById('edit-domain-8k').value = u.domain_8k || '';
-            document.getElementById('edit-user-8k').value = u.username_8k || '';
-            document.getElementById('edit-pass-8k').value = u.password_8k || '';
             document.getElementById('edit-m3u-8k').value = u.m3u_url_8k || '';
             document.getElementById('edit-epg-8k').value = u.epg_url_8k || '';
 
@@ -444,6 +522,22 @@
 
             // Notes
             document.getElementById('edit-notes').value = u.internal_notes || '';
+
+            // --- LICENSE MIGRATION & LOADING ---
+            currentLicenses = u.licenses || [];
+            
+            // Legacy Migration: If no licenses array but singular fields exist, convert to license
+            if (currentLicenses.length === 0 && u.username_8k) {
+                currentLicenses.push({
+                    id: crypto.randomUUID(),
+                    label: "Primary (Legacy)",
+                    username_8k: u.username_8k,
+                    password_8k: u.password_8k,
+                    expiry_date: u.expiry_date || '',
+                    status: 'Active'
+                });
+            }
+            window.renderLicenseList();
 
             // Read Only Selections
             const devices = (u.devices || []).join(', ') || 'None';
@@ -473,17 +567,15 @@
                 full_name: document.getElementById('edit-name').value,
                 email: document.getElementById('edit-email').value,
                 status: document.getElementById('edit-status').value,
-                
-                // Status/Credits
-                expiry_date: document.getElementById('edit-expiry').value,
                 credits_allocated: Number(document.getElementById('edit-credits').value),
                 
-                // 8K Service
+                // Global Config
                 domain_8k: document.getElementById('edit-domain-8k').value,
-                username_8k: document.getElementById('edit-user-8k').value,
-                password_8k: document.getElementById('edit-pass-8k').value,
                 m3u_url_8k: document.getElementById('edit-m3u-8k').value,
                 epg_url_8k: document.getElementById('edit-epg-8k').value,
+
+                // Licenses Array (The New Schema)
+                licenses: currentLicenses,
 
                 // EPGenius
                 epgenius_key: document.getElementById('edit-epg-key').value,
@@ -493,11 +585,14 @@
                 internal_notes: document.getElementById('edit-notes').value
             };
 
+            // Remove legacy fields if they exist to clean up DB (Optional, but good practice)
+            // Note: Firestore update doesn't delete fields unless we use FieldValue.delete(), 
+            // but overwriting with the new object structure usually suffices for the app logic.
+
             try {
                 if (uid) {
                     await updateDoc(doc(db, 'users', uid), data);
                 } else {
-                    // Create NEW user
                     await addDoc(collection(db, 'users'), { 
                         ...data, 
                         devices: [], 
@@ -545,53 +640,21 @@
         // --- UTILITY (SEED DATA) ---
         window.seedData = async () => {
             if(!confirm("Warning: This will reset Devices, Categories, and Product Pricing. Continue?")) return;
-            
             try {
                 // 1. App Config - Devices
                 const devices = [
-                    'Stick: Amazon Fire TV 4K',
-                    'Stick: Chromecast w/ Google TV',
-                    'Stick: Roku 4K (Limited)',
-                    'Box: Formuler Z11 Pro',
-                    'Box: Nvidia Shield Pro',
-                    'Box: BuzzTV X5',
-                    'Box: MAG 524 (Legacy)',
-                    'TV: Samsung Tizen',
-                    'TV: LG WebOS',
-                    'TV: Android Native (Sony/Hisense)',
-                    'Mobile: Android Phone',
-                    'Mobile: iPhone (iOS)',
-                    'Tablet: iPad',
-                    'Tablet: Android Tablet',
-                    'PC: Windows',
-                    'PC: Mac OS'
+                    'Stick: Amazon Fire TV 4K', 'Stick: Chromecast w/ Google TV', 'Stick: Roku 4K (Limited)',
+                    'Box: Formuler Z11 Pro', 'Box: Nvidia Shield Pro', 'Box: BuzzTV X5', 'Box: MAG 524 (Legacy)',
+                    'TV: Samsung Tizen', 'TV: LG WebOS', 'TV: Android Native (Sony/Hisense)',
+                    'Mobile: Android Phone', 'Mobile: iPhone (iOS)', 'Tablet: iPad', 'Tablet: Android Tablet',
+                    'PC: Windows', 'PC: Mac OS'
                 ];
                 await setDoc(doc(db, 'app_config', 'devices'), { list: devices });
 
-                // 2. App Config - Content Categories (Live & VOD)
-                const live_cats = [
-                    "Elliot's Default (QC + Sports + English)",
-                    "Quebec Premium (French)",
-                    "Canada & USA (English)",
-                    "International (Europe/Latino)",
-                    "Adult 18+",
-                    "Other / Custom Request"
-                ];
-
-                const vod_cats = [
-                    "Elliot's Default (Movies & Series)",
-                    "French Content Only",
-                    "English Content Only",
-                    "International",
-                    "Adult",
-                    "None",
-                    "Other / Custom Request"
-                ];
-
-                await setDoc(doc(db, 'app_config', 'content_options'), { 
-                    live_list: live_cats,
-                    vod_list: vod_cats
-                });
+                // 2. App Config - Content Categories
+                const live_cats = ["Elliot's Default (QC + Sports + English)", "Quebec Premium (French)", "Canada & USA (English)", "International (Europe/Latino)", "Adult 18+", "Other / Custom Request"];
+                const vod_cats = ["Elliot's Default (Movies & Series)", "French Content Only", "English Content Only", "International", "Adult", "None", "Other / Custom Request"];
+                await setDoc(doc(db, 'app_config', 'content_options'), { live_list: live_cats, vod_list: vod_cats });
                 
                 // 3. Products
                 await setDoc(doc(db, 'products', 'demo_1day'), { name: 'Demo (1 Day)', price: 0, credits: 0 });
@@ -602,10 +665,7 @@
                 
                 alert("Database Seeded Successfully! Refresh to see changes.");
                 loadData();
-            } catch (err) {
-                console.error(err);
-                alert("Error seeding data: " + err.message);
-            }
+            } catch (err) { console.error(err); alert("Error seeding data: " + err.message); }
         };
     </script>
 </body>
