@@ -1,1 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- HELPER FUNCTIONS ---
+    
+    // Check if the requesting user is the Admin
+    // HARDCODED SECURITY: Grants full access only to this specific email
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'e.chinerman@gmail.com';
+    }
 
+    // Check if the user is accessing their own data
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // --- COLLECTION RULES ---
+
+    // USERS COLLECTION
+    // 1. Admin has full access.
+    // 2. Users can read/write their own document (by UID).
+    // 3. MIGRATION: Users can READ a document if the 'email' field matches their auth email.
+    match /users/{document} {
+      allow read: if isAdmin() || isOwner(document) || resource.data.email == request.auth.token.email;
+      allow write: if isAdmin() || isOwner(document);
+    }
+
+    // APP CONFIG & PRODUCTS
+    // Public Read (Authenticated), Admin Write
+    match /app_config/{doc} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    match /products/{doc} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // BUSINESS DATA (Ledger, Financials)
+    // Admin Only
+    match /business_data/{doc} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
