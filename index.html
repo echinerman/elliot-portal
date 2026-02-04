@@ -3,258 +3,525 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>goelliot.vip | Client</title>
+    <title>Client Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Inter', sans-serif; background-color: #fafaf9; color: #292524; }</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#fafaf9', 100: '#f5f5f4', 800: '#292524', 900: '#1c1917' } // Stone theme
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="antialiased min-h-screen flex flex-col">
+<body class="bg-brand-50 text-brand-900 min-h-screen font-sans antialiased">
 
-    <!-- NAV -->
-    <nav class="bg-white border-b border-stone-200 sticky top-0 z-50">
-        <div class="max-w-4xl mx-auto px-4 h-16 flex justify-between items-center">
-            <span class="font-bold text-xl tracking-tight text-stone-800">goelliot.vip</span>
-            <button id="logout-btn" class="hidden text-sm text-red-600 hover:text-red-800 font-medium">Sign Out</button>
-        </div>
-    </nav>
-
-    <!-- AUTH VIEW -->
-    <div id="view-auth" class="flex-1 flex items-center justify-center p-4">
-        <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-stone-100 overflow-hidden p-8 space-y-6">
-            <div class="text-center">
-                <h1 class="text-2xl font-bold text-stone-900">Welcome</h1>
-                <p class="text-stone-500 text-sm mt-2">Private Client Access</p>
-            </div>
-
-            <!-- Login Form -->
-            <form id="form-login" class="space-y-4">
-                <input type="email" id="email" placeholder="Email" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-stone-900" required>
-                <input type="password" id="password" placeholder="Password" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-stone-900" required>
-                <button type="submit" class="w-full bg-stone-900 text-white font-bold py-3 rounded-lg hover:bg-stone-700 transition">Log In</button>
-            </form>
-            
-            <div class="text-center text-xs text-stone-400 pt-4 border-t border-stone-100">
-                <p>New here? <button id="btn-toggle-reg" class="text-stone-800 font-bold hover:underline">Register</button></p>
-            </div>
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed top-4 right-4 z-50 transform transition-all duration-300 translate-x-full opacity-0">
+        <div class="bg-brand-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <i id="toast-icon" class="fa-solid fa-circle-check"></i>
+            <span id="toast-msg">Success</span>
         </div>
     </div>
 
-    <!-- DASHBOARD VIEW -->
-    <div id="view-dashboard" class="hidden max-w-4xl mx-auto p-4 py-8 space-y-8">
-        
-        <!-- Header -->
-        <div class="flex justify-between items-end">
-            <div>
-                <h1 class="text-3xl font-bold text-stone-900">Dashboard</h1>
-                <p class="text-stone-500" id="user-name">Welcome back.</p>
-            </div>
-            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-stone-200 text-stone-500">Loading...</div>
-        </div>
+    <!-- AUTH CONTAINER -->
+    <div id="auth-view" class="flex flex-col items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl">
+            <h1 class="text-2xl font-bold mb-6 text-center text-brand-800">Client Portal</h1>
+            
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-4">
+                <input type="email" id="login-email" placeholder="Email" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
+                <input type="password" id="login-pass" placeholder="Password" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
+                <button type="submit" class="w-full bg-brand-900 text-white font-semibold py-3 rounded-xl hover:bg-brand-800 transition">Sign In</button>
+                <div class="text-center text-sm text-gray-500 mt-4">
+                    Need an account? <a href="#" onclick="toggleAuth('register')" class="text-brand-900 font-bold hover:underline">Register</a>
+                </div>
+            </form>
 
-        <!-- Credentials Card -->
-        <div class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-            <div class="bg-stone-50 p-4 border-b border-stone-200 flex justify-between items-center">
-                <h2 class="font-bold text-stone-700"><i class="fas fa-key mr-2 text-stone-400"></i>Credentials</h2>
-                <span class="text-xs text-stone-400" id="expiry-date">Expires: ---</span>
+            <!-- Register Form (Hidden) -->
+            <form id="register-form" class="space-y-4 hidden">
+                <input type="text" id="reg-code" placeholder="Invite Code" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
+                <input type="email" id="reg-email" placeholder="Email" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
+                <input type="password" id="reg-pass" placeholder="Password" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
+                <button type="submit" class="w-full bg-brand-900 text-white font-semibold py-3 rounded-xl hover:bg-brand-800 transition">Create Account</button>
+                <div class="text-center text-sm text-gray-500 mt-4">
+                    Have an account? <a href="#" onclick="toggleAuth('login')" class="text-brand-900 font-bold hover:underline">Sign In</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DASHBOARD CONTAINER (Hidden by default) -->
+    <div id="dashboard-view" class="hidden max-w-5xl mx-auto p-4 lg:p-8 space-y-8">
+        <!-- Header -->
+        <header class="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm">
+            <div>
+                <h2 class="text-xl font-bold">Welcome, <span id="user-email-display" class="font-normal text-gray-600"></span></h2>
+                <div id="status-badge" class="mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                    <span class="w-2 h-2 rounded-full bg-gray-400 mr-2"></span> Loading Status...
+                </div>
             </div>
-            <div class="p-6 space-y-6">
-                <!-- EPGenius -->
-                <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                    <h3 class="text-sm font-bold text-blue-900 mb-1"><i class="fas fa-star mr-2"></i>Primary: EPGenius Playlist</h3>
-                    <p class="text-xs text-blue-700 mb-3">Use this URL in TiviMate. Includes EPG automatically.</p>
-                    <div class="flex gap-2">
-                        <input id="cred-epgenius" readonly class="flex-1 bg-white border border-blue-200 rounded px-3 py-2 text-xs font-mono text-stone-600 outline-none" value="Loading...">
-                        <button onclick="copy('cred-epgenius')" class="bg-blue-600 text-white px-4 rounded text-xs font-bold hover:bg-blue-700">Copy</button>
+            <button id="logout-btn" class="text-brand-900 hover:text-red-600 transition"><i class="fa-solid fa-right-from-bracket fa-lg"></i></button>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- Credentials Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-key"></i> Credentials</h3>
+                <div class="space-y-3" id="cred-container">
+                    <!-- Credential Items -->
+                    <div class="group relative">
+                        <label class="text-xs text-gray-400 uppercase font-bold">Server URL</label>
+                        <div class="flex items-center bg-brand-50 rounded-lg p-2 mt-1">
+                            <input type="text" readonly id="cred-url" class="bg-transparent w-full text-sm outline-none text-gray-700 font-mono" value="...">
+                            <button onclick="copyToClip('cred-url')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                    </div>
+                    <div class="group relative">
+                        <label class="text-xs text-gray-400 uppercase font-bold">Username</label>
+                        <div class="flex items-center bg-brand-50 rounded-lg p-2 mt-1">
+                            <input type="text" readonly id="cred-user" class="bg-transparent w-full text-sm outline-none text-gray-700 font-mono" value="...">
+                            <button onclick="copyToClip('cred-user')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                    </div>
+                    <div class="group relative">
+                        <label class="text-xs text-gray-400 uppercase font-bold">Password</label>
+                        <div class="flex items-center bg-brand-50 rounded-lg p-2 mt-1">
+                            <input type="password" readonly id="cred-pass" class="bg-transparent w-full text-sm outline-none text-gray-700 font-mono" value="...">
+                            <button onclick="copyToClip('cred-pass')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Xtream Codes -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label class="text-[10px] font-bold uppercase text-stone-400">Server URL</label><div class="flex border rounded bg-stone-50"><input id="cred-server" readonly class="flex-1 bg-transparent px-2 py-2 text-sm outline-none" value="..."><button onclick="copy('cred-server')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
-                    <div><label class="text-[10px] font-bold uppercase text-stone-400">Username</label><div class="flex border rounded bg-stone-50"><input id="cred-user" readonly class="flex-1 bg-transparent px-2 py-2 text-sm outline-none" value="..."><button onclick="copy('cred-user')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
-                    <div><label class="text-[10px] font-bold uppercase text-stone-400">Password</label><div class="flex border rounded bg-stone-50"><input id="cred-pass" readonly class="flex-1 bg-transparent px-2 py-2 text-sm outline-none" value="..."><button onclick="copy('cred-pass')" class="px-3 text-stone-400 hover:text-stone-600"><i class="fas fa-copy"></i></button></div></div>
+                <!-- Expiry Info -->
+                <div class="mt-6 pt-4 border-t border-brand-100 flex justify-between items-center">
+                    <span class="text-sm text-gray-500">Expires:</span>
+                    <span id="cred-expiry" class="font-bold text-brand-900">--/--/----</span>
                 </div>
             </div>
-        </div>
 
-        <!-- Pricing & Renewal -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm">
-                <h3 class="font-bold text-stone-900 mb-4">Pricing</h3>
-                <ul class="space-y-2 text-sm text-stone-600">
-                    <li class="flex justify-between border-b border-stone-100 pb-1"><span>1 Month</span> <span>$10</span></li>
-                    <li class="flex justify-between border-b border-stone-100 pb-1"><span>3 Months</span> <span>$25</span></li>
-                    <li class="flex justify-between border-b border-stone-100 pb-1"><span>6 Months</span> <span>$40</span></li>
-                    <li class="flex justify-between font-bold"><span>1 Year</span> <span>$60</span></li>
-                </ul>
-                <div class="mt-4 pt-4 border-t border-stone-100">
-                    <p class="text-xs text-stone-400 mb-2">Add-ons:</p>
-                    <li class="flex justify-between text-sm text-stone-600"><span>Supporter (One-time)</span> <span>$20</span></li>
-                    <li class="flex justify-between text-sm text-stone-600"><span>Extra Connection</span> <span>Full Price</span></li>
+            <!-- Calculator Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-calculator"></i> Renewal Calculator</h3>
+                
+                <div class="flex bg-brand-50 p-1 rounded-xl mb-6">
+                    <button onclick="setCalcMode('interac')" id="btn-interac" class="flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm transition">Interac</button>
+                    <button onclick="setCalcMode('btc')" id="btn-btc" class="flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-brand-900 transition">Bitcoin</button>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Select Package</label>
+                        <select id="calc-product" class="w-full p-2 bg-brand-50 rounded-lg border-none outline-none text-sm"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                        <input type="number" id="calc-qty" value="1" min="1" class="w-full p-2 bg-brand-50 rounded-lg border-none outline-none text-sm">
+                    </div>
+                    
+                    <div class="bg-brand-900 text-white p-4 rounded-xl flex justify-between items-center mt-4">
+                        <span>Total:</span>
+                        <span id="calc-total" class="text-xl font-bold">$0.00</span>
+                    </div>
+
+                    <p id="calc-instructions" class="text-xs text-gray-500 mt-2 leading-relaxed">
+                        <!-- Dynamic Instructions based on toggle -->
+                    </p>
                 </div>
             </div>
-            
-            <div class="bg-stone-900 text-white p-6 rounded-2xl shadow-lg flex flex-col justify-center text-center">
-                <h3 class="font-bold text-lg mb-2">Need a Renewal?</h3>
-                <p class="text-stone-400 text-sm mb-6">Contact Elliot directly to top up your account or add connections.</p>
-                <button id="btn-contact" class="bg-white text-stone-900 py-3 rounded-xl font-bold hover:bg-stone-200 transition">
-                    <i class="fab fa-facebook-messenger mr-2"></i> Message Elliot
-                </button>
-            </div>
-        </div>
-        
-        <!-- Simple Config Request -->
-        <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm">
-             <h3 class="font-bold text-stone-900 mb-2">Configuration Requests</h3>
-             <p class="text-sm text-stone-500 mb-4">
-                 <strong>Default:</strong> All English & French channels included. 
-                 <br>Use this box for specific requests (e.g., "Remove Kids", "Add Italian").
-             </p>
-             <div class="flex gap-2">
-                 <input id="config-note" type="text" class="flex-1 border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-stone-400" placeholder="Type request...">
-                 <button onclick="saveNote()" class="bg-stone-200 text-stone-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-stone-300">Save</button>
-             </div>
-        </div>
 
+            <!-- Configuration Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm md:col-span-2">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-sliders"></i> Configuration</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Devices -->
+                    <div>
+                        <h4 class="text-sm font-bold uppercase text-gray-400 mb-2">My Devices</h4>
+                        <div id="device-list" class="space-y-2 mb-2"></div>
+                        <div class="flex gap-2">
+                            <select id="new-device-select" class="flex-1 p-2 bg-brand-50 rounded-lg text-sm"></select>
+                            <button id="add-device-btn" class="bg-brand-800 text-white px-3 rounded-lg hover:bg-brand-900"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <!-- Bouquets/Tags -->
+                    <div>
+                        <h4 class="text-sm font-bold uppercase text-gray-400 mb-2">Bouquet Preferences</h4>
+                        <div id="bouquet-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+                <button id="save-config-btn" class="mt-6 bg-brand-900 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-brand-800 transition">Save Changes</button>
+            </div>
+
+            <!-- Support / FAQ -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm md:col-span-2">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-headset"></i> Support & Setup</h3>
+                
+                <!-- Tabs -->
+                <div class="border-b border-gray-200 mb-4">
+                    <nav class="-mb-px flex space-x-8">
+                        <button onclick="switchTab('android')" class="tab-btn border-b-2 border-brand-900 pb-2 text-sm font-medium text-brand-900" data-tab="android">Android</button>
+                        <button onclick="switchTab('ios')" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 hover:text-brand-900" data-tab="ios">iOS / Apple TV</button>
+                    </nav>
+                </div>
+
+                <div id="tab-android" class="tab-content text-sm text-gray-600 space-y-2">
+                    <p>1. Download the app from the Play Store.</p>
+                    <p>2. Enter the Server URL and credentials from the dashboard above.</p>
+                </div>
+                <div id="tab-ios" class="tab-content hidden text-sm text-gray-600 space-y-2">
+                    <p>1. Use a compatible IPTV player like LillyPlayer or GSE.</p>
+                    <p>2. Select "Xtream Codes API" login method.</p>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-gray-100">
+                    <h4 class="text-sm font-bold mb-2">Contact Admin</h4>
+                    <a id="contact-link" href="#" class="inline-flex items-center text-brand-800 font-medium hover:underline">
+                        <i class="fa-regular fa-envelope mr-2"></i> Send Email Support Request
+                    </a>
+                </div>
+            </div>
+
+        </div>
     </div>
 
-    <!-- LOGIC -->
     <script type="module">
-        import CONFIG from './config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { CONFIG } from './config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            onAuthStateChanged,
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            updateDoc, 
+            deleteDoc,
+            collection,
+            query, 
+            where,
+            getDocs,
+            runTransaction,
+            arrayUnion
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+        // --- INIT FIREBASE ---
         const app = initializeApp(CONFIG.FIREBASE);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // UI State
-        const views = { auth: document.getElementById('view-auth'), dash: document.getElementById('view-dashboard') };
-        const logoutBtn = document.getElementById('logout-btn');
-        let isRegistering = false;
+        // --- GLOBAL STATE ---
+        let currentUserData = null;
+        let products = [];
+        let availableDevices = [];
+        let availableBouquets = [];
+        let calcMode = 'interac';
 
-        // Init
-        document.getElementById('btn-contact').onclick = () => window.open(CONFIG.FB_LINK, '_blank');
-        document.getElementById('btn-toggle-reg').onclick = () => {
-            isRegistering = !isRegistering;
-            const formLogin = document.getElementById('form-login');
-            const formReg = document.getElementById('form-register');
-            const btnToggle = document.getElementById('btn-toggle-reg');
-            
-            if(isRegistering) {
-                formLogin.classList.add('hidden');
-                formReg.classList.remove('hidden');
-                btnToggle.innerText = "Back to Login";
+        // --- UI FUNCTIONS ---
+        window.toggleAuth = (view) => {
+            if(view === 'register') {
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('register-form').classList.remove('hidden');
             } else {
-                formReg.classList.add('hidden');
-                formLogin.classList.remove('hidden');
-                btnToggle.innerText = "Register";
+                document.getElementById('login-form').classList.remove('hidden');
+                document.getElementById('register-form').classList.add('hidden');
             }
         };
 
-        // Auth Listener
+        window.copyToClip = (id) => {
+            const copyText = document.getElementById(id);
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+            showToast('Copied to clipboard');
+        };
+
+        window.setCalcMode = (mode) => {
+            calcMode = mode;
+            document.getElementById('btn-interac').className = mode === 'interac' ? 'flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm transition' : 'flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-brand-900 transition';
+            document.getElementById('btn-btc').className = mode === 'btc' ? 'flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm transition' : 'flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-brand-900 transition';
+            updateCalculator();
+        };
+
+        window.switchTab = (tab) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('border-brand-900', 'text-brand-900');
+                el.classList.add('border-transparent', 'text-gray-500');
+            });
+            const activeBtn = document.querySelector(`button[data-tab="${tab}"]`);
+            activeBtn.classList.remove('border-transparent', 'text-gray-500');
+            activeBtn.classList.add('border-brand-900', 'text-brand-900');
+        };
+
+        function showToast(msg, type='success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.classList.remove('translate-x-full', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-x-full', 'opacity-0'), 3000);
+        }
+
+        function updateCalculator() {
+            const qty = parseInt(document.getElementById('calc-qty').value) || 1;
+            const productId = document.getElementById('calc-product').value;
+            const product = products.find(p => p.id === productId);
+            
+            if(!product) return;
+
+            const total = qty * product.price;
+            document.getElementById('calc-total').textContent = `${CONFIG.CURRENCY_SYMBOL}${total.toFixed(2)}`;
+            
+            const instructions = calcMode === 'interac' 
+                ? `Please e-Transfer <b>${CONFIG.CURRENCY_SYMBOL}${total.toFixed(2)}</b> to <u>payments@example.com</u> using your email as the security answer.`
+                : `Send <b>${CONFIG.CRYPTO_SYMBOL}${(total / 50000).toFixed(6)}</b> (approx) to wallet: <u>bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</u>`;
+            
+            document.getElementById('calc-instructions').innerHTML = instructions;
+        }
+
+        // --- CORE LOGIC ---
+
+        // 1. Auth Listener
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                views.auth.classList.add('hidden');
-                views.dash.classList.remove('hidden');
-                logoutBtn.classList.remove('hidden');
+                document.getElementById('auth-view').classList.add('hidden');
+                document.getElementById('dashboard-view').classList.remove('hidden');
+                document.getElementById('user-email-display').textContent = user.email;
+                document.getElementById('contact-link').href = CONFIG.CONTACT_LINK;
                 
-                // If Admin, redirect to admin.html
-                if(user.email === CONFIG.ADMIN_EMAIL) {
-                    window.location.href = 'admin.html';
-                    return;
-                }
-
-                await loadUserData(user);
+                await loadDashboardData(user);
             } else {
-                views.auth.classList.remove('hidden');
-                views.dash.classList.add('hidden');
-                logoutBtn.classList.add('hidden');
+                document.getElementById('auth-view').classList.remove('hidden');
+                document.getElementById('dashboard-view').classList.add('hidden');
             }
         });
 
-        // User Data Logic
-        async function loadUserData(user) {
-            const userRef = doc(db, "users", user.uid);
-            let snap = await getDoc(userRef);
+        // 2. Data Loading
+        async function loadDashboardData(user) {
+            // Load Configs first
+            const configSnap = await getDocs(collection(db, 'app_config'));
+            const productSnap = await getDocs(collection(db, 'products'));
+            
+            // Process Config
+            configSnap.forEach(doc => {
+                if(doc.id === 'devices') availableDevices = doc.data().list || [];
+                if(doc.id === 'bouquets') availableBouquets = doc.data().list || [];
+            });
 
-            // Merge Logic: Check if there is a pending doc with this email
-            if (!snap.exists()) {
-                const q = query(collection(db, "users"), where("email", "==", user.email.toLowerCase()));
-                const querySnap = await getDocs(q);
-                
-                if (!querySnap.empty) {
-                    // Found a pre-made admin entry! Claim it.
-                    const oldDoc = querySnap.docs[0];
-                    const oldData = oldDoc.data();
-                    await setDoc(userRef, { ...oldData, uid: user.uid }); // Copy to new UID
-                    await deleteDoc(oldDoc.ref); // Delete old email-key doc
-                    snap = await getDoc(userRef); // Refresh snap
-                } else {
-                    // Brand new user
-                    await setDoc(userRef, { email: user.email.toLowerCase(), status: "Pending", created: new Date().toISOString() });
-                    snap = await getDoc(userRef);
-                }
+            // Process Products
+            products = [];
+            const prodSelect = document.getElementById('calc-product');
+            prodSelect.innerHTML = '';
+            productSnap.forEach(doc => {
+                const p = { id: doc.id, ...doc.data() };
+                products.push(p);
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.name} - ${CONFIG.CURRENCY_SYMBOL}${p.price}`;
+                prodSelect.appendChild(opt);
+            });
+
+            // Add Event Listeners for Calc
+            document.getElementById('calc-qty').addEventListener('input', updateCalculator);
+            document.getElementById('calc-product').addEventListener('change', updateCalculator);
+            updateCalculator();
+
+            // Load User Data
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists()) {
+                currentUserData = userDoc.data();
+                renderUserData(currentUserData);
+            } else {
+                // Should have been handled by migration, but fallback
+                console.error("User doc missing");
             }
 
-            const data = snap.data();
-            renderDashboard(data);
+            renderConfigUI();
         }
 
-        function renderDashboard(data) {
-            document.getElementById('user-name').innerText = data.realName || data.email;
-            
-            // Status Badge
+        function renderUserData(data) {
+            // Status
             const badge = document.getElementById('status-badge');
-            badge.innerText = data.status || 'Pending';
-            if(data.status === 'Active') badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-green-100 text-green-700";
-            else if(data.status === 'Disabled') badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-red-100 text-red-700";
-            else badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-yellow-100 text-yellow-700";
+            const status = data.status || 'Pending';
+            let colorClass = 'bg-yellow-100 text-yellow-800';
+            let dotClass = 'bg-yellow-400';
+            
+            if (status === 'Active') {
+                colorClass = 'bg-green-100 text-green-800';
+                dotClass = 'bg-green-400';
+            } else if (status === 'Expired' || status === 'Banned') {
+                colorClass = 'bg-red-100 text-red-800';
+                dotClass = 'bg-red-400';
+            }
+            
+            badge.className = `mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colorClass}`;
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full ${dotClass} mr-2"></span> ${status}`;
 
-            // Data
-            document.getElementById('expiry-date').innerText = `Expires: ${data.expiry || '---'}`;
-            document.getElementById('cred-server').value = data.serverUrl || '';
-            document.getElementById('cred-user').value = data.username || '';
-            document.getElementById('cred-pass').value = data.password || '';
-            document.getElementById('cred-epgenius').value = data.epgeniusM3u || '';
-            document.getElementById('config-note').value = data.notes || '';
+            // Credentials
+            document.getElementById('cred-url').value = data.portal_url || "Pending Activation";
+            document.getElementById('cred-user').value = data.username || "Pending";
+            document.getElementById('cred-pass').value = data.password ? "••••••••" : "Pending"; // Mask password visually or show real? Usually show real for IPTV
+            if(data.password) document.getElementById('cred-pass').value = data.password;
+            
+            document.getElementById('cred-expiry').textContent = data.expiry_date || "N/A";
         }
 
-        // Actions
-        window.Auth = {
-            login: async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('l-email').value;
-                const pass = document.getElementById('l-pass').value;
-                try { await signInWithEmailAndPassword(auth, email, pass); } 
-                catch(e) { alert("Login failed: " + e.message); }
-            },
-            register: async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('r-email').value;
-                const pass = document.getElementById('r-pass').value;
-                // No invite code check here? User asked for unique invites. 
-                // Simplified: Just register. The "Merge" logic handles the security/linking.
-                // If they register and you haven't made a profile, they get "Pending".
-                try { await createUserWithEmailAndPassword(auth, email, pass); } 
-                catch(e) { alert("Registration failed: " + e.message); }
-            },
-            logout: () => signOut(auth)
+        function renderConfigUI() {
+            // Devices
+            const deviceList = document.getElementById('device-list');
+            deviceList.innerHTML = '';
+            const userDevices = currentUserData?.devices || [];
+            
+            userDevices.forEach(dev => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded text-sm';
+                div.innerHTML = `<span>${dev}</span> <button onclick="removeDevice('${dev}')" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-times"></i></button>`;
+                deviceList.appendChild(div);
+            });
+
+            // Populate Add Device Select
+            const devSelect = document.getElementById('new-device-select');
+            devSelect.innerHTML = '<option value="">Select Device...</option>';
+            availableDevices.forEach(d => {
+                if(!userDevices.includes(d)) {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    opt.textContent = d;
+                    devSelect.appendChild(opt);
+                }
+            });
+
+            // Bouquets
+            const bouquetList = document.getElementById('bouquet-list');
+            bouquetList.innerHTML = '';
+            const userBouquets = currentUserData?.bouquets || [];
+            
+            availableBouquets.forEach(b => {
+                const isActive = userBouquets.includes(b);
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1 rounded-full text-xs font-bold border transition ${isActive ? 'bg-brand-800 text-white border-brand-800' : 'bg-white text-gray-500 border-gray-200 hover:border-brand-800'}`;
+                btn.textContent = b;
+                btn.onclick = () => toggleBouquet(b);
+                bouquetList.appendChild(btn);
+            });
+        }
+
+        // --- ACTIONS ---
+
+        window.removeDevice = async (device) => {
+            const userRef = doc(db, 'users', auth.currentUser.uid);
+            // Simple arrayRemove logic manually
+            const newDevices = (currentUserData.devices || []).filter(d => d !== device);
+            await updateDoc(userRef, { devices: newDevices });
+            currentUserData.devices = newDevices;
+            renderConfigUI();
+            showToast('Device removed');
         };
 
-        window.saveNote = async () => {
-            const note = document.getElementById('config-note').value;
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { notes: note });
-            alert("Note saved!");
+        document.getElementById('add-device-btn').addEventListener('click', async () => {
+            const val = document.getElementById('new-device-select').value;
+            if(!val) return;
+            const userRef = doc(db, 'users', auth.currentUser.uid);
+            await updateDoc(userRef, { devices: arrayUnion(val) });
+            if(!currentUserData.devices) currentUserData.devices = [];
+            currentUserData.devices.push(val);
+            renderConfigUI();
+            showToast('Device added');
+        });
+
+        window.toggleBouquet = async (bouquet) => {
+            const userRef = doc(db, 'users', auth.currentUser.uid);
+            let current = currentUserData.bouquets || [];
+            if(current.includes(bouquet)) {
+                current = current.filter(b => b !== bouquet);
+            } else {
+                current.push(bouquet);
+            }
+            await updateDoc(userRef, { bouquets: current });
+            currentUserData.bouquets = current;
+            renderConfigUI();
         };
 
-        window.copy = (id) => {
-            document.getElementById(id).select();
-            document.execCommand('copy');
-            alert("Copied!");
-        };
+        // --- AUTH & MIGRATION HANDLERS ---
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-pass').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        });
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('reg-code').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-pass').value;
+
+            // 1. Client Gatekeeping
+            if (code !== CONFIG.INVITE_CODE) {
+                showToast("Invalid Invite Code", 'error');
+                return;
+            }
+
+            try {
+                // 2. Create Auth User
+                const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+                const user = userCred.user;
+
+                // 3. MIGRATION LOGIC (Crucial)
+                // Look for existing doc by email. 
+                // Security Rule allows this specific query: resource.data.email == auth.email
+                const q = query(collection(db, "users"), where("email", "==", email));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    // FOUND PRE-CREATED ACCOUNT
+                    const oldDoc = querySnapshot.docs[0];
+                    const oldData = oldDoc.data();
+                    
+                    // Transaction: Copy to new UID, Delete old
+                    await runTransaction(db, async (transaction) => {
+                        const newDocRef = doc(db, "users", user.uid);
+                        const oldDocRef = doc(db, "users", oldDoc.id);
+                        
+                        transaction.set(newDocRef, oldData);
+                        transaction.delete(oldDocRef);
+                    });
+                    showToast('Account claimed successfully!');
+                } else {
+                    // NEW USER
+                    await setDoc(doc(db, "users", user.uid), {
+                        email: email,
+                        status: "Pending",
+                        created_at: new Date().toISOString(),
+                        devices: [],
+                        bouquets: []
+                    });
+                    showToast('Account created successfully!');
+                }
+
+            } catch (err) {
+                console.error(err);
+                showToast(err.message, 'error');
+            }
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
     </script>
 </body>
 </html>
