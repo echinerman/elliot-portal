@@ -107,7 +107,7 @@
 
     <!-- User Modal (Expanded for Licenses) -->
     <div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 overflow-y-auto py-10">
-        <div class="bg-white rounded-2xl w-full max-w-4xl p-6 shadow-2xl transform transition-all my-auto relative">
+        <div class="bg-white rounded-2xl w-full max-w-5xl p-6 shadow-2xl transform transition-all my-auto relative">
             <button onclick="closeModal('user-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
             <h3 class="text-lg font-bold mb-4 border-b pb-2">Edit / Create User</h3>
             
@@ -157,7 +157,10 @@
                         <h4 class="text-xs font-bold text-brand-900 uppercase flex items-center gap-2">
                             <i class="fa-solid fa-server"></i> License Manager
                         </h4>
-                        <span class="text-[10px] text-gray-500 uppercase font-bold">Manage individual lines</span>
+                        <!-- Add Button Replaces Text -->
+                        <button type="button" onclick="toggleLicenseForm()" class="bg-brand-800 text-white text-[10px] font-bold px-3 py-1 rounded hover:bg-brand-900">
+                            <i class="fa-solid fa-plus mr-1"></i> Add License
+                        </button>
                     </div>
 
                     <!-- Licenses List -->
@@ -167,8 +170,8 @@
                                 <tr>
                                     <th class="p-2">Label</th>
                                     <th class="p-2">Credentials</th>
+                                    <th class="p-2">Details</th>
                                     <th class="p-2">Expiry</th>
-                                    <th class="p-2">Cost</th>
                                     <th class="p-2">Status</th>
                                     <th class="p-2 text-right">Action</th>
                                 </tr>
@@ -180,13 +183,16 @@
                         <div id="no-licenses-msg" class="p-4 text-center text-gray-400 text-sm italic hidden">No active licenses.</div>
                     </div>
 
-                    <!-- Add License Control Panel -->
-                    <div class="bg-gray-100 p-4 rounded-lg space-y-3">
-                        <div class="flex justify-between items-end">
-                            <h5 class="text-[10px] font-bold text-gray-500 uppercase">Add New License</h5>
+                    <!-- Add/Edit License Control Panel (Hidden by Default) -->
+                    <div id="license-form-container" class="bg-gray-100 p-4 rounded-lg space-y-3 hidden border border-gray-300">
+                        <div class="flex justify-between items-center">
+                            <h5 class="text-[10px] font-bold text-gray-500 uppercase" id="lic-form-title">Add New License</h5>
+                            <button type="button" onclick="cancelLicenseEdit()" class="text-xs text-gray-500 hover:text-gray-800"><i class="fa-solid fa-times"></i></button>
                         </div>
                         
-                        <!-- Row 1: Core Details -->
+                        <input type="hidden" id="editing-lic-index" value="-1">
+
+                        <!-- Row 1: Identity & Status -->
                         <div class="grid grid-cols-1 md:grid-cols-6 gap-2">
                             <div class="md:col-span-1">
                                 <label class="block text-[9px] font-bold text-gray-400 uppercase">Label</label>
@@ -219,7 +225,23 @@
                             </div>
                         </div>
 
-                        <!-- Row 2: Technical Config -->
+                        <!-- Row 2: Sales Data (NEW) -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 bg-white p-2 rounded border border-gray-200">
+                             <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Package Selected</label>
+                                <input type="text" id="new-lic-package" placeholder="1 Year VIP" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Price Paid</label>
+                                <input type="text" id="new-lic-price" placeholder="$0.00" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Date Paid</label>
+                                <input type="date" id="new-lic-date-paid" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Technical Config -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <div>
                                 <label class="block text-[9px] font-bold text-gray-400 uppercase">M3U URL</label>
@@ -231,7 +253,7 @@
                             </div>
                         </div>
 
-                        <!-- Row 3: EPGenius -->
+                        <!-- Row 4: EPGenius -->
                         <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
                             <div class="md:col-span-1">
                                 <label class="block text-[9px] font-bold text-blue-400 uppercase">EPGenius Key</label>
@@ -242,7 +264,7 @@
                                 <input type="text" id="new-lic-drive" class="w-full p-1.5 border rounded text-xs font-mono text-[10px] border-blue-200">
                             </div>
                             <div class="md:col-span-1">
-                                <button type="button" onclick="addLicense()" class="w-full bg-brand-900 text-white text-xs font-bold py-2 rounded hover:bg-brand-800">
+                                <button type="button" onclick="saveLicenseLine()" id="btn-save-lic" class="w-full bg-brand-900 text-white text-xs font-bold py-2 rounded hover:bg-brand-800">
                                     <i class="fa-solid fa-plus mr-1"></i> Add
                                 </button>
                             </div>
@@ -266,6 +288,9 @@
                 <div class="flex justify-between items-center pt-4 border-t">
                     <button type="button" onclick="archiveUser()" id="btn-archive" class="text-red-500 text-sm font-bold hover:underline">Archive User</button>
                     <div class="flex gap-2">
+                        <button type="button" onclick="copyUserToClipboard()" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300">
+                            <i class="fa-regular fa-copy mr-1"></i> Copy Info
+                        </button>
                         <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Cancel</button>
                         <button type="submit" class="px-6 py-2 bg-brand-900 text-white font-bold rounded-lg hover:bg-brand-800 shadow-lg">Save Changes</button>
                     </div>
@@ -490,15 +515,19 @@
                         ${lic.epgenius_key ? '<i class="fa-solid fa-bolt text-blue-400 ml-1 text-[10px]" title="EPGenius"></i>' : ''}
                     </td>
                     <td class="p-2 text-gray-600 text-[11px]">
-                        <div>${lic.username_8k}</div>
-                        <div class="text-[9px] text-gray-400 font-mono">••••••</div>
+                        <div><span class="font-bold text-gray-400">U:</span> ${lic.username_8k}</div>
+                        <div><span class="font-bold text-gray-400">P:</span> ${lic.password_8k}</div>
+                    </td>
+                    <td class="p-2 text-gray-600 text-[10px]">
+                        <div>${lic.package_name || '-'}</div>
+                        <div>${lic.price_paid || '-'}</div>
                     </td>
                     <td class="p-2 text-gray-600 text-[11px]">${lic.expiry_date}</td>
-                    <td class="p-2 text-gray-600 text-[11px]">${lic.credits || 0}</td>
                     <td class="p-2">
                          <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${lic.status}</span>
                     </td>
-                    <td class="p-2 text-right">
+                    <td class="p-2 text-right space-x-2">
+                        <button type="button" onclick="loadLicenseIntoForm(${index})" class="text-brand-900 font-bold text-[10px] hover:underline">View</button>
                         <button type="button" onclick="removeLicense(${index})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 `;
@@ -506,7 +535,61 @@
             });
         };
 
-        window.addLicense = () => {
+        window.toggleLicenseForm = () => {
+            const form = document.getElementById('license-form-container');
+            const isHidden = form.classList.contains('hidden');
+            if (isHidden) {
+                form.classList.remove('hidden');
+                // Default Add Mode
+                document.getElementById('lic-form-title').textContent = "Add New License";
+                document.getElementById('btn-save-lic').innerHTML = '<i class="fa-solid fa-plus mr-1"></i> Add';
+                document.getElementById('editing-lic-index').value = "-1";
+                clearLicenseInputs();
+            } else {
+                form.classList.add('hidden');
+            }
+        };
+
+        window.cancelLicenseEdit = () => {
+            document.getElementById('license-form-container').classList.add('hidden');
+            clearLicenseInputs();
+        };
+
+        window.loadLicenseIntoForm = (index) => {
+            const lic = currentLicenses[index];
+            document.getElementById('license-form-container').classList.remove('hidden');
+            document.getElementById('lic-form-title').textContent = "View / Edit License";
+            document.getElementById('btn-save-lic').innerHTML = '<i class="fa-solid fa-save mr-1"></i> Update';
+            document.getElementById('editing-lic-index').value = index;
+
+            // Populate fields
+            document.getElementById('new-lic-label').value = lic.label || '';
+            document.getElementById('new-lic-status').value = lic.status || 'Active';
+            document.getElementById('new-lic-user').value = lic.username_8k || '';
+            document.getElementById('new-lic-pass').value = lic.password_8k || '';
+            document.getElementById('new-lic-expiry').value = lic.expiry_date || '';
+            document.getElementById('new-lic-credits').value = lic.credits || 0;
+            
+            document.getElementById('new-lic-package').value = lic.package_name || '';
+            document.getElementById('new-lic-price').value = lic.price_paid || '';
+            document.getElementById('new-lic-date-paid').value = lic.date_paid || '';
+
+            document.getElementById('new-lic-m3u').value = lic.m3u_url_8k || '';
+            document.getElementById('new-lic-epg').value = lic.epg_url_8k || '';
+            document.getElementById('new-lic-epg-key').value = lic.epgenius_key || '';
+            document.getElementById('new-lic-drive').value = lic.epgenius_url || '';
+        };
+
+        window.clearLicenseInputs = () => {
+             const ids = ['new-lic-label', 'new-lic-user', 'new-lic-pass', 'new-lic-expiry', 'new-lic-credits', 
+                        'new-lic-m3u', 'new-lic-epg', 'new-lic-epg-key', 'new-lic-drive', 
+                        'new-lic-package', 'new-lic-price', 'new-lic-date-paid'];
+            ids.forEach(id => document.getElementById(id).value = '');
+            document.getElementById('new-lic-status').value = 'Active';
+            document.getElementById('editing-lic-index').value = "-1";
+        };
+
+        window.saveLicenseLine = () => {
             // Core
             const label = document.getElementById('new-lic-label').value;
             const status = document.getElementById('new-lic-status').value;
@@ -515,6 +598,11 @@
             const expiry = document.getElementById('new-lic-expiry').value;
             const credits = document.getElementById('new-lic-credits').value;
             
+            // Sales
+            const pkg = document.getElementById('new-lic-package').value;
+            const price = document.getElementById('new-lic-price').value;
+            const datePaid = document.getElementById('new-lic-date-paid').value;
+
             // Technical
             const m3u = document.getElementById('new-lic-m3u').value;
             const epg = document.getElementById('new-lic-epg').value;
@@ -528,32 +616,78 @@
                 return;
             }
 
-            currentLicenses.push({
-                id: crypto.randomUUID(),
+            const newLicObj = {
+                id: crypto.randomUUID(), // Will be overwritten if editing, handled below? No, fresh ID if new.
                 label: label,
                 status: status,
                 username_8k: user,
                 password_8k: pass,
                 expiry_date: expiry,
                 credits: Number(credits) || 0,
+                package_name: pkg,
+                price_paid: price,
+                date_paid: datePaid,
                 m3u_url_8k: m3u,
                 epg_url_8k: epg,
                 epgenius_key: epgKey,
                 epgenius_url: drive
-            });
+            };
 
-            // Clear inputs
-            const ids = ['new-lic-label', 'new-lic-user', 'new-lic-pass', 'new-lic-expiry', 'new-lic-credits', 
-                        'new-lic-m3u', 'new-lic-epg', 'new-lic-epg-key', 'new-lic-drive'];
-            ids.forEach(id => document.getElementById(id).value = '');
-            document.getElementById('new-lic-status').value = 'Active';
+            const editIndex = parseInt(document.getElementById('editing-lic-index').value);
 
+            if (editIndex >= 0) {
+                // UPDATE existing
+                newLicObj.id = currentLicenses[editIndex].id; // Keep original ID
+                currentLicenses[editIndex] = newLicObj;
+            } else {
+                // ADD new
+                currentLicenses.push(newLicObj);
+            }
+
+            // Reset UI
+            cancelLicenseEdit();
             window.renderLicenseList();
         };
 
         window.removeLicense = (index) => {
+            if(!confirm("Delete this license line?")) return;
             currentLicenses.splice(index, 1);
             window.renderLicenseList();
+        };
+
+        window.copyUserToClipboard = () => {
+            const name = document.getElementById('edit-name').value || "User";
+            const email = document.getElementById('edit-email').value || "";
+            const domain = document.getElementById('edit-domain-8k').value || "N/A";
+            const backup = document.getElementById('edit-domain-backup-8k').value || "N/A";
+            
+            let md = `# Client: ${name}\n`;
+            md += `**Email:** ${email}\n`;
+            md += `**8K Domain:** ${domain}\n`;
+            md += `**Backup Domain:** ${backup}\n\n`;
+            md += `## Licenses\n`;
+
+            if (currentLicenses.length === 0) {
+                md += "_No active licenses._";
+            } else {
+                currentLicenses.forEach((lic, i) => {
+                    md += `### ${i+1}. ${lic.label || 'License'}\n`;
+                    md += `- **Status:** ${lic.status}\n`;
+                    md += `- **Username:** \`${lic.username_8k}\`\n`;
+                    md += `- **Password:** \`${lic.password_8k}\`\n`;
+                    md += `- **Expiry:** ${lic.expiry_date}\n`;
+                    if(lic.package_name) md += `- **Package:** ${lic.package_name} (${lic.price_paid || ''})\n`;
+                    if(lic.m3u_url_8k) md += `- **M3U:** \`${lic.m3u_url_8k}\`\n`;
+                    if(lic.epg_url_8k) md += `- **EPG:** \`${lic.epg_url_8k}\`\n`;
+                    if(lic.epgenius_key) md += `- **EPGenius Key:** ${lic.epgenius_key}\n`;
+                    if(lic.epgenius_url) md += `- **GDrive:** ${lic.epgenius_url}\n`;
+                    md += `\n`;
+                });
+            }
+
+            navigator.clipboard.writeText(md).then(() => {
+                alert("Copied to clipboard!");
+            });
         };
 
         // --- ACTIONS ---
@@ -567,6 +701,7 @@
             // Reset Licenses
             currentLicenses = [];
             window.renderLicenseList();
+            cancelLicenseEdit(); // Hide form
             
             document.getElementById('user-modal').classList.remove('hidden');
         };
@@ -610,6 +745,7 @@
                 });
             }
             window.renderLicenseList();
+            cancelLicenseEdit(); // Ensure form starts hidden
 
             // Read Only Selections
             const devices = (u.devices || []).join(', ') || 'None';
