@@ -57,7 +57,7 @@
     </div>
 
     <!-- DASHBOARD CONTAINER (Hidden by default) -->
-    <div id="dashboard-view" class="hidden max-w-6xl mx-auto p-4 lg:p-8 space-y-12">
+    <div id="dashboard-view" class="hidden max-w-7xl mx-auto p-4 lg:p-8 space-y-8">
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm gap-4">
             <div>
@@ -72,149 +72,128 @@
             </div>
         </header>
 
-        <!-- SECTION 1: STATUS & ACCESS -->
-        <div class="space-y-6">
-            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Connection Status</h3>
-            
-            <!-- Global Server Info -->
-            <div class="bg-brand-900 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fa-solid fa-server text-9xl"></i></div>
-                <h3 class="text-lg font-bold mb-4 relative z-10"><i class="fa-solid fa-network-wired mr-2"></i> Server Connection</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                    <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
-                        <label class="text-[10px] uppercase font-bold text-white/50 block mb-1">Main Server URL (DNS)</label>
-                        <div class="flex items-center justify-between">
-                            <code id="global-domain" class="font-mono text-sm">Loading...</code>
-                            <button onclick="copyText('global-domain')" class="text-white/70 hover:text-white"><i class="fa-regular fa-copy"></i></button>
-                        </div>
-                    </div>
-                    <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
-                        <label class="text-[10px] uppercase font-bold text-white/50 block mb-1">Backup Server URL</label>
-                        <div class="flex items-center justify-between">
-                            <code id="global-backup" class="font-mono text-sm">Loading...</code>
-                            <button onclick="copyText('global-backup')" class="text-white/70 hover:text-white"><i class="fa-regular fa-copy"></i></button>
-                        </div>
-                    </div>
+        <!-- MAIN LAYOUT: Masonry Grid -->
+        <div class="columns-1 lg:columns-2 gap-8 space-y-8">
+
+            <!-- WIDGET 1: ACTIVE LICENSES -->
+            <div class="break-inside-avoid space-y-4">
+                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">My Active Licenses</h3>
+                <div id="licenses-container" class="space-y-4">
+                    <!-- Loaded via JS -->
+                    <div class="bg-white p-8 rounded-2xl text-center text-gray-400">Loading licenses...</div>
                 </div>
             </div>
 
-            <!-- Active Licenses -->
-            <div id="licenses-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Loaded via JS -->
-                <div class="bg-white p-8 rounded-2xl text-center text-gray-400 col-span-full">Loading licenses...</div>
-            </div>
-        </div>
-
-        <!-- SECTION 2: SHOP / PACKAGES -->
-        <div class="space-y-6">
-            <div class="flex items-center justify-between">
+            <!-- WIDGET 2: AVAILABLE PACKAGES -->
+            <div class="break-inside-avoid space-y-4">
                 <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Available Packages</h3>
-            </div>
-            
-            <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Products Loaded JS -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <div id="product-list" class="divide-y divide-gray-100">
+                        <!-- Products Loaded JS -->
+                    </div>
+                </div>
             </div>
 
-            <!-- Hidden Purchase Instructions Modal (Replaces Calculator) -->
-            <div id="purchase-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
-                    <div class="bg-brand-900 p-6 text-white text-center">
-                        <h4 class="text-lg font-bold" id="modal-product-name">Package Name</h4>
-                        <div class="text-3xl font-bold mt-2" id="modal-product-price">$0.00</div>
-                    </div>
-                    <div class="p-8 space-y-6">
-                        <div class="text-center space-y-2">
-                            <p class="text-sm text-gray-500 font-medium">To activate this license, please send an e-transfer to:</p>
-                            <div class="bg-gray-100 p-3 rounded-xl font-mono text-brand-900 font-bold select-all cursor-pointer hover:bg-gray-200 transition" onclick="copyString('e.chinerman@gmail.com')">
-                                e.chinerman@gmail.com
+            <!-- WIDGET 3: VIEWING PREFERENCES -->
+            <div class="break-inside-avoid space-y-4">
+                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Viewing Category Preferences</h3>
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <p class="text-[11px] text-gray-400 mb-6">Customize your playlist content.</p>
+                    
+                    <div class="space-y-6">
+                        <!-- Live TV -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-xs font-bold uppercase text-brand-900">Live TV</h4>
+                                <select id="live-pref-select" class="text-xs bg-transparent text-gray-400 outline-none cursor-pointer hover:text-brand-900 text-right w-1/2"></select>
                             </div>
-                            <p class="text-xs text-gray-400">Tap email to copy</p>
-                        </div>
-                        
-                        <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-xl text-xs text-yellow-800 leading-relaxed">
-                            <i class="fa-solid fa-circle-info mr-1"></i>
-                            <strong>Note:</strong> Elliot will process your order and activate your license only after payment is received.
+                            <div id="live-tags" class="flex flex-wrap gap-2"></div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                            <button onclick="closeModal('purchase-modal')" class="py-3 rounded-xl text-gray-500 font-bold hover:bg-gray-50">Cancel</button>
-                            <a id="notify-link" href="#" class="py-3 rounded-xl bg-brand-900 text-white font-bold text-center hover:bg-brand-800 shadow-lg shadow-brand-900/20">
-                                I've Sent Payment
-                            </a>
+                        <!-- VOD -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-xs font-bold uppercase text-brand-900">Movies & Series</h4>
+                                <select id="vod-pref-select" class="text-xs bg-transparent text-gray-400 outline-none cursor-pointer hover:text-brand-900 text-right w-1/2"></select>
+                            </div>
+                            <div id="vod-tags" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <!-- Custom Request -->
+                        <div>
+                            <h4 class="text-xs font-bold uppercase text-brand-900 mb-2">Special Requests</h4>
+                            <textarea id="custom-req" rows="2" class="w-full p-3 bg-gray-50 rounded-xl text-sm border-none focus:ring-1 focus:ring-brand-900 outline-none resize-none" placeholder="e.g. Specific international channels..."></textarea>
                         </div>
                     </div>
+                    <button id="save-config-btn" class="mt-6 w-full bg-gray-100 text-brand-900 px-6 py-3 rounded-xl text-sm font-bold hover:bg-gray-200 transition">Save Preferences</button>
                 </div>
             </div>
-        </div>
 
-        <!-- SECTION 3: CONFIGURATION -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            <!-- Device Inventory Widget -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm h-full">
-                <h3 class="text-lg font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-mobile-screen-button"></i> Device Inventory</h3>
-                <p class="text-[11px] text-gray-400 mb-6">List your hardware for support reference.</p>
+            <!-- WIDGET 4: DEVICE INVENTORY -->
+            <div class="break-inside-avoid space-y-4">
+                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Device Inventory</h3>
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <p class="text-[11px] text-gray-400 mb-4">List your hardware for support reference. Does not create a connection.</p>
+                    
+                    <div class="flex gap-2 mb-4">
+                        <div class="relative flex-1">
+                            <input type="text" id="new-device-name" placeholder="Device Name" class="w-full pl-3 pr-2 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-900 outline-none">
+                        </div>
+                        <select id="new-device-type" class="bg-gray-50 rounded-xl text-sm border-none outline-none px-2 text-brand-900 font-bold cursor-pointer w-24">
+                            <option value="tv">📺 TV</option>
+                            <option value="box">📦 Box</option>
+                            <option value="mobile">📱 Phone</option>
+                            <option value="laptop">💻 PC</option>
+                        </select>
+                        <button id="add-device-btn" class="bg-brand-900 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-brand-800 shadow-sm"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+
+                    <div id="device-list-container" class="space-y-2">
+                        <!-- Dynamic Device List -->
+                    </div>
+                </div>
                 
-                <div class="flex gap-2 mb-4">
-                    <div class="relative flex-1">
-                        <input type="text" id="new-device-name" placeholder="Device Name (e.g. Bedroom TV)" class="w-full pl-3 pr-10 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-900 outline-none">
-                    </div>
-                    <select id="new-device-type" class="bg-gray-50 rounded-xl text-sm border-none outline-none px-2 text-brand-900 font-bold cursor-pointer">
-                        <option value="tv">📺 TV</option>
-                        <option value="box">📦 Box</option>
-                        <option value="mobile">📱 Phone</option>
-                        <option value="laptop">💻 PC</option>
-                    </select>
-                    <button id="add-device-btn" class="bg-brand-900 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-brand-800 shadow-sm"><i class="fa-solid fa-plus"></i></button>
-                </div>
-
-                <div id="device-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <!-- Dynamic Device Cards -->
+                <!-- Support Link -->
+                <div class="text-center pt-4">
+                    <a id="contact-link" href="#" class="inline-flex items-center gap-2 text-gray-400 text-xs hover:text-brand-900 hover:underline transition">
+                        <i class="fa-regular fa-envelope"></i> Contact Elliot for Support
+                    </a>
                 </div>
             </div>
 
-            <!-- Viewing Category Preferences -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm h-full flex flex-col">
-                <h3 class="text-lg font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-sliders"></i> Viewing Category Preferences</h3>
-                <p class="text-[11px] text-gray-400 mb-6">Customize your playlist content.</p>
-                
-                <div class="space-y-6 flex-1">
-                    <!-- Live TV -->
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <h4 class="text-xs font-bold uppercase text-brand-900">Live TV</h4>
-                            <select id="live-pref-select" class="text-xs bg-transparent text-gray-400 outline-none cursor-pointer hover:text-brand-900 text-right w-1/2"></select>
+        </div> <!-- End Masonry -->
+
+        <!-- Hidden Purchase Instructions Modal -->
+        <div id="purchase-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
+                <div class="bg-brand-900 p-6 text-white text-center">
+                    <h4 class="text-lg font-bold" id="modal-product-name">Package Name</h4>
+                    <div class="text-3xl font-bold mt-2" id="modal-product-price">$0.00</div>
+                </div>
+                <div class="p-8 space-y-6">
+                    <div class="text-center space-y-2">
+                        <p class="text-sm text-gray-500 font-medium">To activate this license, please send an e-transfer to:</p>
+                        <div class="bg-gray-100 p-3 rounded-xl font-mono text-brand-900 font-bold select-all cursor-pointer hover:bg-gray-200 transition" onclick="copyString('e.chinerman@gmail.com')">
+                            e.chinerman@gmail.com
                         </div>
-                        <div id="live-tags" class="flex flex-wrap gap-2"></div>
+                        <p class="text-xs text-gray-400">Tap email to copy</p>
+                    </div>
+                    
+                    <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-xl text-xs text-yellow-800 leading-relaxed">
+                        <i class="fa-solid fa-circle-info mr-1"></i>
+                        <strong>Note:</strong> Elliot will process your order and activate your license only after payment is received.
                     </div>
 
-                    <!-- VOD -->
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <h4 class="text-xs font-bold uppercase text-brand-900">Movies & Series</h4>
-                            <select id="vod-pref-select" class="text-xs bg-transparent text-gray-400 outline-none cursor-pointer hover:text-brand-900 text-right w-1/2"></select>
-                        </div>
-                        <div id="vod-tags" class="flex flex-wrap gap-2"></div>
-                    </div>
-
-                    <!-- Custom Request -->
-                    <div>
-                        <h4 class="text-xs font-bold uppercase text-brand-900 mb-2">Special Requests</h4>
-                        <textarea id="custom-req" rows="2" class="w-full p-3 bg-gray-50 rounded-xl text-sm border-none focus:ring-1 focus:ring-brand-900 outline-none resize-none" placeholder="e.g. Specific international channels..."></textarea>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="closeModal('purchase-modal')" class="py-3 rounded-xl text-gray-500 font-bold hover:bg-gray-50">Cancel</button>
+                        <a id="notify-link" href="#" class="py-3 rounded-xl bg-brand-900 text-white font-bold text-center hover:bg-brand-800 shadow-lg shadow-brand-900/20">
+                            I've Sent Payment
+                        </a>
                     </div>
                 </div>
-                <button id="save-config-btn" class="mt-6 w-full bg-gray-100 text-brand-900 px-6 py-3 rounded-xl text-sm font-bold hover:bg-gray-200 transition">Save Preferences</button>
             </div>
-
         </div>
 
-        <!-- Footer / Support -->
-        <div class="text-center pt-8 border-t border-gray-200">
-            <p class="text-gray-400 text-sm mb-4">Need help setting up?</p>
-            <a id="contact-link" href="#" class="inline-flex items-center gap-2 text-brand-900 font-bold hover:underline">
-                <i class="fa-regular fa-envelope"></i> Contact Elliot
-            </a>
-        </div>
     </div>
 
     <script type="module">
@@ -330,15 +309,13 @@
                 products.push({ id: 'donation_epgenius', name: 'Donate to EPGenius Curator', price: 20 });
             }
 
-            renderProductGrid();
+            renderProductList();
             renderConfigUI();
         }
 
         function renderUserData(data) {
             document.getElementById('user-name-display').textContent = data.full_name || 'Client';
-            document.getElementById('global-domain').textContent = data.domain_8k || 'Contact Admin';
-            document.getElementById('global-backup').textContent = data.domain_8k_backup || 'Contact Admin';
-
+            
             const licContainer = document.getElementById('licenses-container');
             licContainer.innerHTML = '';
             
@@ -358,7 +335,7 @@
                 } else {
                      licContainer.innerHTML = `<div class="bg-gray-50 p-8 rounded-2xl text-center border-2 border-dashed border-gray-200 text-gray-400 col-span-full">
                         <i class="fa-solid fa-ticket text-3xl mb-2 opacity-50"></i><br>
-                        No active licenses found.<br>Select a package below to get started.
+                        No active licenses found.<br>Select a package to get started.
                      </div>`;
                 }
             } else {
@@ -374,6 +351,10 @@
             if(lic.status === 'Expired') statusColor = 'bg-red-100 text-red-700';
             if(lic.status === 'Banned') statusColor = 'bg-black text-white';
 
+            // Use Global or License specific domains
+            const mainDomain = currentUserData.domain_8k || 'Contact Admin';
+            const backDomain = currentUserData.domain_8k_backup || 'Contact Admin';
+
             return `
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative group transition hover:shadow-md">
                 <div class="flex justify-between items-start mb-4">
@@ -388,6 +369,26 @@
                 </div>
 
                 <div class="space-y-3 bg-brand-50 p-4 rounded-xl">
+                    <!-- Global Server URLs (Moved Here) -->
+                    <div class="grid grid-cols-1 gap-2 mb-4 pb-4 border-b border-gray-200/50">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[9px] uppercase font-bold text-gray-400">Server URL</span>
+                            <div class="flex items-center gap-2">
+                                <code class="text-[10px] font-mono text-gray-600">${mainDomain}</code>
+                                <button onclick="copyString('${mainDomain}')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy text-[10px]"></i></button>
+                            </div>
+                        </div>
+                        ${backDomain && backDomain !== 'Contact Admin' ? `
+                        <div class="flex items-center justify-between">
+                            <span class="text-[9px] uppercase font-bold text-gray-400">Backup URL</span>
+                            <div class="flex items-center gap-2">
+                                <code class="text-[10px] font-mono text-gray-600">${backDomain}</code>
+                                <button onclick="copyString('${backDomain}')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy text-[10px]"></i></button>
+                            </div>
+                        </div>` : ''}
+                    </div>
+
+                    <!-- User/Pass -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">Username</label>
@@ -428,9 +429,9 @@
 
         // --- PRODUCT / ORDER LOGIC ---
 
-        function renderProductGrid() {
-            const grid = document.getElementById('product-grid');
-            grid.innerHTML = '';
+        function renderProductList() {
+            const list = document.getElementById('product-list');
+            list.innerHTML = '';
             
             products.forEach(p => {
                 // Determine icon based on product name keywords
@@ -440,20 +441,22 @@
                 if(p.name.toLowerCase().includes('donate')) icon = 'fa-heart';
 
                 const html = `
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-transparent hover:border-brand-900 transition flex flex-col h-full relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition"><i class="fa-solid ${icon} text-6xl"></i></div>
-                    
-                    <div class="flex-1 mb-4 relative z-10">
-                        <h4 class="font-bold text-lg text-brand-900 leading-tight mb-2">${p.name}</h4>
-                        <div class="text-2xl font-bold text-gray-900">${CONFIG.CURRENCY_SYMBOL}${p.price}</div>
-                        ${p.credits ? `<div class="text-xs text-gray-400 mt-1">${p.credits} Credits Value</div>` : ''}
+                <div class="flex items-center justify-between py-4 group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-gray-400 group-hover:text-brand-900 group-hover:bg-gray-100 transition">
+                            <i class="fa-solid ${icon}"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm text-brand-900">${p.name}</h4>
+                            <div class="text-xs font-bold text-gray-500">${CONFIG.CURRENCY_SYMBOL}${p.price}</div>
+                        </div>
                     </div>
                     
-                    <button onclick="openPurchaseModal('${p.name}', '${p.price}')" class="w-full py-3 rounded-xl bg-gray-100 text-brand-900 font-bold hover:bg-brand-900 hover:text-white transition relative z-10">
+                    <button onclick="openPurchaseModal('${p.name}', '${p.price}')" class="px-4 py-2 rounded-lg bg-gray-50 text-brand-900 text-xs font-bold hover:bg-brand-900 hover:text-white transition">
                         Purchase
                     </button>
                 </div>`;
-                grid.innerHTML += html;
+                list.innerHTML += html;
             });
         }
 
@@ -469,7 +472,7 @@
             document.getElementById('purchase-modal').classList.remove('hidden');
         };
 
-        // --- DEVICE INVENTORY (NEW WIDGET) ---
+        // --- DEVICE INVENTORY (LIST STYLE) ---
 
         function renderConfigUI() {
             // Live/VOD Tags
@@ -506,46 +509,41 @@
             // Custom Request
             document.getElementById('custom-req').value = currentUserData.custom_request || '';
 
-            // Render Device Grid
-            renderDeviceGrid();
+            // Render Device List
+            renderDeviceList();
         }
 
-        function renderDeviceGrid() {
-            const grid = document.getElementById('device-grid');
-            grid.innerHTML = '';
-            
-            // Devices stored as strings in array: "Name|Type" or just "Name" (Legacy)
-            // We need to parse or handle objects. 
-            // Current DB schema is array of strings. 
-            // Let's stick to strings for schema compatibility but try to detect type or use delimiter.
-            // PROPOSAL: Store as "Type|Name" string to avoid object migration? 
-            // OR simply stick to "Name" and guess icon, or just generic icon.
-            // User requested "Options to choose from".
-            // Let's store as objects in UI state but save as strings "Name (Type)" for simplicity in DB if schema is strict array of strings.
+        function renderDeviceList() {
+            const list = document.getElementById('device-list-container');
+            list.innerHTML = '';
             
             const userDevices = currentUserData?.devices || [];
             
+            if (userDevices.length === 0) {
+                list.innerHTML = '<div class="text-center text-[10px] text-gray-300 italic py-2">No devices listed</div>';
+                return;
+            }
+
             userDevices.forEach(devStr => {
                 // Parse "Name (Type)" or just "Name"
                 let name = devStr;
-                let type = 'tv'; // Default
                 let icon = 'fa-tv';
 
-                if(devStr.includes('📱')) { type = 'mobile'; icon = 'fa-mobile-screen'; name = devStr.replace('📱 ', ''); }
-                else if(devStr.includes('📦')) { type = 'box'; icon = 'fa-box'; name = devStr.replace('📦 ', ''); }
-                else if(devStr.includes('💻')) { type = 'laptop'; icon = 'fa-laptop'; name = devStr.replace('💻 ', ''); }
-                else if(devStr.includes('📺')) { type = 'tv'; icon = 'fa-tv'; name = devStr.replace('📺 ', ''); }
+                if(devStr.includes('📱')) { icon = 'fa-mobile-screen'; name = devStr.replace('📱 ', ''); }
+                else if(devStr.includes('📦')) { icon = 'fa-box'; name = devStr.replace('📦 ', ''); }
+                else if(devStr.includes('💻')) { icon = 'fa-laptop'; name = devStr.replace('💻 ', ''); }
+                else if(devStr.includes('📺')) { icon = 'fa-tv'; name = devStr.replace('📺 ', ''); }
 
                 const el = document.createElement('div');
-                el.className = 'bg-gray-50 p-3 rounded-xl flex items-center justify-between group border border-transparent hover:border-gray-200 transition';
+                el.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition';
                 el.innerHTML = `
-                    <div class="flex items-center gap-2 overflow-hidden">
-                        <div class="text-gray-400 text-sm"><i class="fa-solid ${icon}"></i></div>
-                        <span class="text-xs font-bold text-gray-700 truncate">${name}</span>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid ${icon} text-gray-400 text-xs"></i>
+                        <span class="text-xs font-bold text-gray-700">${name}</span>
                     </div>
                     <button onclick="removeDevice('${devStr}')" class="text-gray-300 hover:text-red-500 transition"><i class="fa-solid fa-times"></i></button>
                 `;
-                grid.appendChild(el);
+                list.appendChild(el);
             });
         }
 
@@ -570,7 +568,7 @@
             currentUserData.devices.push(val);
             
             document.getElementById('new-device-name').value = ''; // Reset input
-            renderDeviceGrid();
+            renderDeviceList();
             showToast('Device added');
         });
 
@@ -578,7 +576,7 @@
             const userRef = doc(db, 'users', auth.currentUser.uid);
             await updateDoc(userRef, { devices: arrayRemove(device) });
             currentUserData.devices = currentUserData.devices.filter(d => d !== device);
-            renderDeviceGrid();
+            renderDeviceList();
             showToast('Device removed');
         };
 
