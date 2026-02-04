@@ -57,135 +57,139 @@
     </div>
 
     <!-- DASHBOARD CONTAINER (Hidden by default) -->
-    <div id="dashboard-view" class="hidden max-w-5xl mx-auto p-4 lg:p-8 space-y-8">
+    <div id="dashboard-view" class="hidden max-w-6xl mx-auto p-4 lg:p-8 space-y-8">
         <!-- Header -->
-        <header class="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm">
+        <header class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm gap-4">
             <div>
-                <h2 class="text-xl font-bold">Welcome, <span id="user-email-display" class="font-normal text-gray-600"></span></h2>
-                <div id="status-badge" class="mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                    <span class="w-2 h-2 rounded-full bg-gray-400 mr-2"></span> Loading Status...
-                </div>
+                <h2 class="text-xl font-bold">Welcome, <span id="user-name-display" class="font-normal text-gray-600">Client</span></h2>
+                <div class="text-xs text-gray-400 mt-1" id="user-email-display"></div>
             </div>
-            <button id="logout-btn" class="text-brand-900 hover:text-red-600 transition"><i class="fa-solid fa-right-from-bracket fa-lg"></i></button>
+            <div class="flex items-center gap-4">
+                <div class="bg-brand-50 px-4 py-2 rounded-xl text-sm">
+                    <span class="text-gray-400 font-bold uppercase text-xs block">Wallet Balance</span>
+                    <span class="font-bold text-brand-900 text-lg" id="wallet-balance">0 Credits</span>
+                </div>
+                <button id="logout-btn" class="text-brand-900 hover:text-red-600 transition px-2"><i class="fa-solid fa-right-from-bracket fa-lg"></i></button>
+            </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Global Server Info -->
+        <div class="bg-brand-900 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fa-solid fa-server text-9xl"></i></div>
+            <h3 class="text-lg font-bold mb-4 relative z-10"><i class="fa-solid fa-network-wired mr-2"></i> Server Connection</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+                    <label class="text-[10px] uppercase font-bold text-white/50 block mb-1">Main Server URL (DNS)</label>
+                    <div class="flex items-center justify-between">
+                        <code id="global-domain" class="font-mono text-sm">Loading...</code>
+                        <button onclick="copyText('global-domain')" class="text-white/70 hover:text-white"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                </div>
+                <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+                    <label class="text-[10px] uppercase font-bold text-white/50 block mb-1">Backup Server URL</label>
+                    <div class="flex items-center justify-between">
+                        <code id="global-backup" class="font-mono text-sm">Loading...</code>
+                        <button onclick="copyText('global-backup')" class="text-white/70 hover:text-white"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <!-- Credentials Card -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm">
-                <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-key"></i> Credentials</h3>
-                <div class="space-y-3" id="cred-container">
-                    <!-- Credential Items -->
-                    <div class="group relative">
-                        <label class="text-xs text-gray-400 uppercase font-bold">Server URL</label>
-                        <div class="flex items-center bg-brand-50 rounded-lg p-2 mt-1">
-                            <input type="text" readonly id="cred-url" class="bg-transparent w-full text-sm outline-none text-gray-700 font-mono" value="...">
-                            <button onclick="copyToClip('cred-url')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
-                        </div>
-                    </div>
-                    <div class="group relative">
-                        <label class="text-xs text-gray-400 uppercase font-bold">Username</label>
-                        <div class="flex items-center bg-brand-50 rounded-lg p-2 mt-1">
-                            <input type="text" readonly id="cred-user" class="bg-transparent w-full text-sm outline-none text-gray-700 font-mono" value="...">
-                            <button onclick="copyToClip('cred-user')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
-                        </div>
-                    </div>
-                    <div class="group relative">
-                        <label class="text-xs text-gray-400 uppercase font-bold">Password</label>
-                        <div class="flex items-center bg-brand-50 rounded-lg p-2 mt-1">
-                            <input type="password" readonly id="cred-pass" class="bg-transparent w-full text-sm outline-none text-gray-700 font-mono" value="...">
-                            <button onclick="copyToClip('cred-pass')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
-                        </div>
-                    </div>
+            <!-- Left Column: Licenses (My Subscriptions) -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-ticket"></i> My Active Licenses</h3>
                 </div>
-                <!-- Expiry Info -->
-                <div class="mt-6 pt-4 border-t border-brand-100 flex justify-between items-center">
-                    <span class="text-sm text-gray-500">Expires:</span>
-                    <span id="cred-expiry" class="font-bold text-brand-900">--/--/----</span>
+
+                <!-- Dynamic License Container -->
+                <div id="licenses-container" class="space-y-4">
+                    <!-- Loaded via JS -->
+                    <div class="bg-white p-8 rounded-2xl text-center text-gray-400">Loading licenses...</div>
                 </div>
             </div>
 
-            <!-- Calculator Card -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm">
-                <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-calculator"></i> Renewal Calculator</h3>
+            <!-- Right Column: Tools & Config -->
+            <div class="space-y-8">
                 
-                <div class="flex bg-brand-50 p-1 rounded-xl mb-6">
-                    <button onclick="setCalcMode('interac')" id="btn-interac" class="flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm transition">Interac</button>
-                    <button onclick="setCalcMode('btc')" id="btn-btc" class="flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-brand-900 transition">Bitcoin</button>
-                </div>
-
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Select Package</label>
-                        <select id="calc-product" class="w-full p-2 bg-brand-50 rounded-lg border-none outline-none text-sm"></select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                        <input type="number" id="calc-qty" value="1" min="1" class="w-full p-2 bg-brand-50 rounded-lg border-none outline-none text-sm">
-                    </div>
+                <!-- Calculator Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-calculator"></i> Renewal Calculator</h3>
                     
-                    <div class="bg-brand-900 text-white p-4 rounded-xl flex justify-between items-center mt-4">
-                        <span>Total:</span>
-                        <span id="calc-total" class="text-xl font-bold">$0.00</span>
+                    <div class="flex bg-brand-50 p-1 rounded-xl mb-6">
+                        <button onclick="setCalcMode('interac')" id="btn-interac" class="flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm transition">Interac</button>
+                        <button onclick="setCalcMode('btc')" id="btn-btc" class="flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-brand-900 transition">Bitcoin</button>
                     </div>
 
-                    <p id="calc-instructions" class="text-xs text-gray-500 mt-2 leading-relaxed">
-                        <!-- Dynamic Instructions based on toggle -->
-                    </p>
-                </div>
-            </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Select Package</label>
+                            <select id="calc-product" class="w-full p-2 bg-brand-50 rounded-lg border-none outline-none text-sm"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Quantity</label>
+                            <input type="number" id="calc-qty" value="1" min="1" class="w-full p-2 bg-brand-50 rounded-lg border-none outline-none text-sm">
+                        </div>
+                        
+                        <div class="bg-brand-900 text-white p-4 rounded-xl flex justify-between items-center mt-4">
+                            <span>Total:</span>
+                            <span id="calc-total" class="text-xl font-bold">$0.00</span>
+                        </div>
 
-            <!-- Configuration Card -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm md:col-span-2">
-                <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-sliders"></i> Configuration</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Devices -->
-                    <div>
-                        <h4 class="text-sm font-bold uppercase text-gray-400 mb-2">My Devices</h4>
-                        <div id="device-list" class="space-y-2 mb-2"></div>
-                        <div class="flex gap-2">
-                            <select id="new-device-select" class="flex-1 p-2 bg-brand-50 rounded-lg text-sm"></select>
-                            <button id="add-device-btn" class="bg-brand-800 text-white px-3 rounded-lg hover:bg-brand-900"><i class="fa-solid fa-plus"></i></button>
+                        <p id="calc-instructions" class="text-xs text-gray-500 mt-2 leading-relaxed">
+                            <!-- Dynamic Instructions based on toggle -->
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Configuration Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-sliders"></i> Preferences</h3>
+                    
+                    <div class="space-y-4">
+                        <!-- Devices -->
+                        <div>
+                            <h4 class="text-xs font-bold uppercase text-gray-400 mb-2">My Devices</h4>
+                            <div id="device-list" class="space-y-2 mb-2"></div>
+                            <div class="flex gap-2">
+                                <select id="new-device-select" class="flex-1 p-2 bg-brand-50 rounded-lg text-sm"></select>
+                                <button id="add-device-btn" class="bg-brand-800 text-white px-3 rounded-lg hover:bg-brand-900"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Live TV Categories -->
+                        <div>
+                            <h4 class="text-xs font-bold uppercase text-gray-400 mb-2">Live TV Preferences</h4>
+                            <select id="live-pref-select" class="w-full p-2 bg-brand-50 rounded-lg text-sm mb-2"></select>
+                            <div id="live-tags" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <!-- VOD Categories -->
+                        <div>
+                            <h4 class="text-xs font-bold uppercase text-gray-400 mb-2">VOD Preferences</h4>
+                            <select id="vod-pref-select" class="w-full p-2 bg-brand-50 rounded-lg text-sm mb-2"></select>
+                            <div id="vod-tags" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <!-- Custom Request -->
+                        <div>
+                            <h4 class="text-xs font-bold uppercase text-gray-400 mb-2">Custom Request</h4>
+                            <textarea id="custom-req" rows="2" class="w-full p-2 bg-brand-50 rounded-lg text-sm" placeholder="e.g. Italian channels..."></textarea>
                         </div>
                     </div>
-                    <!-- Bouquets/Tags -->
-                    <div>
-                        <h4 class="text-sm font-bold uppercase text-gray-400 mb-2">Bouquet Preferences</h4>
-                        <div id="bouquet-list" class="flex flex-wrap gap-2"></div>
-                    </div>
-                </div>
-                <button id="save-config-btn" class="mt-6 bg-brand-900 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-brand-800 transition">Save Changes</button>
-            </div>
-
-            <!-- Support / FAQ -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm md:col-span-2">
-                <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-headset"></i> Support & Setup</h3>
-                
-                <!-- Tabs -->
-                <div class="border-b border-gray-200 mb-4">
-                    <nav class="-mb-px flex space-x-8">
-                        <button onclick="switchTab('android')" class="tab-btn border-b-2 border-brand-900 pb-2 text-sm font-medium text-brand-900" data-tab="android">Android</button>
-                        <button onclick="switchTab('ios')" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 hover:text-brand-900" data-tab="ios">iOS / Apple TV</button>
-                    </nav>
+                    <button id="save-config-btn" class="mt-6 w-full bg-brand-900 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-brand-800 transition">Save Preferences</button>
                 </div>
 
-                <div id="tab-android" class="tab-content text-sm text-gray-600 space-y-2">
-                    <p>1. Download the app from the Play Store.</p>
-                    <p>2. Enter the Server URL and credentials from the dashboard above.</p>
-                </div>
-                <div id="tab-ios" class="tab-content hidden text-sm text-gray-600 space-y-2">
-                    <p>1. Use a compatible IPTV player like LillyPlayer or GSE.</p>
-                    <p>2. Select "Xtream Codes API" login method.</p>
-                </div>
-
-                <div class="mt-6 pt-6 border-t border-gray-100">
-                    <h4 class="text-sm font-bold mb-2">Contact Admin</h4>
-                    <a id="contact-link" href="#" class="inline-flex items-center text-brand-800 font-medium hover:underline">
-                        <i class="fa-regular fa-envelope mr-2"></i> Send Email Support Request
+                 <!-- Support -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-headset mr-2"></i>Support</h3>
+                     <a id="contact-link" href="#" class="block w-full text-center bg-gray-100 text-brand-900 font-bold py-3 rounded-xl hover:bg-gray-200 transition">
+                        Contact Admin
                     </a>
                 </div>
-            </div>
 
+            </div>
         </div>
     </div>
 
@@ -211,7 +215,8 @@
             where,
             getDocs,
             runTransaction,
-            arrayUnion
+            arrayUnion,
+            arrayRemove
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- INIT FIREBASE ---
@@ -223,27 +228,26 @@
         let currentUserData = null;
         let products = [];
         let availableDevices = [];
-        let availableBouquets = [];
+        let contentOptions = { live_list: [], vod_list: [] };
         let calcMode = 'interac';
 
         // --- UI FUNCTIONS ---
         window.toggleAuth = (view) => {
-            if(view === 'register') {
-                document.getElementById('login-form').classList.add('hidden');
-                document.getElementById('register-form').classList.remove('hidden');
-            } else {
-                document.getElementById('login-form').classList.remove('hidden');
-                document.getElementById('register-form').classList.add('hidden');
-            }
+            document.getElementById('login-form').classList.toggle('hidden', view === 'register');
+            document.getElementById('register-form').classList.toggle('hidden', view !== 'register');
         };
 
-        window.copyToClip = (id) => {
-            const copyText = document.getElementById(id);
-            copyText.select();
-            copyText.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(copyText.value);
+        window.copyText = (elementId) => {
+            const el = document.getElementById(elementId);
+            const text = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ? el.value : el.textContent;
+            navigator.clipboard.writeText(text);
             showToast('Copied to clipboard');
         };
+
+        window.copyString = (str) => {
+            navigator.clipboard.writeText(str);
+            showToast('Copied to clipboard');
+        }
 
         window.setCalcMode = (mode) => {
             calcMode = mode;
@@ -252,19 +256,7 @@
             updateCalculator();
         };
 
-        window.switchTab = (tab) => {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`tab-${tab}`).classList.remove('hidden');
-            document.querySelectorAll('.tab-btn').forEach(el => {
-                el.classList.remove('border-brand-900', 'text-brand-900');
-                el.classList.add('border-transparent', 'text-gray-500');
-            });
-            const activeBtn = document.querySelector(`button[data-tab="${tab}"]`);
-            activeBtn.classList.remove('border-transparent', 'text-gray-500');
-            activeBtn.classList.add('border-brand-900', 'text-brand-900');
-        };
-
-        function showToast(msg, type='success') {
+        function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toast-msg').textContent = msg;
             toast.classList.remove('translate-x-full', 'opacity-0');
@@ -283,14 +275,13 @@
             
             const instructions = calcMode === 'interac' 
                 ? `Please e-Transfer <b>${CONFIG.CURRENCY_SYMBOL}${total.toFixed(2)}</b> to <u>payments@example.com</u> using your email as the security answer.`
-                : `Send <b>${CONFIG.CRYPTO_SYMBOL}${(total / 50000).toFixed(6)}</b> (approx) to wallet: <u>bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</u>`;
+                : `Send <b>${CONFIG.CRYPTO_SYMBOL}${(total / 95000).toFixed(6)}</b> (est) to wallet: <u>bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</u>`;
             
             document.getElementById('calc-instructions').innerHTML = instructions;
         }
 
         // --- CORE LOGIC ---
 
-        // 1. Auth Listener
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 document.getElementById('auth-view').classList.add('hidden');
@@ -305,37 +296,36 @@
             }
         });
 
-        // 2. Data Loading
         async function loadDashboardData(user) {
-            // Load Configs first
+            // 1. Fetch Configs & Products
             const configSnap = await getDocs(collection(db, 'app_config'));
             const productSnap = await getDocs(collection(db, 'products'));
             
-            // Process Config
             configSnap.forEach(doc => {
                 if(doc.id === 'devices') availableDevices = doc.data().list || [];
-                if(doc.id === 'bouquets') availableBouquets = doc.data().list || [];
+                if(doc.id === 'content_options') contentOptions = doc.data();
             });
 
-            // Process Products
             products = [];
             const prodSelect = document.getElementById('calc-product');
             prodSelect.innerHTML = '';
             productSnap.forEach(doc => {
                 const p = { id: doc.id, ...doc.data() };
                 products.push(p);
-                const opt = document.createElement('option');
+            });
+            products.sort((a,b) => a.price - b.price);
+            products.forEach(p => {
+                 const opt = document.createElement('option');
                 opt.value = p.id;
                 opt.textContent = `${p.name} - ${CONFIG.CURRENCY_SYMBOL}${p.price}`;
                 prodSelect.appendChild(opt);
             });
 
-            // Add Event Listeners for Calc
             document.getElementById('calc-qty').addEventListener('input', updateCalculator);
             document.getElementById('calc-product').addEventListener('change', updateCalculator);
             updateCalculator();
 
-            // Load User Data
+            // 2. Fetch User Data
             const userDocRef = doc(db, 'users', user.uid);
             const userDoc = await getDoc(userDocRef);
 
@@ -343,38 +333,106 @@
                 currentUserData = userDoc.data();
                 renderUserData(currentUserData);
             } else {
-                // Should have been handled by migration, but fallback
-                console.error("User doc missing");
+                console.error("User doc missing"); // Should be handled by migration
+            }
+        }
+
+        function renderUserData(data) {
+            // Header
+            document.getElementById('user-name-display').textContent = data.full_name || 'Client';
+            document.getElementById('wallet-balance').textContent = (data.credits_allocated || 0) + ' Credits';
+            document.getElementById('global-domain').textContent = data.domain_8k || 'Contact Admin';
+            document.getElementById('global-backup').textContent = data.domain_8k_backup || 'Contact Admin';
+
+            // Licenses Loop
+            const licContainer = document.getElementById('licenses-container');
+            licContainer.innerHTML = '';
+            
+            const licenses = data.licenses || [];
+            
+            if (licenses.length === 0) {
+                // Fallback for legacy single-field users (if any left) or empty
+                if(data.username_8k) {
+                     licContainer.innerHTML = createLicenseCard({
+                        label: 'Primary Connection',
+                        username_8k: data.username_8k,
+                        password_8k: data.password_8k,
+                        expiry_date: data.expiry_date,
+                        status: data.status,
+                        m3u_url_8k: data.m3u_url_8k,
+                        epg_url_8k: data.epg_url_8k
+                     });
+                } else {
+                     licContainer.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center border-2 border-dashed border-gray-200 text-gray-400">
+                        <i class="fa-solid fa-ticket text-4xl mb-2"></i><br>
+                        No active licenses found. Please contact support.
+                     </div>`;
+                }
+            } else {
+                licenses.forEach(lic => {
+                    licContainer.innerHTML += createLicenseCard(lic);
+                });
             }
 
             renderConfigUI();
         }
 
-        function renderUserData(data) {
-            // Status
-            const badge = document.getElementById('status-badge');
-            const status = data.status || 'Pending';
-            let colorClass = 'bg-yellow-100 text-yellow-800';
-            let dotClass = 'bg-yellow-400';
-            
-            if (status === 'Active') {
-                colorClass = 'bg-green-100 text-green-800';
-                dotClass = 'bg-green-400';
-            } else if (status === 'Expired' || status === 'Banned') {
-                colorClass = 'bg-red-100 text-red-800';
-                dotClass = 'bg-red-400';
-            }
-            
-            badge.className = `mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colorClass}`;
-            badge.innerHTML = `<span class="w-2 h-2 rounded-full ${dotClass} mr-2"></span> ${status}`;
+        function createLicenseCard(lic) {
+            let statusColor = 'bg-gray-100 text-gray-500';
+            if(lic.status === 'Active') statusColor = 'bg-green-100 text-green-700';
+            if(lic.status === 'Expired') statusColor = 'bg-red-100 text-red-700';
+            if(lic.status === 'Banned') statusColor = 'bg-black text-white';
 
-            // Credentials
-            document.getElementById('cred-url').value = data.portal_url || "Pending Activation";
-            document.getElementById('cred-user').value = data.username || "Pending";
-            document.getElementById('cred-pass').value = data.password ? "••••••••" : "Pending"; // Mask password visually or show real? Usually show real for IPTV
-            if(data.password) document.getElementById('cred-pass').value = data.password;
-            
-            document.getElementById('cred-expiry').textContent = data.expiry_date || "N/A";
+            return `
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative group transition hover:shadow-md">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h4 class="font-bold text-lg text-brand-900">${lic.label || 'License'}</h4>
+                        <div class="text-xs text-gray-400 font-mono mt-1">EXP: ${lic.expiry_date || 'N/A'}</div>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColor}">${lic.status || 'Unknown'}</span>
+                </div>
+
+                <div class="space-y-3 bg-brand-50 p-4 rounded-xl">
+                    <!-- User/Pass -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Username</label>
+                            <div class="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
+                                <span class="text-sm font-mono text-gray-700 select-all">${lic.username_8k}</span>
+                                <button onclick="copyString('${lic.username_8k}')" class="text-gray-300 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Password</label>
+                            <div class="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
+                                <span class="text-sm font-mono text-gray-700 select-all">${lic.password_8k}</span>
+                                <button onclick="copyString('${lic.password_8k}')" class="text-gray-300 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Links -->
+                    ${lic.m3u_url_8k ? `
+                    <div>
+                        <label class="text-[10px] uppercase font-bold text-gray-400 block mb-1">8K M3U URL</label>
+                        <div class="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
+                            <input readonly value="${lic.m3u_url_8k}" class="w-full text-xs font-mono text-gray-500 bg-transparent outline-none">
+                            <button onclick="copyString('${lic.m3u_url_8k}')" class="ml-2 text-gray-300 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                    </div>` : ''}
+                    
+                     ${lic.epgenius_url ? `
+                    <div>
+                        <label class="text-[10px] uppercase font-bold text-blue-400 block mb-1">EPGenius M3U (GDrive)</label>
+                        <div class="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
+                            <input readonly value="${lic.epgenius_url}" class="w-full text-xs font-mono text-gray-500 bg-transparent outline-none">
+                            <button onclick="copyString('${lic.epgenius_url}')" class="ml-2 text-gray-300 hover:text-blue-600"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                    </div>` : ''}
+
+                </div>
+            </div>`;
         }
 
         function renderConfigUI() {
@@ -390,7 +448,6 @@
                 deviceList.appendChild(div);
             });
 
-            // Populate Add Device Select
             const devSelect = document.getElementById('new-device-select');
             devSelect.innerHTML = '<option value="">Select Device...</option>';
             availableDevices.forEach(d => {
@@ -402,29 +459,47 @@
                 }
             });
 
-            // Bouquets
-            const bouquetList = document.getElementById('bouquet-list');
-            bouquetList.innerHTML = '';
-            const userBouquets = currentUserData?.bouquets || [];
-            
-            availableBouquets.forEach(b => {
-                const isActive = userBouquets.includes(b);
-                const btn = document.createElement('button');
-                btn.className = `px-3 py-1 rounded-full text-xs font-bold border transition ${isActive ? 'bg-brand-800 text-white border-brand-800' : 'bg-white text-gray-500 border-gray-200 hover:border-brand-800'}`;
-                btn.textContent = b;
-                btn.onclick = () => toggleBouquet(b);
-                bouquetList.appendChild(btn);
-            });
+            // Config Selectors Helper
+            const renderTags = (containerId, selectedList, allOptions, type) => {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
+                selectedList.forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.className = 'bg-brand-900 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2';
+                    btn.innerHTML = `${item} <i class="fa-solid fa-times"></i>`;
+                    btn.onclick = () => togglePref(type, item);
+                    container.appendChild(btn);
+                });
+
+                const select = document.getElementById(type === 'live' ? 'live-pref-select' : 'vod-pref-select');
+                select.innerHTML = `<option value="">Add ${type === 'live' ? 'Live' : 'VOD'} Category...</option>`;
+                allOptions.forEach(opt => {
+                    if(!selectedList.includes(opt)) {
+                        const o = document.createElement('option');
+                        o.value = opt;
+                        o.textContent = opt;
+                        select.appendChild(o);
+                    }
+                });
+            };
+
+            renderTags('live-tags', currentUserData.live_preferences || [], contentOptions.live_list || [], 'live');
+            renderTags('vod-tags', currentUserData.vod_preferences || [], contentOptions.vod_list || [], 'vod');
+
+            document.getElementById('custom-req').value = currentUserData.custom_request || '';
+
+            // Event listeners for dropdowns
+            document.getElementById('live-pref-select').onchange = (e) => { if(e.target.value) togglePref('live', e.target.value); };
+            document.getElementById('vod-pref-select').onchange = (e) => { if(e.target.value) togglePref('vod', e.target.value); };
         }
 
         // --- ACTIONS ---
 
         window.removeDevice = async (device) => {
             const userRef = doc(db, 'users', auth.currentUser.uid);
-            // Simple arrayRemove logic manually
-            const newDevices = (currentUserData.devices || []).filter(d => d !== device);
-            await updateDoc(userRef, { devices: newDevices });
-            currentUserData.devices = newDevices;
+            await updateDoc(userRef, { devices: arrayRemove(device) });
+            // Optimistic update
+            currentUserData.devices = currentUserData.devices.filter(d => d !== device);
             renderConfigUI();
             showToast('Device removed');
         };
@@ -440,20 +515,38 @@
             showToast('Device added');
         });
 
-        window.toggleBouquet = async (bouquet) => {
-            const userRef = doc(db, 'users', auth.currentUser.uid);
-            let current = currentUserData.bouquets || [];
-            if(current.includes(bouquet)) {
-                current = current.filter(b => b !== bouquet);
+        window.togglePref = async (type, val) => {
+            const field = type === 'live' ? 'live_preferences' : 'vod_preferences';
+            let list = currentUserData[field] || [];
+            
+            if(list.includes(val)) {
+                list = list.filter(i => i !== val);
             } else {
-                current.push(bouquet);
+                list.push(val);
             }
-            await updateDoc(userRef, { bouquets: current });
-            currentUserData.bouquets = current;
+
+            // Local update for immediate UI feel
+            currentUserData[field] = list;
             renderConfigUI();
+
+            // Note: We won't save to DB on every click to save writes, 
+            // relying on the main "Save Preferences" button for the heavy lift 
+            // OR we can do it here. Given the UI has a "Save" button, let's wait for that.
+            // ACTUALLY: The removeDevice was immediate. Let's make this consistent.
+            // But UI has a "Save Preferences" button... let's make the Save button do it all.
         };
 
-        // --- AUTH & MIGRATION HANDLERS ---
+        document.getElementById('save-config-btn').addEventListener('click', async () => {
+            const userRef = doc(db, 'users', auth.currentUser.uid);
+            await updateDoc(userRef, {
+                live_preferences: currentUserData.live_preferences || [],
+                vod_preferences: currentUserData.vod_preferences || [],
+                custom_request: document.getElementById('custom-req').value
+            });
+            showToast('Preferences Saved');
+        });
+
+        // --- AUTH & MIGRATION ---
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -462,7 +555,7 @@
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
             } catch (err) {
-                showToast(err.message, 'error');
+                showToast(err.message);
             }
         });
 
@@ -472,52 +565,49 @@
             const email = document.getElementById('reg-email').value;
             const pass = document.getElementById('reg-pass').value;
 
-            // 1. Client Gatekeeping
             if (code !== CONFIG.INVITE_CODE) {
-                showToast("Invalid Invite Code", 'error');
+                showToast("Invalid Invite Code");
                 return;
             }
 
             try {
-                // 2. Create Auth User
                 const userCred = await createUserWithEmailAndPassword(auth, email, pass);
                 const user = userCred.user;
 
-                // 3. MIGRATION LOGIC (Crucial)
-                // Look for existing doc by email. 
-                // Security Rule allows this specific query: resource.data.email == auth.email
+                // MIGRATION LOGIC
                 const q = query(collection(db, "users"), where("email", "==", email));
                 const querySnapshot = await getDocs(q);
 
                 if (!querySnapshot.empty) {
-                    // FOUND PRE-CREATED ACCOUNT
+                    // Claim existing admin-created doc
                     const oldDoc = querySnapshot.docs[0];
                     const oldData = oldDoc.data();
                     
-                    // Transaction: Copy to new UID, Delete old
                     await runTransaction(db, async (transaction) => {
                         const newDocRef = doc(db, "users", user.uid);
                         const oldDocRef = doc(db, "users", oldDoc.id);
-                        
                         transaction.set(newDocRef, oldData);
                         transaction.delete(oldDocRef);
                     });
                     showToast('Account claimed successfully!');
                 } else {
-                    // NEW USER
+                    // New User - Initialize with NEW SCHEMA arrays
                     await setDoc(doc(db, "users", user.uid), {
                         email: email,
                         status: "Pending",
                         created_at: new Date().toISOString(),
                         devices: [],
-                        bouquets: []
+                        licenses: [], // Empty array for new users
+                        live_preferences: ["Elliot's Default (QC + Sports + English)"], 
+                        vod_preferences: ["Elliot's Default (Movies & Series)"], 
+                        custom_request: "",
+                        credits_allocated: 0
                     });
                     showToast('Account created successfully!');
                 }
-
             } catch (err) {
                 console.error(err);
-                showToast(err.message, 'error');
+                showToast(err.message);
             }
         });
 
@@ -525,3 +615,5 @@
     </script>
 </body>
 </html>
+
+
