@@ -65,11 +65,10 @@
                 <div class="text-xs text-gray-400 mt-1" id="user-email-display"></div>
             </div>
             <div class="flex items-center gap-4">
-                <div class="bg-brand-50 px-4 py-2 rounded-xl text-sm">
-                    <span class="text-gray-400 font-bold uppercase text-xs block">Wallet Balance</span>
-                    <span class="font-bold text-brand-900 text-lg" id="wallet-balance">0 Credits</span>
-                </div>
-                <button id="logout-btn" class="text-brand-900 hover:text-red-600 transition px-2"><i class="fa-solid fa-right-from-bracket fa-lg"></i></button>
+                <button id="logout-btn" class="text-brand-900 hover:text-red-600 transition px-2 flex items-center gap-2">
+                    <span class="text-sm font-bold">Sign Out</span>
+                    <i class="fa-solid fa-right-from-bracket fa-lg"></i>
+                </button>
             </div>
         </header>
 
@@ -127,10 +126,6 @@
                             <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Select Package</label>
                             <select id="calc-product" class="w-full p-2 bg-brand-50 rounded-lg border-none outline-none text-sm"></select>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Quantity</label>
-                            <input type="number" id="calc-qty" value="1" min="1" class="w-full p-2 bg-brand-50 rounded-lg border-none outline-none text-sm">
-                        </div>
                         
                         <div class="bg-brand-900 text-white p-4 rounded-xl flex justify-between items-center mt-4">
                             <span>Total:</span>
@@ -150,7 +145,8 @@
                     <div class="space-y-4">
                         <!-- Devices -->
                         <div>
-                            <h4 class="text-xs font-bold uppercase text-gray-400 mb-2">My Devices</h4>
+                            <h4 class="text-xs font-bold uppercase text-gray-400 mb-2">Device Inventory (For Support)</h4>
+                            <p class="text-[11px] text-gray-500 mb-2 leading-tight">Adding a device here does not create a new connection line. To add a screen, please contact Elliot.</p>
                             <div id="device-list" class="space-y-2 mb-2"></div>
                             <div class="flex gap-2">
                                 <select id="new-device-select" class="flex-1 p-2 bg-brand-50 rounded-lg text-sm"></select>
@@ -185,7 +181,7 @@
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                     <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-headset mr-2"></i>Support</h3>
                      <a id="contact-link" href="#" class="block w-full text-center bg-gray-100 text-brand-900 font-bold py-3 rounded-xl hover:bg-gray-200 transition">
-                        Contact Admin
+                        Contact Elliot
                     </a>
                 </div>
 
@@ -264,7 +260,8 @@
         }
 
         function updateCalculator() {
-            const qty = parseInt(document.getElementById('calc-qty').value) || 1;
+            // Quantity is always 1 for subscriptions/donations in this view
+            const qty = 1; 
             const productId = document.getElementById('calc-product').value;
             const product = products.find(p => p.id === productId);
             
@@ -297,7 +294,19 @@
         });
 
         async function loadDashboardData(user) {
-            // 1. Fetch Configs & Products
+            // 1. Fetch User Data First (Needed for conditional products)
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists()) {
+                currentUserData = userDoc.data();
+                renderUserData(currentUserData);
+            } else {
+                console.error("User doc missing"); 
+                return;
+            }
+
+            // 2. Fetch Configs & Products
             const configSnap = await getDocs(collection(db, 'app_config'));
             const productSnap = await getDocs(collection(db, 'products'));
             
@@ -307,13 +316,27 @@
             });
 
             products = [];
-            const prodSelect = document.getElementById('calc-product');
-            prodSelect.innerHTML = '';
             productSnap.forEach(doc => {
                 const p = { id: doc.id, ...doc.data() };
                 products.push(p);
             });
             products.sort((a,b) => a.price - b.price);
+
+            // 3. Conditional Product Logic (Donation)
+            // Check if ANY license has an EPGenius URL
+            const hasEPGenius = currentUserData.licenses && currentUserData.licenses.some(l => l.epgenius_url && l.epgenius_url.trim() !== "");
+            
+            if (hasEPGenius) {
+                products.push({
+                    id: 'donation_epgenius',
+                    name: 'Donate to EPGenius Curator (One-time)',
+                    price: 20
+                });
+            }
+
+            // Render Product Dropdown
+            const prodSelect = document.getElementById('calc-product');
+            prodSelect.innerHTML = '';
             products.forEach(p => {
                  const opt = document.createElement('option');
                 opt.value = p.id;
@@ -321,26 +344,15 @@
                 prodSelect.appendChild(opt);
             });
 
-            document.getElementById('calc-qty').addEventListener('input', updateCalculator);
             document.getElementById('calc-product').addEventListener('change', updateCalculator);
-            updateCalculator();
-
-            // 2. Fetch User Data
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
-
-            if (userDoc.exists()) {
-                currentUserData = userDoc.data();
-                renderUserData(currentUserData);
-            } else {
-                console.error("User doc missing"); // Should be handled by migration
-            }
+            updateCalculator(); // init
+            renderConfigUI();
         }
 
         function renderUserData(data) {
             // Header
             document.getElementById('user-name-display').textContent = data.full_name || 'Client';
-            document.getElementById('wallet-balance').textContent = (data.credits_allocated || 0) + ' Credits';
+            // Wallet balance removed
             document.getElementById('global-domain').textContent = data.domain_8k || 'Contact Admin';
             document.getElementById('global-backup').textContent = data.domain_8k_backup || 'Contact Admin';
 
@@ -351,7 +363,7 @@
             const licenses = data.licenses || [];
             
             if (licenses.length === 0) {
-                // Fallback for legacy single-field users (if any left) or empty
+                // Fallback for legacy single-field users
                 if(data.username_8k) {
                      licContainer.innerHTML = createLicenseCard({
                         label: 'Primary Connection',
@@ -365,7 +377,7 @@
                 } else {
                      licContainer.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center border-2 border-dashed border-gray-200 text-gray-400">
                         <i class="fa-solid fa-ticket text-4xl mb-2"></i><br>
-                        No active licenses found. Please contact support.
+                        No active licenses found. Please contact Elliot.
                      </div>`;
                 }
             } else {
@@ -373,8 +385,6 @@
                     licContainer.innerHTML += createLicenseCard(lic);
                 });
             }
-
-            renderConfigUI();
         }
 
         function createLicenseCard(lic) {
@@ -424,7 +434,7 @@
                     
                      ${lic.epgenius_url ? `
                     <div>
-                        <label class="text-[10px] uppercase font-bold text-blue-400 block mb-1">EPGenius M3U (GDrive)</label>
+                        <label class="text-[10px] uppercase font-bold text-blue-400 block mb-1">EPGenius Playlist URL</label>
                         <div class="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
                             <input readonly value="${lic.epgenius_url}" class="w-full text-xs font-mono text-gray-500 bg-transparent outline-none">
                             <button onclick="copyString('${lic.epgenius_url}')" class="ml-2 text-gray-300 hover:text-blue-600"><i class="fa-regular fa-copy"></i></button>
@@ -528,12 +538,6 @@
             // Local update for immediate UI feel
             currentUserData[field] = list;
             renderConfigUI();
-
-            // Note: We won't save to DB on every click to save writes, 
-            // relying on the main "Save Preferences" button for the heavy lift 
-            // OR we can do it here. Given the UI has a "Save" button, let's wait for that.
-            // ACTUALLY: The removeDevice was immediate. Let's make this consistent.
-            // But UI has a "Save Preferences" button... let's make the Save button do it all.
         };
 
         document.getElementById('save-config-btn').addEventListener('click', async () => {
@@ -615,5 +619,3 @@
     </script>
 </body>
 </html>
-
-
