@@ -129,36 +129,20 @@
                 </div>
             </div>
 
-            <!-- WIDGET 4: DEVICE INVENTORY -->
+            <!-- WIDGET 4: DEVICE INVENTORY (Digital Locker Style) -->
             <div class="break-inside-avoid space-y-4">
-                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Device Inventory</h3>
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <p class="text-[11px] text-gray-400 mb-4">List your hardware for support reference. Does not create a connection.</p>
-                    
-                    <div class="flex gap-2 mb-4">
-                        <div class="relative flex-1">
-                            <input type="text" id="new-device-name" placeholder="Device Name" class="w-full pl-3 pr-2 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-900 outline-none">
-                        </div>
-                        <select id="new-device-type" class="bg-gray-50 rounded-xl text-sm border-none outline-none px-2 text-brand-900 font-bold cursor-pointer w-24">
-                            <option value="tv">📺 TV</option>
-                            <option value="box">📦 Box</option>
-                            <option value="mobile">📱 Phone</option>
-                            <option value="laptop">💻 PC</option>
-                        </select>
-                        <button id="add-device-btn" class="bg-brand-900 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-brand-800 shadow-sm"><i class="fa-solid fa-plus"></i></button>
-                    </div>
-
-                    <div id="device-list-container" class="space-y-2">
-                        <!-- Dynamic Device List -->
-                    </div>
-                </div>
-                
-                <!-- Support Link -->
-                <div class="text-center pt-4">
-                    <a id="contact-link" href="#" class="inline-flex items-center gap-2 text-gray-400 text-xs hover:text-brand-900 hover:underline transition">
-                        <i class="fa-regular fa-envelope"></i> Contact Elliot for Support
+                <div class="flex justify-between items-end">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Device Inventory</h3>
+                    <a id="contact-link-devices" href="#" class="text-[10px] text-gray-400 hover:text-brand-900 hover:underline">
+                        <i class="fa-regular fa-envelope mr-1"></i>Contact Elliot
                     </a>
                 </div>
+                
+                <div id="device-grid" class="grid grid-cols-2 gap-4">
+                    <!-- Dynamic Device Cards + Add Button -->
+                </div>
+                
+                <p class="text-[10px] text-gray-400 text-center pt-2">Listing devices here helps support diagnosis. It does not create a connection.</p>
             </div>
 
         </div> <!-- End Masonry -->
@@ -190,6 +174,50 @@
                             I've Sent Payment
                         </a>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden Add Device Modal (School A Style) -->
+        <div id="add-device-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up p-6 space-y-6">
+                <div class="text-center">
+                    <h4 class="text-lg font-bold text-brand-900">Add New Device</h4>
+                    <p class="text-xs text-gray-400 mt-1">What kind of hardware is it?</p>
+                </div>
+
+                <!-- Step 1: Icon Selection -->
+                <div class="grid grid-cols-4 gap-4" id="device-type-selector">
+                    <button onclick="selectDeviceType('tv')" class="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-brand-900 hover:bg-brand-50 transition group">
+                        <i class="fa-solid fa-tv text-2xl text-gray-300 group-hover:text-brand-900"></i>
+                        <span class="text-[10px] font-bold text-gray-400 group-hover:text-brand-900">TV</span>
+                    </button>
+                    <button onclick="selectDeviceType('box')" class="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-brand-900 hover:bg-brand-50 transition group">
+                        <i class="fa-solid fa-box text-2xl text-gray-300 group-hover:text-brand-900"></i>
+                        <span class="text-[10px] font-bold text-gray-400 group-hover:text-brand-900">Box</span>
+                    </button>
+                    <button onclick="selectDeviceType('mobile')" class="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-brand-900 hover:bg-brand-50 transition group">
+                        <i class="fa-solid fa-mobile-screen text-2xl text-gray-300 group-hover:text-brand-900"></i>
+                        <span class="text-[10px] font-bold text-gray-400 group-hover:text-brand-900">Phone</span>
+                    </button>
+                    <button onclick="selectDeviceType('laptop')" class="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-brand-900 hover:bg-brand-50 transition group">
+                        <i class="fa-solid fa-laptop text-2xl text-gray-300 group-hover:text-brand-900"></i>
+                        <span class="text-[10px] font-bold text-gray-400 group-hover:text-brand-900">PC</span>
+                    </button>
+                </div>
+
+                <!-- Step 2: Naming (Hidden until type selected) -->
+                <div id="device-name-input-group" class="hidden space-y-4 animate-fade-in">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Device Name</label>
+                        <input type="text" id="modal-device-name" placeholder="e.g. Bedroom Firestick" class="w-full p-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-900 outline-none">
+                        <input type="hidden" id="modal-device-type">
+                    </div>
+                    <button onclick="confirmAddDevice()" class="w-full py-3 bg-brand-900 text-white rounded-xl font-bold hover:bg-brand-800 transition">Save Device</button>
+                </div>
+
+                <div class="pt-2 border-t border-gray-100">
+                    <button onclick="closeModal('add-device-modal')" class="w-full py-2 text-xs font-bold text-gray-400 hover:text-brand-900">Cancel</button>
                 </div>
             </div>
         </div>
@@ -250,7 +278,15 @@
             showToast('Copied to clipboard');
         }
 
-        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+        window.closeModal = (id) => {
+            document.getElementById(id).classList.add('hidden');
+            if(id === 'add-device-modal') {
+                // Reset device modal state
+                document.getElementById('device-name-input-group').classList.add('hidden');
+                document.getElementById('device-type-selector').classList.remove('opacity-50', 'pointer-events-none');
+                document.getElementById('modal-device-name').value = '';
+            }
+        };
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -267,6 +303,7 @@
                 document.getElementById('dashboard-view').classList.remove('hidden');
                 document.getElementById('user-email-display').textContent = user.email;
                 document.getElementById('contact-link').href = CONFIG.CONTACT_LINK;
+                document.getElementById('contact-link-devices').href = CONFIG.CONTACT_LINK;
                 
                 await loadDashboardData(user);
             } else {
@@ -351,7 +388,6 @@
             if(lic.status === 'Expired') statusColor = 'bg-red-100 text-red-700';
             if(lic.status === 'Banned') statusColor = 'bg-black text-white';
 
-            // Use Global or License specific domains
             const mainDomain = currentUserData.domain_8k || 'Contact Admin';
             const backDomain = currentUserData.domain_8k_backup || 'Contact Admin';
 
@@ -369,7 +405,7 @@
                 </div>
 
                 <div class="space-y-3 bg-brand-50 p-4 rounded-xl">
-                    <!-- Global Server URLs (Moved Here) -->
+                    <!-- Global Server URLs -->
                     <div class="grid grid-cols-1 gap-2 mb-4 pb-4 border-b border-gray-200/50">
                         <div class="flex items-center justify-between">
                             <span class="text-[9px] uppercase font-bold text-gray-400">Server URL</span>
@@ -434,7 +470,6 @@
             list.innerHTML = '';
             
             products.forEach(p => {
-                // Determine icon based on product name keywords
                 let icon = 'fa-box-open';
                 if(p.name.toLowerCase().includes('month')) icon = 'fa-calendar-check';
                 if(p.name.toLowerCase().includes('year')) icon = 'fa-crown';
@@ -464,7 +499,6 @@
             document.getElementById('modal-product-name').textContent = name;
             document.getElementById('modal-product-price').textContent = `${CONFIG.CURRENCY_SYMBOL}${price}`;
             
-            // Build Mailto Link
             const subject = encodeURIComponent(`Payment Sent: ${name} (${currentUserData.email})`);
             const body = encodeURIComponent(`Hi Elliot,\n\nI have sent an e-transfer of $${price} for the ${name} package.\n\nAccount Email: ${currentUserData.email}\n\nThanks!`);
             document.getElementById('notify-link').href = `mailto:e.chinerman@gmail.com?subject=${subject}&body=${body}`;
@@ -472,10 +506,9 @@
             document.getElementById('purchase-modal').classList.remove('hidden');
         };
 
-        // --- DEVICE INVENTORY (LIST STYLE) ---
+        // --- DEVICE INVENTORY (GRID / SCHOOL A) ---
 
         function renderConfigUI() {
-            // Live/VOD Tags
             const renderTags = (containerId, selectedList, allOptions, type) => {
                 const container = document.getElementById(containerId);
                 container.innerHTML = '';
@@ -502,30 +535,20 @@
             renderTags('live-tags', currentUserData.live_preferences || [], contentOptions.live_list || [], 'live');
             renderTags('vod-tags', currentUserData.vod_preferences || [], contentOptions.vod_list || [], 'vod');
             
-            // Event listeners for dropdowns
             document.getElementById('live-pref-select').onchange = (e) => { if(e.target.value) togglePref('live', e.target.value); };
             document.getElementById('vod-pref-select').onchange = (e) => { if(e.target.value) togglePref('vod', e.target.value); };
-
-            // Custom Request
             document.getElementById('custom-req').value = currentUserData.custom_request || '';
 
-            // Render Device List
-            renderDeviceList();
+            renderDeviceGrid();
         }
 
-        function renderDeviceList() {
-            const list = document.getElementById('device-list-container');
-            list.innerHTML = '';
+        function renderDeviceGrid() {
+            const grid = document.getElementById('device-grid');
+            grid.innerHTML = '';
             
             const userDevices = currentUserData?.devices || [];
             
-            if (userDevices.length === 0) {
-                list.innerHTML = '<div class="text-center text-[10px] text-gray-300 italic py-2">No devices listed</div>';
-                return;
-            }
-
             userDevices.forEach(devStr => {
-                // Parse "Name (Type)" or just "Name"
                 let name = devStr;
                 let icon = 'fa-tv';
 
@@ -535,25 +558,46 @@
                 else if(devStr.includes('📺')) { icon = 'fa-tv'; name = devStr.replace('📺 ', ''); }
 
                 const el = document.createElement('div');
-                el.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition';
+                el.className = 'bg-white rounded-2xl p-4 shadow-md flex flex-col items-center justify-center gap-3 aspect-square relative group hover:shadow-xl transition';
                 el.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid ${icon} text-gray-400 text-xs"></i>
-                        <span class="text-xs font-bold text-gray-700">${name}</span>
+                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+                        <button onclick="removeDevice('${devStr}')" class="text-red-300 hover:text-red-500"><i class="fa-solid fa-times-circle"></i></button>
                     </div>
-                    <button onclick="removeDevice('${devStr}')" class="text-gray-300 hover:text-red-500 transition"><i class="fa-solid fa-times"></i></button>
+                    <i class="fa-solid ${icon} text-4xl text-gray-300 group-hover:text-brand-900 transition"></i>
+                    <span class="text-xs font-bold text-gray-600 text-center leading-tight px-1 truncate w-full">${name}</span>
                 `;
-                list.appendChild(el);
+                grid.appendChild(el);
             });
+
+            // Add Button Card
+            const addBtn = document.createElement('button');
+            addBtn.onclick = () => openAddDeviceModal();
+            addBtn.className = 'rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 aspect-square hover:border-brand-900 hover:bg-gray-50 transition group';
+            addBtn.innerHTML = `
+                <i class="fa-solid fa-plus text-2xl text-gray-300 group-hover:text-brand-900"></i>
+                <span class="text-[10px] font-bold text-gray-400 group-hover:text-brand-900 uppercase">Add Slot</span>
+            `;
+            grid.appendChild(addBtn);
         }
 
-        document.getElementById('add-device-btn').addEventListener('click', async () => {
-            const name = document.getElementById('new-device-name').value;
-            const type = document.getElementById('new-device-type').value;
+        // --- NEW DEVICE MODAL LOGIC ---
+        window.openAddDeviceModal = () => {
+            document.getElementById('add-device-modal').classList.remove('hidden');
+        };
+
+        window.selectDeviceType = (type) => {
+            document.getElementById('modal-device-type').value = type;
+            document.getElementById('device-type-selector').classList.add('opacity-50', 'pointer-events-none');
+            document.getElementById('device-name-input-group').classList.remove('hidden');
+            document.getElementById('modal-device-name').focus();
+        };
+
+        window.confirmAddDevice = async () => {
+            const name = document.getElementById('modal-device-name').value;
+            const type = document.getElementById('modal-device-type').value;
             
             if(!name) return;
 
-            // Encode type into string for storage (Simple approach)
             let emoji = '📺';
             if(type === 'mobile') emoji = '📱';
             if(type === 'box') emoji = '📦';
@@ -567,28 +611,27 @@
             if(!currentUserData.devices) currentUserData.devices = [];
             currentUserData.devices.push(val);
             
-            document.getElementById('new-device-name').value = ''; // Reset input
-            renderDeviceList();
+            renderDeviceGrid();
+            closeModal('add-device-modal');
             showToast('Device added');
-        });
+        };
 
         window.removeDevice = async (device) => {
+            if(!confirm("Remove this device?")) return;
             const userRef = doc(db, 'users', auth.currentUser.uid);
             await updateDoc(userRef, { devices: arrayRemove(device) });
             currentUserData.devices = currentUserData.devices.filter(d => d !== device);
-            renderDeviceList();
+            renderDeviceGrid();
             showToast('Device removed');
         };
 
         window.togglePref = async (type, val) => {
             const field = type === 'live' ? 'live_preferences' : 'vod_preferences';
             let list = currentUserData[field] || [];
-            
             if(list.includes(val)) list = list.filter(i => i !== val);
             else list.push(val);
-
             currentUserData[field] = list;
-            renderConfigUI(); // Optimistic UI update
+            renderConfigUI(); 
         };
 
         document.getElementById('save-config-btn').addEventListener('click', async () => {
