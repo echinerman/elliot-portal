@@ -81,7 +81,7 @@
             <div class="p-4 border-b border-gray-100 flex justify-between items-center">
                 <h2 class="font-bold text-lg">User Roster</h2>
                 <div class="flex gap-2">
-                    <input type="text" id="search-input" placeholder="Search email..." class="bg-gray-50 p-2 rounded-lg text-sm outline-none border border-gray-200 focus:border-brand-900">
+                    <input type="text" id="search-input" placeholder="Search name or email..." class="bg-gray-50 p-2 rounded-lg text-sm outline-none border border-gray-200 focus:border-brand-900">
                     <button onclick="seedData()" class="bg-gray-200 text-gray-600 px-3 py-1 rounded text-xs hover:bg-gray-300">Seed Defaults</button>
                     <button onclick="openUserModal()" class="bg-brand-900 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-brand-800">+ New User</button>
                 </div>
@@ -90,9 +90,9 @@
                 <table class="w-full text-sm text-left">
                     <thead class="text-xs text-gray-400 uppercase bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3">User / Email</th>
+                            <th class="px-6 py-3">User</th>
                             <th class="px-6 py-3">Status</th>
-                            <th class="px-6 py-3">Credits/Expiry</th>
+                            <th class="px-6 py-3">8K Details</th>
                             <th class="px-6 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -105,50 +105,116 @@
 
     </div>
 
-    <!-- User Modal -->
-    <div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl transform transition-all">
-            <h3 class="text-lg font-bold mb-4">Edit / Create User</h3>
-            <form id="user-form" class="space-y-4">
+    <!-- User Modal (Expanded) -->
+    <div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 overflow-y-auto py-10">
+        <div class="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-2xl transform transition-all my-auto relative">
+            <button onclick="closeModal('user-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-lg font-bold mb-4 border-b pb-2">Edit / Create User</h3>
+            
+            <form id="user-form" class="space-y-6">
                 <input type="hidden" id="edit-uid">
+                
+                <!-- Section 1: Identity -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase">Email</label>
-                        <input type="email" id="edit-email" class="w-full p-2 border rounded-lg" required>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+                        <input type="text" id="edit-name" class="w-full p-2 border rounded-lg text-sm bg-gray-50" placeholder="John Doe">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase">Status</label>
-                        <select id="edit-status" class="w-full p-2 border rounded-lg">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
+                        <input type="email" id="edit-email" class="w-full p-2 border rounded-lg text-sm bg-gray-50" required>
+                    </div>
+                </div>
+
+                <!-- Section 2: Status & Expiry -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status</label>
+                        <select id="edit-status" class="w-full p-2 border rounded-lg text-sm bg-white">
                             <option value="Pending">Pending</option>
                             <option value="Active">Active</option>
                             <option value="Expired">Expired</option>
                             <option value="Banned">Banned</option>
                         </select>
                     </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase">Expiry Date</label>
-                        <input type="date" id="edit-expiry" class="w-full p-2 border rounded-lg">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">8K Expiration</label>
+                        <input type="date" id="edit-expiry" class="w-full p-2 border rounded-lg text-sm bg-white">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase">Credits Alloc.</label>
-                        <input type="number" id="edit-credits" value="0" class="w-full p-2 border rounded-lg">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Credits Alloc.</label>
+                        <input type="number" id="edit-credits" value="0" class="w-full p-2 border rounded-lg text-sm bg-white">
                     </div>
                 </div>
-                <div class="bg-gray-50 p-4 rounded-xl space-y-2">
-                    <label class="block text-xs font-bold text-gray-500 uppercase">IPTV Credentials</label>
-                    <input type="text" id="edit-url" placeholder="Server URL" class="w-full p-2 border rounded-lg text-sm">
-                    <div class="flex gap-2">
-                        <input type="text" id="edit-user" placeholder="Username" class="w-full p-2 border rounded-lg text-sm">
-                        <input type="text" id="edit-pass" placeholder="Password" class="w-full p-2 border rounded-lg text-sm">
+
+                <!-- Section 3: 8K Service Info -->
+                <div class="bg-brand-50 p-4 rounded-xl space-y-3 border border-brand-100">
+                    <h4 class="text-xs font-bold text-brand-900 uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-server"></i> 8K Service Details
+                    </h4>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">8K Domain</label>
+                        <input type="text" id="edit-domain-8k" placeholder="http://domain.com:port" class="w-full p-2 border rounded-lg text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">8K Username</label>
+                            <input type="text" id="edit-user-8k" class="w-full p-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">8K Password</label>
+                            <input type="text" id="edit-pass-8k" class="w-full p-2 border rounded-lg text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">8K M3U URL</label>
+                        <input type="text" id="edit-m3u-8k" class="w-full p-2 border rounded-lg text-sm font-mono text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">8K EPG URL</label>
+                        <input type="text" id="edit-epg-8k" class="w-full p-2 border rounded-lg text-sm font-mono text-xs">
                     </div>
                 </div>
-                <div class="flex justify-between items-center mt-6">
+
+                <!-- Section 4: EPGenius -->
+                <div class="bg-blue-50 p-4 rounded-xl space-y-3 border border-blue-100">
+                    <h4 class="text-xs font-bold text-blue-900 uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-bolt"></i> EPGenius Integration
+                    </h4>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="col-span-1">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Key (Number)</label>
+                            <input type="number" id="edit-epg-key" class="w-full p-2 border rounded-lg text-sm">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Google Drive Playlist URL</label>
+                            <input type="text" id="edit-epg-drive" class="w-full p-2 border rounded-lg text-sm font-mono text-xs">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Preferences (Read Only) & Notes -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Internal Notes</label>
+                        <textarea id="edit-notes" rows="4" class="w-full p-2 border rounded-lg text-sm bg-yellow-50 focus:bg-white transition" placeholder="Private admin notes..."></textarea>
+                    </div>
+                    <div class="space-y-2">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Selections (Read Only)</label>
+                            <div class="p-2 bg-gray-100 rounded-lg text-xs text-gray-600 h-24 overflow-y-auto" id="read-selections">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="flex justify-between items-center pt-4 border-t">
                     <button type="button" onclick="archiveUser()" id="btn-archive" class="text-red-500 text-sm font-bold hover:underline">Archive User</button>
                     <div class="flex gap-2">
                         <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-brand-900 text-white font-bold rounded-lg hover:bg-brand-800">Save</button>
+                        <button type="submit" class="px-6 py-2 bg-brand-900 text-white font-bold rounded-lg hover:bg-brand-800 shadow-lg">Save User</button>
                     </div>
                 </div>
             </form>
@@ -250,9 +316,6 @@
             const totalCost = supplyData.reduce((sum, item) => sum + Number(item.cost), 0);
             const totalAllocated = allUsers.reduce((sum, u) => sum + (Number(u.credits_allocated) || 0), 0);
             
-            // Est. Revenue based on average price (simple assumption of $10/credit)
-            // For a more accurate "Total Profit", we'd need to know exactly which packages were sold.
-            // Currently using a blended average for the dashboard total.
             const BLENDED_REV_PER_CREDIT = 8; 
             const estRevenue = totalAllocated * BLENDED_REV_PER_CREDIT;
 
@@ -299,7 +362,10 @@
             const tbody = document.getElementById('roster-body');
             tbody.innerHTML = '';
             
-            const filtered = allUsers.filter(u => u.email.toLowerCase().includes(filter.toLowerCase()));
+            const filtered = allUsers.filter(u => 
+                (u.email && u.email.toLowerCase().includes(filter.toLowerCase())) || 
+                (u.full_name && u.full_name.toLowerCase().includes(filter.toLowerCase()))
+            );
 
             filtered.forEach(u => {
                 const tr = document.createElement('tr');
@@ -310,17 +376,28 @@
                 if(u.status === 'Pending') statusColor = 'text-yellow-700 bg-yellow-100';
                 if(u.status === 'Expired') statusColor = 'text-red-700 bg-red-100';
 
+                // Icons for services
+                const has8K = u.username_8k ? '<i class="fa-solid fa-server text-brand-900 mr-1" title="8K Configured"></i>' : '';
+                const hasEPG = u.epgenius_key ? '<i class="fa-solid fa-bolt text-blue-600 mr-1" title="EPGenius Configured"></i>' : '';
+                const hasNotes = u.internal_notes ? '<i class="fa-regular fa-note-sticky text-yellow-500" title="Has Notes"></i>' : '';
+
                 tr.innerHTML = `
                     <td class="px-6 py-4">
-                        <div class="font-bold text-gray-900">${u.email}</div>
-                        <div class="text-xs text-gray-400">${u.id.substring(0,8)}...</div>
+                        <div class="font-bold text-gray-900">${u.full_name || 'No Name'}</div>
+                        <div class="text-xs text-gray-500">${u.email}</div>
                     </td>
                     <td class="px-6 py-4">
                         <span class="px-2 py-1 rounded-full text-xs font-bold ${statusColor}">${u.status}</span>
                     </td>
                     <td class="px-6 py-4 text-gray-600">
-                        <div>Alloc: ${u.credits_allocated || 0}</div>
-                        <div class="text-xs text-gray-400">Exp: ${u.expiry_date || 'N/A'}</div>
+                        <div class="flex items-center gap-2 mb-1">
+                            ${has8K} ${hasEPG} ${hasNotes}
+                        </div>
+                        <div class="text-xs">
+                            <span class="font-bold">Alloc:</span> ${u.credits_allocated || 0}
+                            <span class="mx-1">|</span>
+                            <span class="font-bold">Exp:</span> ${u.expiry_date || 'N/A'}
+                        </div>
                     </td>
                     <td class="px-6 py-4 text-right">
                         <button onclick="editUser('${u.id}')" class="text-brand-900 font-bold hover:underline">Edit</button>
@@ -337,6 +414,7 @@
         window.openUserModal = () => {
             document.getElementById('user-form').reset();
             document.getElementById('edit-uid').value = ''; 
+            document.getElementById('read-selections').innerHTML = '<span class="italic text-gray-400">New user (No selections yet)</span>';
             document.getElementById('btn-archive').classList.add('hidden');
             document.getElementById('user-modal').classList.remove('hidden');
         };
@@ -344,14 +422,41 @@
         window.editUser = (id) => {
             const u = allUsers.find(user => user.id === id);
             if(!u) return;
+            
+            // Basic
             document.getElementById('edit-uid').value = u.id;
+            document.getElementById('edit-name').value = u.full_name || '';
             document.getElementById('edit-email').value = u.email;
             document.getElementById('edit-status').value = u.status || 'Pending';
             document.getElementById('edit-expiry').value = u.expiry_date || '';
             document.getElementById('edit-credits').value = u.credits_allocated || 0;
-            document.getElementById('edit-url').value = u.portal_url || '';
-            document.getElementById('edit-user').value = u.username || '';
-            document.getElementById('edit-pass').value = u.password || '';
+            
+            // 8K Details
+            document.getElementById('edit-domain-8k').value = u.domain_8k || '';
+            document.getElementById('edit-user-8k').value = u.username_8k || '';
+            document.getElementById('edit-pass-8k').value = u.password_8k || '';
+            document.getElementById('edit-m3u-8k').value = u.m3u_url_8k || '';
+            document.getElementById('edit-epg-8k').value = u.epg_url_8k || '';
+
+            // EPGenius
+            document.getElementById('edit-epg-key').value = u.epgenius_key || '';
+            document.getElementById('edit-epg-drive').value = u.epgenius_url || '';
+
+            // Notes
+            document.getElementById('edit-notes').value = u.internal_notes || '';
+
+            // Read Only Selections
+            const devices = (u.devices || []).join(', ') || 'None';
+            const live = (u.live_preferences || []).join(', ') || 'None';
+            const vod = (u.vod_preferences || []).join(', ') || 'None';
+            const custom = u.custom_request || '';
+            
+            document.getElementById('read-selections').innerHTML = `
+                <p><strong>Devices:</strong> ${devices}</p>
+                <p class="mt-1"><strong>Live TV:</strong> ${live}</p>
+                <p class="mt-1"><strong>VOD:</strong> ${vod}</p>
+                ${custom ? `<p class="mt-1 text-red-500"><strong>Custom:</strong> ${custom}</p>` : ''}
+            `;
             
             document.getElementById('btn-archive').classList.remove('hidden');
             document.getElementById('user-modal').classList.remove('hidden');
@@ -362,25 +467,40 @@
         document.getElementById('user-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const uid = document.getElementById('edit-uid').value;
+            
             const data = {
+                // Identity
+                full_name: document.getElementById('edit-name').value,
                 email: document.getElementById('edit-email').value,
                 status: document.getElementById('edit-status').value,
+                
+                // Status/Credits
                 expiry_date: document.getElementById('edit-expiry').value,
                 credits_allocated: Number(document.getElementById('edit-credits').value),
-                portal_url: document.getElementById('edit-url').value,
-                username: document.getElementById('edit-user').value,
-                password: document.getElementById('edit-pass').value
+                
+                // 8K Service
+                domain_8k: document.getElementById('edit-domain-8k').value,
+                username_8k: document.getElementById('edit-user-8k').value,
+                password_8k: document.getElementById('edit-pass-8k').value,
+                m3u_url_8k: document.getElementById('edit-m3u-8k').value,
+                epg_url_8k: document.getElementById('edit-epg-8k').value,
+
+                // EPGenius
+                epgenius_key: document.getElementById('edit-epg-key').value,
+                epgenius_url: document.getElementById('edit-epg-drive').value,
+
+                // Internal
+                internal_notes: document.getElementById('edit-notes').value
             };
 
             try {
                 if (uid) {
                     await updateDoc(doc(db, 'users', uid), data);
                 } else {
-                    // Create NEW user - Initialize with new split categories
+                    // Create NEW user
                     await addDoc(collection(db, 'users'), { 
                         ...data, 
                         devices: [], 
-                        // New fields initialized here for future UI compatibility:
                         live_preferences: ["Elliot's Default (QC + Sports + English)"], 
                         vod_preferences: ["Elliot's Default (Movies & Series)"], 
                         custom_request: "",
@@ -449,7 +569,6 @@
                 await setDoc(doc(db, 'app_config', 'devices'), { list: devices });
 
                 // 2. App Config - Content Categories (Live & VOD)
-                // Split per request, including "Other" for custom text scenarios
                 const live_cats = [
                     "Elliot's Default (QC + Sports + English)",
                     "Quebec Premium (French)",
@@ -469,7 +588,6 @@
                     "Other / Custom Request"
                 ];
 
-                // Using a new document 'content_options' to store both lists
                 await setDoc(doc(db, 'app_config', 'content_options'), { 
                     live_list: live_cats,
                     vod_list: vod_cats
