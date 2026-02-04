@@ -57,7 +57,7 @@
     </div>
 
     <!-- DASHBOARD CONTAINER (Hidden by default) -->
-    <div id="dashboard-view" class="hidden max-w-6xl mx-auto p-4 lg:p-8 space-y-8">
+    <div id="dashboard-view" class="hidden max-w-6xl mx-auto p-4 lg:p-8 space-y-12">
         <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm gap-4">
             <div>
@@ -72,120 +72,148 @@
             </div>
         </header>
 
-        <!-- Global Server Info -->
-        <div class="bg-brand-900 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fa-solid fa-server text-9xl"></i></div>
-            <h3 class="text-lg font-bold mb-4 relative z-10"><i class="fa-solid fa-network-wired mr-2"></i> Server Connection</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
-                    <label class="text-[10px] uppercase font-bold text-white/50 block mb-1">Main Server URL (DNS)</label>
-                    <div class="flex items-center justify-between">
-                        <code id="global-domain" class="font-mono text-sm">Loading...</code>
-                        <button onclick="copyText('global-domain')" class="text-white/70 hover:text-white"><i class="fa-regular fa-copy"></i></button>
+        <!-- SECTION 1: STATUS & ACCESS -->
+        <div class="space-y-6">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Connection Status</h3>
+            
+            <!-- Global Server Info -->
+            <div class="bg-brand-900 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fa-solid fa-server text-9xl"></i></div>
+                <h3 class="text-lg font-bold mb-4 relative z-10"><i class="fa-solid fa-network-wired mr-2"></i> Server Connection</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                    <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+                        <label class="text-[10px] uppercase font-bold text-white/50 block mb-1">Main Server URL (DNS)</label>
+                        <div class="flex items-center justify-between">
+                            <code id="global-domain" class="font-mono text-sm">Loading...</code>
+                            <button onclick="copyText('global-domain')" class="text-white/70 hover:text-white"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                    </div>
+                    <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+                        <label class="text-[10px] uppercase font-bold text-white/50 block mb-1">Backup Server URL</label>
+                        <div class="flex items-center justify-between">
+                            <code id="global-backup" class="font-mono text-sm">Loading...</code>
+                            <button onclick="copyText('global-backup')" class="text-white/70 hover:text-white"><i class="fa-regular fa-copy"></i></button>
+                        </div>
                     </div>
                 </div>
-                <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
-                    <label class="text-[10px] uppercase font-bold text-white/50 block mb-1">Backup Server URL</label>
-                    <div class="flex items-center justify-between">
-                        <code id="global-backup" class="font-mono text-sm">Loading...</code>
-                        <button onclick="copyText('global-backup')" class="text-white/70 hover:text-white"><i class="fa-regular fa-copy"></i></button>
+            </div>
+
+            <!-- Active Licenses -->
+            <div id="licenses-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Loaded via JS -->
+                <div class="bg-white p-8 rounded-2xl text-center text-gray-400 col-span-full">Loading licenses...</div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: SHOP / PACKAGES -->
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Available Packages</h3>
+            </div>
+            
+            <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Products Loaded JS -->
+            </div>
+
+            <!-- Hidden Purchase Instructions Modal (Replaces Calculator) -->
+            <div id="purchase-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
+                    <div class="bg-brand-900 p-6 text-white text-center">
+                        <h4 class="text-lg font-bold" id="modal-product-name">Package Name</h4>
+                        <div class="text-3xl font-bold mt-2" id="modal-product-price">$0.00</div>
+                    </div>
+                    <div class="p-8 space-y-6">
+                        <div class="text-center space-y-2">
+                            <p class="text-sm text-gray-500 font-medium">To activate this license, please send an e-transfer to:</p>
+                            <div class="bg-gray-100 p-3 rounded-xl font-mono text-brand-900 font-bold select-all cursor-pointer hover:bg-gray-200 transition" onclick="copyString('e.chinerman@gmail.com')">
+                                e.chinerman@gmail.com
+                            </div>
+                            <p class="text-xs text-gray-400">Tap email to copy</p>
+                        </div>
+                        
+                        <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-xl text-xs text-yellow-800 leading-relaxed">
+                            <i class="fa-solid fa-circle-info mr-1"></i>
+                            <strong>Note:</strong> Elliot will process your order and activate your license only after payment is received.
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="closeModal('purchase-modal')" class="py-3 rounded-xl text-gray-500 font-bold hover:bg-gray-50">Cancel</button>
+                            <a id="notify-link" href="#" class="py-3 rounded-xl bg-brand-900 text-white font-bold text-center hover:bg-brand-800 shadow-lg shadow-brand-900/20">
+                                I've Sent Payment
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- SECTION 3: CONFIGURATION -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
-            <!-- Left Column: Licenses (My Subscriptions) -->
-            <div class="lg:col-span-2 space-y-6">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-ticket"></i> My Active Licenses</h3>
-                </div>
-
-                <!-- Dynamic License Container -->
-                <div id="licenses-container" class="space-y-4">
-                    <!-- Loaded via JS -->
-                    <div class="bg-white p-8 rounded-2xl text-center text-gray-400">Loading licenses...</div>
-                </div>
-            </div>
-
-            <!-- Right Column: Tools & Config -->
-            <div class="space-y-8">
+            <!-- Device Inventory Widget -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm h-full">
+                <h3 class="text-lg font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-mobile-screen-button"></i> Device Inventory</h3>
+                <p class="text-[11px] text-gray-400 mb-6">List your hardware for support reference.</p>
                 
-                <!-- Calculator Card -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-calculator"></i> Renewal Calculator</h3>
-                    
-                    <div class="flex bg-brand-50 p-1 rounded-xl mb-6">
-                        <button onclick="setCalcMode('interac')" id="btn-interac" class="flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm transition">Interac</button>
-                        <button onclick="setCalcMode('btc')" id="btn-btc" class="flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-brand-900 transition">Bitcoin</button>
+                <div class="flex gap-2 mb-4">
+                    <div class="relative flex-1">
+                        <input type="text" id="new-device-name" placeholder="Device Name (e.g. Bedroom TV)" class="w-full pl-3 pr-10 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-900 outline-none">
                     </div>
-
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Select Package</label>
-                            <select id="calc-product" class="w-full p-2 bg-brand-50 rounded-lg border-none outline-none text-sm"></select>
-                        </div>
-                        
-                        <div class="bg-brand-900 text-white p-4 rounded-xl flex justify-between items-center mt-4">
-                            <span>Total:</span>
-                            <span id="calc-total" class="text-xl font-bold">$0.00</span>
-                        </div>
-
-                        <p id="calc-instructions" class="text-xs text-gray-500 mt-2 leading-relaxed">
-                            <!-- Dynamic Instructions based on toggle -->
-                        </p>
-                    </div>
+                    <select id="new-device-type" class="bg-gray-50 rounded-xl text-sm border-none outline-none px-2 text-brand-900 font-bold cursor-pointer">
+                        <option value="tv">📺 TV</option>
+                        <option value="box">📦 Box</option>
+                        <option value="mobile">📱 Phone</option>
+                        <option value="laptop">💻 PC</option>
+                    </select>
+                    <button id="add-device-btn" class="bg-brand-900 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-brand-800 shadow-sm"><i class="fa-solid fa-plus"></i></button>
                 </div>
 
-                <!-- Configuration Card -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-solid fa-sliders"></i> Preferences</h3>
-                    
-                    <div class="space-y-4">
-                        <!-- Devices -->
-                        <div>
-                            <h4 class="text-xs font-bold uppercase text-gray-400 mb-2">Device Inventory (For Support)</h4>
-                            <p class="text-[11px] text-gray-500 mb-2 leading-tight">Adding a device here does not create a new connection line. To add a screen, please contact Elliot.</p>
-                            <div id="device-list" class="space-y-2 mb-2"></div>
-                            <div class="flex gap-2">
-                                <select id="new-device-select" class="flex-1 p-2 bg-brand-50 rounded-lg text-sm"></select>
-                                <button id="add-device-btn" class="bg-brand-800 text-white px-3 rounded-lg hover:bg-brand-900"><i class="fa-solid fa-plus"></i></button>
-                            </div>
-                        </div>
-
-                        <!-- Live TV Categories -->
-                        <div>
-                            <h4 class="text-xs font-bold uppercase text-gray-400 mb-2">Live TV Preferences</h4>
-                            <select id="live-pref-select" class="w-full p-2 bg-brand-50 rounded-lg text-sm mb-2"></select>
-                            <div id="live-tags" class="flex flex-wrap gap-2"></div>
-                        </div>
-
-                        <!-- VOD Categories -->
-                        <div>
-                            <h4 class="text-xs font-bold uppercase text-gray-400 mb-2">VOD Preferences</h4>
-                            <select id="vod-pref-select" class="w-full p-2 bg-brand-50 rounded-lg text-sm mb-2"></select>
-                            <div id="vod-tags" class="flex flex-wrap gap-2"></div>
-                        </div>
-
-                        <!-- Custom Request -->
-                        <div>
-                            <h4 class="text-xs font-bold uppercase text-gray-400 mb-2">Custom Request</h4>
-                            <textarea id="custom-req" rows="2" class="w-full p-2 bg-brand-50 rounded-lg text-sm" placeholder="e.g. Italian channels..."></textarea>
-                        </div>
-                    </div>
-                    <button id="save-config-btn" class="mt-6 w-full bg-brand-900 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-brand-800 transition">Save Preferences</button>
+                <div id="device-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <!-- Dynamic Device Cards -->
                 </div>
-
-                 <!-- Support -->
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <h3 class="text-lg font-bold mb-4"><i class="fa-solid fa-headset mr-2"></i>Support</h3>
-                     <a id="contact-link" href="#" class="block w-full text-center bg-gray-100 text-brand-900 font-bold py-3 rounded-xl hover:bg-gray-200 transition">
-                        Contact Elliot
-                    </a>
-                </div>
-
             </div>
+
+            <!-- Viewing Category Preferences -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm h-full flex flex-col">
+                <h3 class="text-lg font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-sliders"></i> Viewing Category Preferences</h3>
+                <p class="text-[11px] text-gray-400 mb-6">Customize your playlist content.</p>
+                
+                <div class="space-y-6 flex-1">
+                    <!-- Live TV -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="text-xs font-bold uppercase text-brand-900">Live TV</h4>
+                            <select id="live-pref-select" class="text-xs bg-transparent text-gray-400 outline-none cursor-pointer hover:text-brand-900 text-right w-1/2"></select>
+                        </div>
+                        <div id="live-tags" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <!-- VOD -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="text-xs font-bold uppercase text-brand-900">Movies & Series</h4>
+                            <select id="vod-pref-select" class="text-xs bg-transparent text-gray-400 outline-none cursor-pointer hover:text-brand-900 text-right w-1/2"></select>
+                        </div>
+                        <div id="vod-tags" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <!-- Custom Request -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase text-brand-900 mb-2">Special Requests</h4>
+                        <textarea id="custom-req" rows="2" class="w-full p-3 bg-gray-50 rounded-xl text-sm border-none focus:ring-1 focus:ring-brand-900 outline-none resize-none" placeholder="e.g. Specific international channels..."></textarea>
+                    </div>
+                </div>
+                <button id="save-config-btn" class="mt-6 w-full bg-gray-100 text-brand-900 px-6 py-3 rounded-xl text-sm font-bold hover:bg-gray-200 transition">Save Preferences</button>
+            </div>
+
+        </div>
+
+        <!-- Footer / Support -->
+        <div class="text-center pt-8 border-t border-gray-200">
+            <p class="text-gray-400 text-sm mb-4">Need help setting up?</p>
+            <a id="contact-link" href="#" class="inline-flex items-center gap-2 text-brand-900 font-bold hover:underline">
+                <i class="fa-regular fa-envelope"></i> Contact Elliot
+            </a>
         </div>
     </div>
 
@@ -223,9 +251,7 @@
         // --- GLOBAL STATE ---
         let currentUserData = null;
         let products = [];
-        let availableDevices = [];
         let contentOptions = { live_list: [], vod_list: [] };
-        let calcMode = 'interac';
 
         // --- UI FUNCTIONS ---
         window.toggleAuth = (view) => {
@@ -245,36 +271,13 @@
             showToast('Copied to clipboard');
         }
 
-        window.setCalcMode = (mode) => {
-            calcMode = mode;
-            document.getElementById('btn-interac').className = mode === 'interac' ? 'flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm transition' : 'flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-brand-900 transition';
-            document.getElementById('btn-btc').className = mode === 'btc' ? 'flex-1 py-2 rounded-lg text-sm font-bold bg-white shadow-sm transition' : 'flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-brand-900 transition';
-            updateCalculator();
-        };
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toast-msg').textContent = msg;
             toast.classList.remove('translate-x-full', 'opacity-0');
             setTimeout(() => toast.classList.add('translate-x-full', 'opacity-0'), 3000);
-        }
-
-        function updateCalculator() {
-            // Quantity is always 1 for subscriptions/donations in this view
-            const qty = 1; 
-            const productId = document.getElementById('calc-product').value;
-            const product = products.find(p => p.id === productId);
-            
-            if(!product) return;
-
-            const total = qty * product.price;
-            document.getElementById('calc-total').textContent = `${CONFIG.CURRENCY_SYMBOL}${total.toFixed(2)}`;
-            
-            const instructions = calcMode === 'interac' 
-                ? `Please e-Transfer <b>${CONFIG.CURRENCY_SYMBOL}${total.toFixed(2)}</b> to <u>payments@example.com</u> using your email as the security answer.`
-                : `Send <b>${CONFIG.CRYPTO_SYMBOL}${(total / 95000).toFixed(6)}</b> (est) to wallet: <u>bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</u>`;
-            
-            document.getElementById('calc-instructions').innerHTML = instructions;
         }
 
         // --- CORE LOGIC ---
@@ -294,7 +297,7 @@
         });
 
         async function loadDashboardData(user) {
-            // 1. Fetch User Data First (Needed for conditional products)
+            // 1. Fetch User Data
             const userDocRef = doc(db, 'users', user.uid);
             const userDoc = await getDoc(userDocRef);
 
@@ -311,7 +314,6 @@
             const productSnap = await getDocs(collection(db, 'products'));
             
             configSnap.forEach(doc => {
-                if(doc.id === 'devices') availableDevices = doc.data().list || [];
                 if(doc.id === 'content_options') contentOptions = doc.data();
             });
 
@@ -322,48 +324,27 @@
             });
             products.sort((a,b) => a.price - b.price);
 
-            // 3. Conditional Product Logic (Donation)
-            // Check if ANY license has an EPGenius URL
+            // Conditional Donation Product
             const hasEPGenius = currentUserData.licenses && currentUserData.licenses.some(l => l.epgenius_url && l.epgenius_url.trim() !== "");
-            
             if (hasEPGenius) {
-                products.push({
-                    id: 'donation_epgenius',
-                    name: 'Donate to EPGenius Curator (One-time)',
-                    price: 20
-                });
+                products.push({ id: 'donation_epgenius', name: 'Donate to EPGenius Curator', price: 20 });
             }
 
-            // Render Product Dropdown
-            const prodSelect = document.getElementById('calc-product');
-            prodSelect.innerHTML = '';
-            products.forEach(p => {
-                 const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = `${p.name} - ${CONFIG.CURRENCY_SYMBOL}${p.price}`;
-                prodSelect.appendChild(opt);
-            });
-
-            document.getElementById('calc-product').addEventListener('change', updateCalculator);
-            updateCalculator(); // init
+            renderProductGrid();
             renderConfigUI();
         }
 
         function renderUserData(data) {
-            // Header
             document.getElementById('user-name-display').textContent = data.full_name || 'Client';
-            // Wallet balance removed
             document.getElementById('global-domain').textContent = data.domain_8k || 'Contact Admin';
             document.getElementById('global-backup').textContent = data.domain_8k_backup || 'Contact Admin';
 
-            // Licenses Loop
             const licContainer = document.getElementById('licenses-container');
             licContainer.innerHTML = '';
             
             const licenses = data.licenses || [];
             
             if (licenses.length === 0) {
-                // Fallback for legacy single-field users
                 if(data.username_8k) {
                      licContainer.innerHTML = createLicenseCard({
                         label: 'Primary Connection',
@@ -375,9 +356,9 @@
                         epg_url_8k: data.epg_url_8k
                      });
                 } else {
-                     licContainer.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center border-2 border-dashed border-gray-200 text-gray-400">
-                        <i class="fa-solid fa-ticket text-4xl mb-2"></i><br>
-                        No active licenses found. Please contact Elliot.
+                     licContainer.innerHTML = `<div class="bg-gray-50 p-8 rounded-2xl text-center border-2 border-dashed border-gray-200 text-gray-400 col-span-full">
+                        <i class="fa-solid fa-ticket text-3xl mb-2 opacity-50"></i><br>
+                        No active licenses found.<br>Select a package below to get started.
                      </div>`;
                 }
             } else {
@@ -396,93 +377,115 @@
             return `
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative group transition hover:shadow-md">
                 <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h4 class="font-bold text-lg text-brand-900">${lic.label || 'License'}</h4>
-                        <div class="text-xs text-gray-400 font-mono mt-1">EXP: ${lic.expiry_date || 'N/A'}</div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-900"><i class="fa-solid fa-tv"></i></div>
+                        <div>
+                            <h4 class="font-bold text-base text-brand-900 leading-tight">${lic.label || 'License'}</h4>
+                            <div class="text-[10px] text-gray-400 font-mono mt-0.5">EXP: ${lic.expiry_date || 'N/A'}</div>
+                        </div>
                     </div>
-                    <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColor}">${lic.status || 'Unknown'}</span>
+                    <span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold ${statusColor}">${lic.status || 'Unknown'}</span>
                 </div>
 
                 <div class="space-y-3 bg-brand-50 p-4 rounded-xl">
-                    <!-- User/Pass -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Username</label>
-                            <div class="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
-                                <span class="text-sm font-mono text-gray-700 select-all">${lic.username_8k}</span>
-                                <button onclick="copyString('${lic.username_8k}')" class="text-gray-300 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
+                            <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">Username</label>
+                            <div class="flex items-center justify-between bg-white p-1.5 rounded border border-gray-200 cursor-pointer hover:border-brand-900 group/input" onclick="copyString('${lic.username_8k}')">
+                                <span class="text-xs font-mono text-gray-700 select-all truncate">${lic.username_8k}</span>
+                                <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-brand-900"></i>
                             </div>
                         </div>
                         <div>
-                            <label class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Password</label>
-                            <div class="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
-                                <span class="text-sm font-mono text-gray-700 select-all">${lic.password_8k}</span>
-                                <button onclick="copyString('${lic.password_8k}')" class="text-gray-300 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
+                            <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">Password</label>
+                            <div class="flex items-center justify-between bg-white p-1.5 rounded border border-gray-200 cursor-pointer hover:border-brand-900 group/input" onclick="copyString('${lic.password_8k}')">
+                                <span class="text-xs font-mono text-gray-700 select-all truncate">${lic.password_8k}</span>
+                                <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-brand-900"></i>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Links -->
                     ${lic.m3u_url_8k ? `
                     <div>
-                        <label class="text-[10px] uppercase font-bold text-gray-400 block mb-1">8K M3U URL</label>
-                        <div class="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
-                            <input readonly value="${lic.m3u_url_8k}" class="w-full text-xs font-mono text-gray-500 bg-transparent outline-none">
-                            <button onclick="copyString('${lic.m3u_url_8k}')" class="ml-2 text-gray-300 hover:text-brand-900"><i class="fa-regular fa-copy"></i></button>
+                        <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">8K M3U URL</label>
+                        <div class="flex items-center justify-between bg-white p-1.5 rounded border border-gray-200 cursor-pointer hover:border-brand-900 group/input" onclick="copyString('${lic.m3u_url_8k}')">
+                            <input readonly value="${lic.m3u_url_8k}" class="w-full text-[10px] font-mono text-gray-500 bg-transparent outline-none cursor-pointer truncate">
+                            <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-brand-900 ml-1"></i>
                         </div>
                     </div>` : ''}
                     
                      ${lic.epgenius_url ? `
                     <div>
-                        <label class="text-[10px] uppercase font-bold text-blue-400 block mb-1">EPGenius Playlist URL</label>
-                        <div class="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
-                            <input readonly value="${lic.epgenius_url}" class="w-full text-xs font-mono text-gray-500 bg-transparent outline-none">
-                            <button onclick="copyString('${lic.epgenius_url}')" class="ml-2 text-gray-300 hover:text-blue-600"><i class="fa-regular fa-copy"></i></button>
+                        <label class="text-[9px] uppercase font-bold text-blue-400 block mb-1">EPGenius Playlist URL</label>
+                        <div class="flex items-center justify-between bg-white p-1.5 rounded border border-blue-100 cursor-pointer hover:border-blue-500 group/input" onclick="copyString('${lic.epgenius_url}')">
+                            <input readonly value="${lic.epgenius_url}" class="w-full text-[10px] font-mono text-gray-500 bg-transparent outline-none cursor-pointer truncate">
+                            <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-blue-500 ml-1"></i>
                         </div>
                     </div>` : ''}
-
                 </div>
             </div>`;
         }
 
-        function renderConfigUI() {
-            // Devices
-            const deviceList = document.getElementById('device-list');
-            deviceList.innerHTML = '';
-            const userDevices = currentUserData?.devices || [];
+        // --- PRODUCT / ORDER LOGIC ---
+
+        function renderProductGrid() {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
             
-            userDevices.forEach(dev => {
-                const div = document.createElement('div');
-                div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded text-sm';
-                div.innerHTML = `<span>${dev}</span> <button onclick="removeDevice('${dev}')" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-times"></i></button>`;
-                deviceList.appendChild(div);
-            });
+            products.forEach(p => {
+                // Determine icon based on product name keywords
+                let icon = 'fa-box-open';
+                if(p.name.toLowerCase().includes('month')) icon = 'fa-calendar-check';
+                if(p.name.toLowerCase().includes('year')) icon = 'fa-crown';
+                if(p.name.toLowerCase().includes('donate')) icon = 'fa-heart';
 
-            const devSelect = document.getElementById('new-device-select');
-            devSelect.innerHTML = '<option value="">Select Device...</option>';
-            availableDevices.forEach(d => {
-                if(!userDevices.includes(d)) {
-                    const opt = document.createElement('option');
-                    opt.value = d;
-                    opt.textContent = d;
-                    devSelect.appendChild(opt);
-                }
+                const html = `
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-transparent hover:border-brand-900 transition flex flex-col h-full relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition"><i class="fa-solid ${icon} text-6xl"></i></div>
+                    
+                    <div class="flex-1 mb-4 relative z-10">
+                        <h4 class="font-bold text-lg text-brand-900 leading-tight mb-2">${p.name}</h4>
+                        <div class="text-2xl font-bold text-gray-900">${CONFIG.CURRENCY_SYMBOL}${p.price}</div>
+                        ${p.credits ? `<div class="text-xs text-gray-400 mt-1">${p.credits} Credits Value</div>` : ''}
+                    </div>
+                    
+                    <button onclick="openPurchaseModal('${p.name}', '${p.price}')" class="w-full py-3 rounded-xl bg-gray-100 text-brand-900 font-bold hover:bg-brand-900 hover:text-white transition relative z-10">
+                        Purchase
+                    </button>
+                </div>`;
+                grid.innerHTML += html;
             });
+        }
 
-            // Config Selectors Helper
+        window.openPurchaseModal = (name, price) => {
+            document.getElementById('modal-product-name').textContent = name;
+            document.getElementById('modal-product-price').textContent = `${CONFIG.CURRENCY_SYMBOL}${price}`;
+            
+            // Build Mailto Link
+            const subject = encodeURIComponent(`Payment Sent: ${name} (${currentUserData.email})`);
+            const body = encodeURIComponent(`Hi Elliot,\n\nI have sent an e-transfer of $${price} for the ${name} package.\n\nAccount Email: ${currentUserData.email}\n\nThanks!`);
+            document.getElementById('notify-link').href = `mailto:e.chinerman@gmail.com?subject=${subject}&body=${body}`;
+            
+            document.getElementById('purchase-modal').classList.remove('hidden');
+        };
+
+        // --- DEVICE INVENTORY (NEW WIDGET) ---
+
+        function renderConfigUI() {
+            // Live/VOD Tags
             const renderTags = (containerId, selectedList, allOptions, type) => {
                 const container = document.getElementById(containerId);
                 container.innerHTML = '';
                 selectedList.forEach(item => {
                     const btn = document.createElement('button');
-                    btn.className = 'bg-brand-900 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2';
+                    btn.className = 'bg-brand-900 text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 hover:bg-red-600 transition';
                     btn.innerHTML = `${item} <i class="fa-solid fa-times"></i>`;
                     btn.onclick = () => togglePref(type, item);
                     container.appendChild(btn);
                 });
 
                 const select = document.getElementById(type === 'live' ? 'live-pref-select' : 'vod-pref-select');
-                select.innerHTML = `<option value="">Add ${type === 'live' ? 'Live' : 'VOD'} Category...</option>`;
+                select.innerHTML = `<option value="">+ Add...</option>`;
                 allOptions.forEach(opt => {
                     if(!selectedList.includes(opt)) {
                         const o = document.createElement('option');
@@ -495,49 +498,99 @@
 
             renderTags('live-tags', currentUserData.live_preferences || [], contentOptions.live_list || [], 'live');
             renderTags('vod-tags', currentUserData.vod_preferences || [], contentOptions.vod_list || [], 'vod');
-
-            document.getElementById('custom-req').value = currentUserData.custom_request || '';
-
+            
             // Event listeners for dropdowns
             document.getElementById('live-pref-select').onchange = (e) => { if(e.target.value) togglePref('live', e.target.value); };
             document.getElementById('vod-pref-select').onchange = (e) => { if(e.target.value) togglePref('vod', e.target.value); };
+
+            // Custom Request
+            document.getElementById('custom-req').value = currentUserData.custom_request || '';
+
+            // Render Device Grid
+            renderDeviceGrid();
         }
 
-        // --- ACTIONS ---
+        function renderDeviceGrid() {
+            const grid = document.getElementById('device-grid');
+            grid.innerHTML = '';
+            
+            // Devices stored as strings in array: "Name|Type" or just "Name" (Legacy)
+            // We need to parse or handle objects. 
+            // Current DB schema is array of strings. 
+            // Let's stick to strings for schema compatibility but try to detect type or use delimiter.
+            // PROPOSAL: Store as "Type|Name" string to avoid object migration? 
+            // OR simply stick to "Name" and guess icon, or just generic icon.
+            // User requested "Options to choose from".
+            // Let's store as objects in UI state but save as strings "Name (Type)" for simplicity in DB if schema is strict array of strings.
+            
+            const userDevices = currentUserData?.devices || [];
+            
+            userDevices.forEach(devStr => {
+                // Parse "Name (Type)" or just "Name"
+                let name = devStr;
+                let type = 'tv'; // Default
+                let icon = 'fa-tv';
+
+                if(devStr.includes('📱')) { type = 'mobile'; icon = 'fa-mobile-screen'; name = devStr.replace('📱 ', ''); }
+                else if(devStr.includes('📦')) { type = 'box'; icon = 'fa-box'; name = devStr.replace('📦 ', ''); }
+                else if(devStr.includes('💻')) { type = 'laptop'; icon = 'fa-laptop'; name = devStr.replace('💻 ', ''); }
+                else if(devStr.includes('📺')) { type = 'tv'; icon = 'fa-tv'; name = devStr.replace('📺 ', ''); }
+
+                const el = document.createElement('div');
+                el.className = 'bg-gray-50 p-3 rounded-xl flex items-center justify-between group border border-transparent hover:border-gray-200 transition';
+                el.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <div class="text-gray-400 text-sm"><i class="fa-solid ${icon}"></i></div>
+                        <span class="text-xs font-bold text-gray-700 truncate">${name}</span>
+                    </div>
+                    <button onclick="removeDevice('${devStr}')" class="text-gray-300 hover:text-red-500 transition"><i class="fa-solid fa-times"></i></button>
+                `;
+                grid.appendChild(el);
+            });
+        }
+
+        document.getElementById('add-device-btn').addEventListener('click', async () => {
+            const name = document.getElementById('new-device-name').value;
+            const type = document.getElementById('new-device-type').value;
+            
+            if(!name) return;
+
+            // Encode type into string for storage (Simple approach)
+            let emoji = '📺';
+            if(type === 'mobile') emoji = '📱';
+            if(type === 'box') emoji = '📦';
+            if(type === 'laptop') emoji = '💻';
+
+            const val = `${emoji} ${name}`;
+
+            const userRef = doc(db, 'users', auth.currentUser.uid);
+            await updateDoc(userRef, { devices: arrayUnion(val) });
+            
+            if(!currentUserData.devices) currentUserData.devices = [];
+            currentUserData.devices.push(val);
+            
+            document.getElementById('new-device-name').value = ''; // Reset input
+            renderDeviceGrid();
+            showToast('Device added');
+        });
 
         window.removeDevice = async (device) => {
             const userRef = doc(db, 'users', auth.currentUser.uid);
             await updateDoc(userRef, { devices: arrayRemove(device) });
-            // Optimistic update
             currentUserData.devices = currentUserData.devices.filter(d => d !== device);
-            renderConfigUI();
+            renderDeviceGrid();
             showToast('Device removed');
         };
-
-        document.getElementById('add-device-btn').addEventListener('click', async () => {
-            const val = document.getElementById('new-device-select').value;
-            if(!val) return;
-            const userRef = doc(db, 'users', auth.currentUser.uid);
-            await updateDoc(userRef, { devices: arrayUnion(val) });
-            if(!currentUserData.devices) currentUserData.devices = [];
-            currentUserData.devices.push(val);
-            renderConfigUI();
-            showToast('Device added');
-        });
 
         window.togglePref = async (type, val) => {
             const field = type === 'live' ? 'live_preferences' : 'vod_preferences';
             let list = currentUserData[field] || [];
             
-            if(list.includes(val)) {
-                list = list.filter(i => i !== val);
-            } else {
-                list.push(val);
-            }
+            if(list.includes(val)) list = list.filter(i => i !== val);
+            else list.push(val);
 
-            // Local update for immediate UI feel
             currentUserData[field] = list;
-            renderConfigUI();
+            renderConfigUI(); // Optimistic UI update
         };
 
         document.getElementById('save-config-btn').addEventListener('click', async () => {
@@ -583,7 +636,6 @@
                 const querySnapshot = await getDocs(q);
 
                 if (!querySnapshot.empty) {
-                    // Claim existing admin-created doc
                     const oldDoc = querySnapshot.docs[0];
                     const oldData = oldDoc.data();
                     
@@ -595,13 +647,12 @@
                     });
                     showToast('Account claimed successfully!');
                 } else {
-                    // New User - Initialize with NEW SCHEMA arrays
                     await setDoc(doc(db, "users", user.uid), {
                         email: email,
                         status: "Pending",
                         created_at: new Date().toISOString(),
                         devices: [],
-                        licenses: [], // Empty array for new users
+                        licenses: [], 
                         live_preferences: ["Elliot's Default (QC + Sports + English)"], 
                         vod_preferences: ["Elliot's Default (Movies & Series)"], 
                         custom_request: "",
