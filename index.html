@@ -90,6 +90,7 @@
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                     <div id="product-list" class="divide-y divide-gray-100">
                         <!-- Products Loaded JS -->
+                        <div class="text-center text-gray-400 text-xs py-4">Loading packages...</div>
                     </div>
                 </div>
             </div>
@@ -313,41 +314,57 @@
         });
 
         async function loadDashboardData(user) {
-            // 1. Fetch User Data
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
+            try {
+                // 1. Fetch User Data
+                const userDocRef = doc(db, 'users', user.uid);
+                const userDoc = await getDoc(userDocRef);
 
-            if (userDoc.exists()) {
-                currentUserData = userDoc.data();
-                renderUserData(currentUserData);
-            } else {
-                console.error("User doc missing"); 
-                return;
+                if (userDoc.exists()) {
+                    currentUserData = userDoc.data();
+                    renderUserData(currentUserData);
+                } else {
+                    console.error("User doc missing"); 
+                    document.getElementById('licenses-container').innerHTML = `
+                        <div class="bg-red-50 p-4 rounded-xl text-center border border-red-100 text-red-600 col-span-full">
+                            <i class="fa-solid fa-triangle-exclamation mb-2"></i><br>
+                            Account Profile Not Found.<br>Please contact support to reset your account.
+                        </div>`;
+                    return;
+                }
+
+                // 2. Fetch Configs & Products
+                const configSnap = await getDocs(collection(db, 'app_config'));
+                const productSnap = await getDocs(collection(db, 'products'));
+                
+                configSnap.forEach(doc => {
+                    if(doc.id === 'content_options') contentOptions = doc.data();
+                });
+
+                products = [];
+                productSnap.forEach(doc => {
+                    const p = { id: doc.id, ...doc.data() };
+                    products.push(p);
+                });
+                products.sort((a,b) => a.price - b.price);
+
+                // Conditional Donation Product
+                const hasEPGenius = currentUserData.licenses && currentUserData.licenses.some(l => l.epgenius_url && l.epgenius_url.trim() !== "");
+                if (hasEPGenius) {
+                    products.push({ id: 'donation_epgenius', name: 'Donate to EPGenius Curator', price: 20 });
+                }
+
+                renderProductList();
+                renderConfigUI();
+                
+            } catch (err) {
+                console.error("Dashboard Load Error:", err);
+                showToast("Error loading dashboard data. See console.");
+                document.getElementById('licenses-container').innerHTML = `
+                    <div class="bg-red-50 p-4 rounded-xl text-center border border-red-100 text-red-600 col-span-full">
+                        <i class="fa-solid fa-bug mb-2"></i><br>
+                        System Error. Please refresh or contact support.
+                    </div>`;
             }
-
-            // 2. Fetch Configs & Products
-            const configSnap = await getDocs(collection(db, 'app_config'));
-            const productSnap = await getDocs(collection(db, 'products'));
-            
-            configSnap.forEach(doc => {
-                if(doc.id === 'content_options') contentOptions = doc.data();
-            });
-
-            products = [];
-            productSnap.forEach(doc => {
-                const p = { id: doc.id, ...doc.data() };
-                products.push(p);
-            });
-            products.sort((a,b) => a.price - b.price);
-
-            // Conditional Donation Product
-            const hasEPGenius = currentUserData.licenses && currentUserData.licenses.some(l => l.epgenius_url && l.epgenius_url.trim() !== "");
-            if (hasEPGenius) {
-                products.push({ id: 'donation_epgenius', name: 'Donate to EPGenius Curator', price: 20 });
-            }
-
-            renderProductList();
-            renderConfigUI();
         }
 
         function renderUserData(data) {
@@ -388,8 +405,9 @@
             if(lic.status === 'Expired') statusColor = 'bg-red-100 text-red-700';
             if(lic.status === 'Banned') statusColor = 'bg-black text-white';
 
-            const mainDomain = currentUserData.domain_8k || 'Contact Admin';
-            const backDomain = currentUserData.domain_8k_backup || 'Contact Admin';
+            // Safe Access for Global Vars
+            const mainDomain = currentUserData?.domain_8k || 'Contact Admin';
+            const backDomain = currentUserData?.domain_8k_backup || 'Contact Admin';
 
             return `
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative group transition hover:shadow-md">
@@ -469,6 +487,11 @@
             const list = document.getElementById('product-list');
             list.innerHTML = '';
             
+            if (products.length === 0) {
+                list.innerHTML = `<div class="text-center text-[10px] text-gray-300 italic py-4">No packages currently available.</div>`;
+                return;
+            }
+
             products.forEach(p => {
                 let icon = 'fa-box-open';
                 if(p.name.toLowerCase().includes('month')) icon = 'fa-calendar-check';
