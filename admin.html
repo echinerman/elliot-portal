@@ -3,734 +3,1053 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Portal</title>
+    <title>Admin Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
-                extend: {
-                    colors: {
-                        brand: { 50: '#fafaf9', 100: '#f5f5f4', 800: '#292524', 900: '#1c1917' } // Stone theme
-                    }
-                }
+                extend: { colors: { brand: { 800: '#292524', 900: '#1c1917' } } }
             }
         }
     </script>
 </head>
-<body class="bg-brand-50 text-brand-900 min-h-screen font-sans antialiased">
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
 
-    <!-- TOAST NOTIFICATION -->
-    <div id="toast" class="fixed top-4 right-4 z-50 transform transition-all duration-300 translate-x-full opacity-0">
-        <div class="bg-brand-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <i id="toast-icon" class="fa-solid fa-circle-check"></i>
-            <span id="toast-msg">Success</span>
+    <!-- Navbar -->
+    <nav class="bg-brand-900 text-white p-4 shadow-lg">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold"><i class="fa-solid fa-shield-halved mr-2"></i>Admin Console</h1>
+            <div class="flex gap-4 text-sm">
+                <span id="admin-email">Loading...</span>
+                <button onclick="window.location.href='index.html'" class="hover:text-gray-300">Exit</button>
+            </div>
         </div>
+    </nav>
+
+    <div id="main-content" class="max-w-7xl mx-auto p-6 space-y-6 opacity-0 transition-opacity duration-500">
+        
+        <!-- Financials Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500">
+                <h3 class="text-xs font-bold text-gray-400 uppercase">Credits Remaining</h3>
+                <p class="text-3xl font-bold mt-2" id="stat-credits">--</p>
+                <button onclick="openSupplyModal()" class="text-xs text-blue-500 font-bold mt-2 hover:underline">+ Add Supply</button>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-green-500">
+                <h3 class="text-xs font-bold text-gray-400 uppercase">Est. Total Profit</h3>
+                <p class="text-3xl font-bold mt-2 text-green-600" id="stat-profit">--</p>
+                <p class="text-xs text-gray-400 mt-1">*Based on historical supply cost</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-purple-500">
+                <h3 class="text-xs font-bold text-gray-400 uppercase">Total Users</h3>
+                <p class="text-3xl font-bold mt-2" id="stat-users">--</p>
+                <div class="mt-2 text-xs">
+                    <span id="stat-active" class="text-green-600 font-bold">0 Active</span> • 
+                    <span id="stat-pending" class="text-yellow-600 font-bold">0 Pending</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profit Analysis Table -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-100">
+                <h2 class="font-bold text-lg">Product Unit Economics</h2>
+                <p class="text-xs text-gray-400">Profit calculation based on Credit Cost: <span class="font-mono text-brand-900">$3.36 CAD</span></p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3">Product Name</th>
+                            <th class="px-6 py-3">Price (CAD)</th>
+                            <th class="px-6 py-3">Credits</th>
+                            <th class="px-6 py-3">Cost ($3.36/cr)</th>
+                            <th class="px-6 py-3">Net Profit</th>
+                            <th class="px-6 py-3">Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody id="profit-body" class="divide-y divide-gray-100">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Roster -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                <h2 class="font-bold text-lg">User Roster</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="search-input" placeholder="Search name or email..." class="bg-gray-50 p-2 rounded-lg text-sm outline-none border border-gray-200 focus:border-brand-900">
+                    <button onclick="seedData()" class="bg-gray-200 text-gray-600 px-3 py-1 rounded text-xs hover:bg-gray-300">Seed Defaults</button>
+                    <button onclick="openUserModal()" class="bg-brand-900 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-brand-800">+ New User</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-400 uppercase bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3">User</th>
+                            <th class="px-6 py-3">Status</th>
+                            <th class="px-6 py-3">8K Details</th>
+                            <th class="px-6 py-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roster-body" class="divide-y divide-gray-100">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
-    <!-- AUTH CONTAINER -->
-    <div id="auth-view" class="flex flex-col items-center justify-center min-h-screen p-4">
-        <div class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl">
-            <h1 class="text-2xl font-bold mb-6 text-center text-brand-800">Client Portal</h1>
+    <!-- User Modal (Expanded for Licenses) -->
+    <div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 overflow-y-auto py-10">
+        <div class="bg-white rounded-2xl w-full max-w-5xl p-6 shadow-2xl transform transition-all my-auto relative">
+            <button onclick="closeModal('user-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-lg font-bold mb-4 border-b pb-2">Edit / Create User</h3>
             
-            <!-- Login Form -->
-            <form id="login-form" class="space-y-4">
-                <input type="email" id="login-email" placeholder="Email" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
-                <input type="password" id="login-pass" placeholder="Password" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
-                <button type="submit" class="w-full bg-brand-900 text-white font-semibold py-3 rounded-xl hover:bg-brand-800 transition">Sign In</button>
-                <div class="text-center text-sm text-gray-500 mt-4">
-                    Need an account? <a href="#" onclick="toggleAuth('register')" class="text-brand-900 font-bold hover:underline">Register</a>
+            <form id="user-form" class="space-y-6">
+                <input type="hidden" id="edit-uid">
+                
+                <!-- Section 1: Identity & Global Status -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="col-span-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status (Account Level)</label>
+                        <select id="edit-status" class="w-full p-2 border rounded-lg text-sm bg-white font-bold">
+                            <option value="Pending">Pending</option>
+                            <option value="Active">Active</option>
+                            <option value="Expired">Expired</option>
+                            <option value="Banned">Banned</option>
+                        </select>
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+                        <input type="text" id="edit-name" class="w-full p-2 border rounded-lg text-sm bg-gray-50" placeholder="John Doe">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
+                        <input type="email" id="edit-email" class="w-full p-2 border rounded-lg text-sm bg-gray-50" required>
+                    </div>
                 </div>
-            </form>
 
-            <!-- Register Form (Hidden) -->
-            <form id="register-form" class="space-y-4 hidden">
-                <input type="text" id="reg-code" placeholder="Invite Code" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
-                <input type="email" id="reg-email" placeholder="Email" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
-                <input type="password" id="reg-pass" placeholder="Password" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
-                <button type="submit" class="w-full bg-brand-900 text-white font-semibold py-3 rounded-xl hover:bg-brand-800 transition">Create Account</button>
-                <div class="text-center text-sm text-gray-500 mt-4">
-                    Have an account? <a href="#" onclick="toggleAuth('login')" class="text-brand-900 font-bold hover:underline">Sign In</a>
+                <!-- Section 2: Global Configuration -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Global 8K Domain</label>
+                        <input type="text" id="edit-domain-8k" placeholder="http://domain.com:port" class="w-full p-2 border rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Backup 8K Domain</label>
+                        <input type="text" id="edit-domain-backup-8k" placeholder="http://backup.com:port" class="w-full p-2 border rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Total Credits (Wallet)</label>
+                        <input type="number" id="edit-credits" value="0" class="w-full p-2 border rounded-lg text-sm bg-white">
+                    </div>
+                </div>
+
+                <!-- Section 3: License Manager (NEW) -->
+                <div class="bg-brand-50 p-4 rounded-xl space-y-4 border border-brand-100">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-xs font-bold text-brand-900 uppercase flex items-center gap-2">
+                            <i class="fa-solid fa-server"></i> License Manager
+                        </h4>
+                        <!-- Add Button Replaces Text -->
+                        <button type="button" onclick="toggleLicenseForm('add')" class="bg-brand-800 text-white text-[10px] font-bold px-3 py-1 rounded hover:bg-brand-900">
+                            <i class="fa-solid fa-plus mr-1"></i> Add License
+                        </button>
+                    </div>
+
+                    <!-- Licenses List -->
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-gray-50 text-gray-400 uppercase font-bold">
+                                <tr>
+                                    <th class="p-2">Label</th>
+                                    <th class="p-2">Credentials</th>
+                                    <th class="p-2">Details</th>
+                                    <th class="p-2">Expiry</th>
+                                    <th class="p-2">Status</th>
+                                    <th class="p-2 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="license-list-body" class="divide-y divide-gray-100">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                        <div id="no-licenses-msg" class="p-4 text-center text-gray-400 text-sm italic hidden">No active licenses.</div>
+                    </div>
+
+                    <!-- Add/Edit License Control Panel (Hidden by Default) -->
+                    <div id="license-form-container" class="bg-gray-100 p-4 rounded-lg space-y-3 hidden border border-gray-300">
+                        <div class="flex justify-between items-center">
+                            <h5 class="text-[10px] font-bold text-gray-500 uppercase" id="lic-form-title">Add New License</h5>
+                            <button type="button" onclick="cancelLicenseEdit()" class="text-xs text-gray-500 hover:text-gray-800"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                        
+                        <input type="hidden" id="editing-lic-index" value="-1">
+
+                        <!-- Row 1: Identity & Status -->
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-2">
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Label</label>
+                                <input type="text" id="new-lic-label" placeholder="Living Room" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Status</label>
+                                <select id="new-lic-status" class="w-full p-1.5 border rounded text-xs font-bold">
+                                    <option value="Active">Active</option>
+                                    <option value="Trial">Trial</option>
+                                    <option value="Banned">Banned</option>
+                                    <option value="Expired">Expired</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Username</label>
+                                <input type="text" id="new-lic-user" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Password</label>
+                                <input type="text" id="new-lic-pass" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Expiry</label>
+                                <input type="date" id="new-lic-expiry" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Credits Cost</label>
+                                <input type="number" id="new-lic-credits" value="0" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Sales Data (NEW) -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 bg-white p-2 rounded border border-gray-200">
+                             <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Package Selected</label>
+                                <select id="new-lic-package" onchange="updatePriceFromPackage()" class="w-full p-1.5 border rounded text-xs">
+                                    <option value="">-- Select Product --</option>
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Price Paid</label>
+                                <input type="text" id="new-lic-price" placeholder="$0.00" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">Date Paid</label>
+                                <input type="date" id="new-lic-date-paid" class="w-full p-1.5 border rounded text-xs">
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Technical Config -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">8K M3U URL</label>
+                                <input type="text" id="new-lic-m3u" class="w-full p-1.5 border rounded text-xs font-mono text-[10px]">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-gray-400 uppercase">8K EPG URL</label>
+                                <input type="text" id="new-lic-epg" class="w-full p-1.5 border rounded text-xs font-mono text-[10px]">
+                            </div>
+                        </div>
+
+                        <!-- Row 4: EPGenius -->
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-blue-400 uppercase">EPGenius Key</label>
+                                <input type="number" id="new-lic-epg-key" class="w-full p-1.5 border rounded text-xs border-blue-200">
+                            </div>
+                            <div class="md:col-span-4">
+                                <label class="block text-[9px] font-bold text-blue-400 uppercase">EPGenius M3U URL</label>
+                                <input type="text" id="new-lic-drive" class="w-full p-1.5 border rounded text-xs font-mono text-[10px] border-blue-200">
+                            </div>
+                            <div class="md:col-span-1">
+                                <button type="button" onclick="saveLicenseLine()" id="btn-save-lic" class="w-full bg-brand-900 text-white text-xs font-bold py-2 rounded hover:bg-brand-800">
+                                    <i class="fa-solid fa-plus mr-1"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Renewal Form (Hidden by Default) -->
+                    <div id="renewal-form-container" class="bg-green-50 p-4 rounded-lg space-y-3 hidden border border-green-200">
+                        <div class="flex justify-between items-center">
+                            <h5 class="text-[10px] font-bold text-green-700 uppercase"><i class="fa-solid fa-arrows-rotate mr-1"></i>Renew License</h5>
+                            <button type="button" onclick="cancelLicenseEdit()" class="text-xs text-green-700 hover:text-green-900"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                        <input type="hidden" id="renew-lic-index">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div class="md:col-span-2">
+                                <label class="block text-[9px] font-bold text-green-700 uppercase">Select Renewal Package</label>
+                                <select id="renew-package" class="w-full p-1.5 border border-green-300 rounded text-xs">
+                                    <option value="">-- Choose Package --</option>
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                            <div class="md:col-span-1">
+                                <label class="block text-[9px] font-bold text-green-700 uppercase">New Expiry Preview</label>
+                                <div id="renew-expiry-preview" class="text-sm font-bold text-green-900">--/--/----</div>
+                            </div>
+                             <div class="md:col-span-1">
+                                <button type="button" onclick="confirmRenewal()" class="w-full bg-green-600 text-white text-xs font-bold py-2 rounded hover:bg-green-700">
+                                    Confirm Renewal
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Section 4: Preferences & Notes -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Internal Notes</label>
+                        <textarea id="edit-notes" rows="3" class="w-full p-2 border rounded-lg text-sm bg-yellow-50 focus:bg-white transition" placeholder="Private admin notes..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Selections (Read Only)</label>
+                        <div class="p-2 bg-gray-100 rounded-lg text-xs text-gray-600 h-20 overflow-y-auto" id="read-selections"></div>
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="flex justify-between items-center pt-4 border-t">
+                    <button type="button" onclick="archiveUser()" id="btn-archive" class="text-red-500 text-sm font-bold hover:underline">Archive User</button>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="copyUserToClipboard(true)" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300">
+                            <i class="fa-regular fa-copy mr-1"></i> Copy Info
+                        </button>
+                        <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-brand-900 text-white font-bold rounded-lg hover:bg-brand-800 shadow-lg">Save Changes</button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- DASHBOARD CONTAINER (Hidden by default) -->
-    <div id="dashboard-view" class="hidden max-w-7xl mx-auto p-4 lg:p-8 space-y-8">
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm gap-4">
-            <div>
-                <h2 class="text-xl font-bold">Welcome, <span id="user-name-display" class="font-normal text-gray-600">Client</span></h2>
-                <div class="text-xs text-gray-400 mt-1" id="user-email-display"></div>
-            </div>
-            <div class="flex items-center gap-4">
-                <button id="logout-btn" class="text-brand-900 hover:text-red-600 transition px-2 flex items-center gap-2">
-                    <span class="text-sm font-bold">Sign Out</span>
-                    <i class="fa-solid fa-right-from-bracket fa-lg"></i>
-                </button>
-            </div>
-        </header>
-
-        <!-- MAIN LAYOUT: Masonry Grid -->
-        <div class="columns-1 lg:columns-2 gap-8 space-y-8">
-
-            <!-- WIDGET 1: ACTIVE LICENSES -->
-            <div class="break-inside-avoid space-y-4">
-                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">My Active Licenses</h3>
-                <div id="licenses-container" class="space-y-4">
-                    <!-- Loaded via JS -->
-                    <div class="bg-white p-8 rounded-2xl text-center text-gray-400">Loading licenses...</div>
+    <!-- Supply Modal -->
+    <div id="supply-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h3 class="text-lg font-bold mb-4">Add Supply</h3>
+            <form id="supply-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase">Credits Purchased</label>
+                    <input type="number" id="supply-credits" class="w-full p-2 border rounded-lg" required>
                 </div>
-            </div>
-
-            <!-- WIDGET 2: AVAILABLE PACKAGES -->
-            <div class="break-inside-avoid space-y-4">
-                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Available Packages</h3>
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <div id="product-list" class="divide-y divide-gray-100">
-                        <!-- Products Loaded JS -->
-                        <div class="text-center text-gray-400 text-xs py-4">Loading packages...</div>
-                    </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase">Total Cost ($)</label>
+                    <input type="number" id="supply-cost" class="w-full p-2 border rounded-lg" required>
                 </div>
-            </div>
-
-            <!-- WIDGET 3: VIEWING PREFERENCES -->
-            <div class="break-inside-avoid space-y-4">
-                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Viewing Category Preferences</h3>
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <p class="text-[11px] text-gray-400 mb-6">Customize your playlist content.</p>
-                    
-                    <div class="space-y-6">
-                        <!-- Live TV -->
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-xs font-bold uppercase text-brand-900">Live TV</h4>
-                                <select id="live-pref-select" class="text-xs bg-transparent text-gray-400 outline-none cursor-pointer hover:text-brand-900 text-right w-1/2"></select>
-                            </div>
-                            <div id="live-tags" class="flex flex-wrap gap-2"></div>
-                        </div>
-
-                        <!-- VOD -->
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-xs font-bold uppercase text-brand-900">Movies & Series</h4>
-                                <select id="vod-pref-select" class="text-xs bg-transparent text-gray-400 outline-none cursor-pointer hover:text-brand-900 text-right w-1/2"></select>
-                            </div>
-                            <div id="vod-tags" class="flex flex-wrap gap-2"></div>
-                        </div>
-
-                        <!-- Custom Request -->
-                        <div>
-                            <h4 class="text-xs font-bold uppercase text-brand-900 mb-2">Special Requests</h4>
-                            <textarea id="custom-req" rows="2" class="w-full p-3 bg-gray-50 rounded-xl text-sm border-none focus:ring-1 focus:ring-brand-900 outline-none resize-none" placeholder="e.g. Specific international channels..."></textarea>
-                        </div>
-                    </div>
-                    <button id="save-config-btn" class="mt-6 w-full bg-gray-100 text-brand-900 px-6 py-3 rounded-xl text-sm font-bold hover:bg-gray-200 transition">Save Preferences</button>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" onclick="closeModal('supply-modal')" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Add Entry</button>
                 </div>
-            </div>
-
-            <!-- WIDGET 4: DEVICE INVENTORY (Digital Locker Style) -->
-            <div class="break-inside-avoid space-y-4">
-                <div class="flex justify-between items-end">
-                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Device Inventory</h3>
-                    <a id="contact-link-devices" href="#" class="text-[10px] text-gray-400 hover:text-brand-900 hover:underline">
-                        <i class="fa-regular fa-envelope mr-1"></i>Contact Elliot
-                    </a>
-                </div>
-                
-                <div id="device-grid" class="grid grid-cols-2 gap-4">
-                    <!-- Dynamic Device Cards + Add Button -->
-                </div>
-                
-                <p class="text-[10px] text-gray-400 text-center pt-2">Listing devices here helps support diagnosis. It does not create a connection.</p>
-            </div>
-
-        </div> <!-- End Masonry -->
-
-        <!-- Hidden Purchase Instructions Modal -->
-        <div id="purchase-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
-                <div class="bg-brand-900 p-6 text-white text-center">
-                    <h4 class="text-lg font-bold" id="modal-product-name">Package Name</h4>
-                    <div class="text-3xl font-bold mt-2" id="modal-product-price">$0.00</div>
-                </div>
-                <div class="p-8 space-y-6">
-                    <div class="text-center space-y-2">
-                        <p class="text-sm text-gray-500 font-medium">To activate this license, please send an e-transfer to:</p>
-                        <div class="bg-gray-100 p-3 rounded-xl font-mono text-brand-900 font-bold select-all cursor-pointer hover:bg-gray-200 transition" onclick="copyString('e.chinerman@gmail.com')">
-                            e.chinerman@gmail.com
-                        </div>
-                        <p class="text-xs text-gray-400">Tap email to copy</p>
-                    </div>
-                    
-                    <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-xl text-xs text-yellow-800 leading-relaxed">
-                        <i class="fa-solid fa-circle-info mr-1"></i>
-                        <strong>Note:</strong> Elliot will process your order and activate your license only after payment is received.
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="closeModal('purchase-modal')" class="py-3 rounded-xl text-gray-500 font-bold hover:bg-gray-50">Cancel</button>
-                        <a id="notify-link" href="#" class="py-3 rounded-xl bg-brand-900 text-white font-bold text-center hover:bg-brand-800 shadow-lg shadow-brand-900/20">
-                            I've Sent Payment
-                        </a>
-                    </div>
-                </div>
-            </div>
+            </form>
         </div>
-
-        <!-- Hidden Add Device Modal (School A Style) -->
-        <div id="add-device-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up p-6 space-y-6">
-                <div class="text-center">
-                    <h4 class="text-lg font-bold text-brand-900">Add New Device</h4>
-                    <p class="text-xs text-gray-400 mt-1">What kind of hardware is it?</p>
-                </div>
-
-                <!-- Step 1: Icon Selection -->
-                <div class="grid grid-cols-4 gap-4" id="device-type-selector">
-                    <button onclick="selectDeviceType('tv')" class="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-brand-900 hover:bg-brand-50 transition group">
-                        <i class="fa-solid fa-tv text-2xl text-gray-300 group-hover:text-brand-900"></i>
-                        <span class="text-[10px] font-bold text-gray-400 group-hover:text-brand-900">TV</span>
-                    </button>
-                    <button onclick="selectDeviceType('box')" class="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-brand-900 hover:bg-brand-50 transition group">
-                        <i class="fa-solid fa-box text-2xl text-gray-300 group-hover:text-brand-900"></i>
-                        <span class="text-[10px] font-bold text-gray-400 group-hover:text-brand-900">Box</span>
-                    </button>
-                    <button onclick="selectDeviceType('mobile')" class="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-brand-900 hover:bg-brand-50 transition group">
-                        <i class="fa-solid fa-mobile-screen text-2xl text-gray-300 group-hover:text-brand-900"></i>
-                        <span class="text-[10px] font-bold text-gray-400 group-hover:text-brand-900">Phone</span>
-                    </button>
-                    <button onclick="selectDeviceType('laptop')" class="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-brand-900 hover:bg-brand-50 transition group">
-                        <i class="fa-solid fa-laptop text-2xl text-gray-300 group-hover:text-brand-900"></i>
-                        <span class="text-[10px] font-bold text-gray-400 group-hover:text-brand-900">PC</span>
-                    </button>
-                </div>
-
-                <!-- Step 2: Naming (Hidden until type selected) -->
-                <div id="device-name-input-group" class="hidden space-y-4 animate-fade-in">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Device Name</label>
-                        <input type="text" id="modal-device-name" placeholder="e.g. Bedroom Firestick" class="w-full p-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-900 outline-none">
-                        <input type="hidden" id="modal-device-type">
-                    </div>
-                    <button onclick="confirmAddDevice()" class="w-full py-3 bg-brand-900 text-white rounded-xl font-bold hover:bg-brand-800 transition">Save Device</button>
-                </div>
-
-                <div class="pt-2 border-t border-gray-100">
-                    <button onclick="closeModal('add-device-modal')" class="w-full py-2 text-xs font-bold text-gray-400 hover:text-brand-900">Cancel</button>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <script type="module">
         import { CONFIG } from './config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { 
-            getAuth, 
-            createUserWithEmailAndPassword, 
-            signInWithEmailAndPassword, 
-            onAuthStateChanged,
-            signOut 
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { 
             getFirestore, 
+            collection, 
+            getDocs, 
             doc, 
-            getDoc, 
             setDoc, 
             updateDoc, 
-            deleteDoc,
-            collection,
-            query, 
-            where,
-            getDocs,
-            runTransaction,
+            addDoc,
             arrayUnion,
-            arrayRemove
+            query,
+            where
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- INIT FIREBASE ---
         const app = initializeApp(CONFIG.FIREBASE);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- GLOBAL STATE ---
-        let currentUserData = null;
+        // --- CONSTANTS ---
+        const COST_PER_CREDIT = 3.36; // CAD
+
+        let allUsers = [];
+        let supplyData = [];
         let products = [];
-        let contentOptions = { live_list: [], vod_list: [] };
+        let currentLicenses = []; // Global state for modal
 
-        // --- UI FUNCTIONS ---
-        window.toggleAuth = (view) => {
-            document.getElementById('login-form').classList.toggle('hidden', view === 'register');
-            document.getElementById('register-form').classList.toggle('hidden', view !== 'register');
-        };
-
-        window.copyText = (elementId) => {
-            const el = document.getElementById(elementId);
-            const text = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ? el.value : el.textContent;
-            navigator.clipboard.writeText(text);
-            showToast('Copied to clipboard');
-        };
-
-        window.copyString = (str) => {
-            navigator.clipboard.writeText(str);
-            showToast('Copied to clipboard');
-        }
-
-        window.closeModal = (id) => {
-            document.getElementById(id).classList.add('hidden');
-            if(id === 'add-device-modal') {
-                // Reset device modal state
-                document.getElementById('device-name-input-group').classList.add('hidden');
-                document.getElementById('device-type-selector').classList.remove('opacity-50', 'pointer-events-none');
-                document.getElementById('modal-device-name').value = '';
-            }
-        };
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-msg').textContent = msg;
-            toast.classList.remove('translate-x-full', 'opacity-0');
-            setTimeout(() => toast.classList.add('translate-x-full', 'opacity-0'), 3000);
-        }
-
-        // --- CORE LOGIC ---
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                document.getElementById('auth-view').classList.add('hidden');
-                document.getElementById('dashboard-view').classList.remove('hidden');
-                document.getElementById('user-email-display').textContent = user.email;
-                document.getElementById('contact-link').href = CONFIG.CONTACT_LINK;
-                document.getElementById('contact-link-devices').href = CONFIG.CONTACT_LINK;
-                
-                await loadDashboardData(user);
+        // --- AUTH GUARD ---
+        onAuthStateChanged(auth, (user) => {
+            if (!user || user.email !== CONFIG.ADMIN_EMAIL) {
+                window.location.href = 'index.html';
             } else {
-                document.getElementById('auth-view').classList.remove('hidden');
-                document.getElementById('dashboard-view').classList.add('hidden');
+                document.getElementById('admin-email').textContent = user.email;
+                document.getElementById('main-content').classList.remove('opacity-0');
+                loadData();
             }
         });
 
-        async function loadDashboardData(user) {
-            try {
-                // 1. Fetch User Data
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDoc = await getDoc(userDocRef);
+        // --- DATA LOADING ---
+        async function loadData() {
+            // 1. Fetch Users
+            const userSnap = await getDocs(collection(db, 'users'));
+            allUsers = [];
+            userSnap.forEach(doc => {
+                const data = doc.data();
+                if(!data.deleted) allUsers.push({ id: doc.id, ...data });
+            });
 
-                if (userDoc.exists()) {
-                    currentUserData = userDoc.data();
-                    renderUserData(currentUserData);
-                } else {
-                    console.error("User doc missing"); 
-                    document.getElementById('licenses-container').innerHTML = `
-                        <div class="bg-red-50 p-4 rounded-xl text-center border border-red-100 text-red-600 col-span-full">
-                            <i class="fa-solid fa-triangle-exclamation mb-2"></i><br>
-                            Account Profile Not Found.<br>Please contact support to reset your account.
-                        </div>`;
-                    return;
-                }
+            // 2. Fetch Supply (Ledger)
+            const bizSnap = await getDocs(collection(db, 'business_data'));
+            supplyData = [];
+            bizSnap.forEach(doc => {
+                if(doc.data().supply_log) supplyData.push(...doc.data().supply_log);
+            });
 
-                // 2. Fetch Configs & Products
-                const configSnap = await getDocs(collection(db, 'app_config'));
-                const productSnap = await getDocs(collection(db, 'products'));
-                
-                configSnap.forEach(doc => {
-                    if(doc.id === 'content_options') contentOptions = doc.data();
-                });
+            // 3. Fetch Products for Profit Analysis & Dropdowns
+            const prodSnap = await getDocs(collection(db, 'products'));
+            products = [];
+            prodSnap.forEach(doc => products.push({id: doc.id, ...doc.data()}));
+            products.sort((a,b) => a.price - b.price);
 
-                products = [];
-                productSnap.forEach(doc => {
-                    const p = { id: doc.id, ...doc.data() };
-                    products.push(p);
-                });
-                products.sort((a,b) => a.price - b.price);
-
-                // Conditional Donation Product
-                const hasEPGenius = currentUserData.licenses && currentUserData.licenses.some(l => l.epgenius_url && l.epgenius_url.trim() !== "");
-                if (hasEPGenius) {
-                    products.push({ id: 'donation_epgenius', name: 'Donate to EPGenius Curator', price: 20 });
-                }
-
-                renderProductList();
-                renderConfigUI();
-                
-            } catch (err) {
-                console.error("Dashboard Load Error:", err);
-                showToast("Error loading dashboard data. See console.");
-                document.getElementById('licenses-container').innerHTML = `
-                    <div class="bg-red-50 p-4 rounded-xl text-center border border-red-100 text-red-600 col-span-full">
-                        <i class="fa-solid fa-bug mb-2"></i><br>
-                        System Error. Please refresh or contact support.
-                    </div>`;
-            }
+            calculateStats();
+            renderRoster();
+            renderProfitTable();
+            populatePackageSelect();
         }
 
-        function renderUserData(data) {
-            document.getElementById('user-name-display').textContent = data.full_name || 'Client';
-            
-            const licContainer = document.getElementById('licenses-container');
-            licContainer.innerHTML = '';
-            
-            const licenses = data.licenses || [];
-            
-            if (licenses.length === 0) {
-                if(data.username_8k) {
-                     licContainer.innerHTML = createLicenseCard({
-                        label: 'Primary Connection',
-                        username_8k: data.username_8k,
-                        password_8k: data.password_8k,
-                        expiry_date: data.expiry_date,
-                        status: data.status,
-                        m3u_url_8k: data.m3u_url_8k,
-                        epg_url_8k: data.epg_url_8k
-                     });
-                } else {
-                     licContainer.innerHTML = `<div class="bg-gray-50 p-8 rounded-2xl text-center border-2 border-dashed border-gray-200 text-gray-400 col-span-full">
-                        <i class="fa-solid fa-ticket text-3xl mb-2 opacity-50"></i><br>
-                        No active licenses found.<br>Select a package to get started.
-                     </div>`;
-                }
-            } else {
-                licenses.forEach(lic => {
-                    licContainer.innerHTML += createLicenseCard(lic);
-                });
-            }
+        function calculateStats() {
+            const totalSupply = supplyData.reduce((sum, item) => sum + Number(item.credits), 0);
+            const totalCost = supplyData.reduce((sum, item) => sum + Number(item.cost), 0);
+            const totalAllocated = allUsers.reduce((sum, u) => sum + (Number(u.credits_allocated) || 0), 0);
+            const BLENDED_REV_PER_CREDIT = 8; 
+            const estRevenue = totalAllocated * BLENDED_REV_PER_CREDIT;
+
+            document.getElementById('stat-credits').textContent = (totalSupply - totalAllocated).toLocaleString();
+            document.getElementById('stat-profit').textContent = CONFIG.CURRENCY_SYMBOL + (estRevenue - totalCost).toLocaleString();
+            document.getElementById('stat-users').textContent = allUsers.length;
+            document.getElementById('stat-active').textContent = `${allUsers.filter(u => u.status === 'Active').length} Active`;
+            document.getElementById('stat-pending').textContent = `${allUsers.filter(u => u.status === 'Pending').length} Pending`;
         }
 
-        function createLicenseCard(lic) {
-            let statusColor = 'bg-gray-100 text-gray-500';
-            if(lic.status === 'Active') statusColor = 'bg-green-100 text-green-700';
-            if(lic.status === 'Expired') statusColor = 'bg-red-100 text-red-700';
-            if(lic.status === 'Banned') statusColor = 'bg-black text-white';
-
-            // Safe Access for Global Vars
-            const mainDomain = currentUserData?.domain_8k || 'Contact Admin';
-            const backDomain = currentUserData?.domain_8k_backup || 'Contact Admin';
-
-            return `
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative group transition hover:shadow-md">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-900"><i class="fa-solid fa-tv"></i></div>
-                        <div>
-                            <h4 class="font-bold text-base text-brand-900 leading-tight">${lic.label || 'License'}</h4>
-                            <div class="text-[10px] text-gray-400 font-mono mt-0.5">EXP: ${lic.expiry_date || 'N/A'}</div>
-                        </div>
-                    </div>
-                    <span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold ${statusColor}">${lic.status || 'Unknown'}</span>
-                </div>
-
-                <div class="space-y-3 bg-brand-50 p-4 rounded-xl">
-                    <!-- Global Server URLs -->
-                    <div class="grid grid-cols-1 gap-2 mb-4 pb-4 border-b border-gray-200/50">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[9px] uppercase font-bold text-gray-400">Server URL</span>
-                            <div class="flex items-center gap-2">
-                                <code class="text-[10px] font-mono text-gray-600">${mainDomain}</code>
-                                <button onclick="copyString('${mainDomain}')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy text-[10px]"></i></button>
-                            </div>
-                        </div>
-                        ${backDomain && backDomain !== 'Contact Admin' ? `
-                        <div class="flex items-center justify-between">
-                            <span class="text-[9px] uppercase font-bold text-gray-400">Backup URL</span>
-                            <div class="flex items-center gap-2">
-                                <code class="text-[10px] font-mono text-gray-600">${backDomain}</code>
-                                <button onclick="copyString('${backDomain}')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy text-[10px]"></i></button>
-                            </div>
-                        </div>` : ''}
-                    </div>
-
-                    <!-- User/Pass -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">Username</label>
-                            <div class="flex items-center justify-between bg-white p-1.5 rounded border border-gray-200 cursor-pointer hover:border-brand-900 group/input" onclick="copyString('${lic.username_8k}')">
-                                <span class="text-xs font-mono text-gray-700 select-all truncate">${lic.username_8k}</span>
-                                <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-brand-900"></i>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">Password</label>
-                            <div class="flex items-center justify-between bg-white p-1.5 rounded border border-gray-200 cursor-pointer hover:border-brand-900 group/input" onclick="copyString('${lic.password_8k}')">
-                                <span class="text-xs font-mono text-gray-700 select-all truncate">${lic.password_8k}</span>
-                                <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-brand-900"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    ${lic.m3u_url_8k ? `
-                    <div>
-                        <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">8K M3U URL</label>
-                        <div class="flex items-center justify-between bg-white p-1.5 rounded border border-gray-200 cursor-pointer hover:border-brand-900 group/input" onclick="copyString('${lic.m3u_url_8k}')">
-                            <input readonly value="${lic.m3u_url_8k}" class="w-full text-[10px] font-mono text-gray-500 bg-transparent outline-none cursor-pointer truncate">
-                            <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-brand-900 ml-1"></i>
-                        </div>
-                    </div>` : ''}
-                    
-                     ${lic.epgenius_url ? `
-                    <div>
-                        <label class="text-[9px] uppercase font-bold text-blue-400 block mb-1">EPGenius Playlist URL</label>
-                        <div class="flex items-center justify-between bg-white p-1.5 rounded border border-blue-100 cursor-pointer hover:border-blue-500 group/input" onclick="copyString('${lic.epgenius_url}')">
-                            <input readonly value="${lic.epgenius_url}" class="w-full text-[10px] font-mono text-gray-500 bg-transparent outline-none cursor-pointer truncate">
-                            <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-blue-500 ml-1"></i>
-                        </div>
-                    </div>` : ''}
-                </div>
-            </div>`;
-        }
-
-        // --- PRODUCT / ORDER LOGIC ---
-
-        function renderProductList() {
-            const list = document.getElementById('product-list');
-            list.innerHTML = '';
+        // --- UI HELPERS ---
+        function populatePackageSelect() {
+            const select = document.getElementById('new-lic-package');
+            const renewSelect = document.getElementById('renew-package');
+            select.innerHTML = '<option value="">-- Select Product --</option>';
+            renewSelect.innerHTML = '<option value="">-- Choose Package --</option>';
             
-            if (products.length === 0) {
-                list.innerHTML = `<div class="text-center text-[10px] text-gray-300 italic py-4">No packages currently available.</div>`;
-                return;
-            }
-
             products.forEach(p => {
-                let icon = 'fa-box-open';
-                if(p.name.toLowerCase().includes('month')) icon = 'fa-calendar-check';
-                if(p.name.toLowerCase().includes('year')) icon = 'fa-crown';
-                if(p.name.toLowerCase().includes('donate')) icon = 'fa-heart';
+                const opt = `<option value="${p.id}" data-price="${p.price}" data-credits="${p.credits}">${p.name} - $${p.price}</option>`;
+                select.insertAdjacentHTML('beforeend', opt);
+                renewSelect.insertAdjacentHTML('beforeend', opt);
+            });
+        }
+        
+        window.updatePriceFromPackage = () => {
+             const select = document.getElementById('new-lic-package');
+             const selectedOpt = select.options[select.selectedIndex];
+             if(selectedOpt.value) {
+                 document.getElementById('new-lic-price').value = selectedOpt.dataset.price;
+                 document.getElementById('new-lic-credits').value = selectedOpt.dataset.credits;
+             }
+        };
 
-                const html = `
-                <div class="flex items-center justify-between py-4 group">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-gray-400 group-hover:text-brand-900 group-hover:bg-gray-100 transition">
-                            <i class="fa-solid ${icon}"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-sm text-brand-900">${p.name}</h4>
-                            <div class="text-xs font-bold text-gray-500">${CONFIG.CURRENCY_SYMBOL}${p.price}</div>
-                        </div>
-                    </div>
-                    
-                    <button onclick="openPurchaseModal('${p.name}', '${p.price}')" class="px-4 py-2 rounded-lg bg-gray-50 text-brand-900 text-xs font-bold hover:bg-brand-900 hover:text-white transition">
-                        Purchase
-                    </button>
-                </div>`;
-                list.innerHTML += html;
+        // --- PROFIT TABLE UI ---
+        function renderProfitTable() {
+            const tbody = document.getElementById('profit-body');
+            tbody.innerHTML = '';
+            products.forEach(p => {
+                const creditCost = p.credits * COST_PER_CREDIT;
+                const netProfit = p.price - creditCost;
+                const margin = p.price > 0 ? ((netProfit / p.price) * 100).toFixed(1) : 0;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-bold text-gray-900">${p.name}</td>
+                    <td class="px-6 py-4">${CONFIG.CURRENCY_SYMBOL}${p.price}</td>
+                    <td class="px-6 py-4">${p.credits}</td>
+                    <td class="px-6 py-4 text-gray-500">${CONFIG.CURRENCY_SYMBOL}${creditCost.toFixed(2)}</td>
+                    <td class="px-6 py-4 font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}">${CONFIG.CURRENCY_SYMBOL}${netProfit.toFixed(2)}</td>
+                    <td class="px-6 py-4"><span class="px-2 py-1 rounded text-xs font-bold ${margin > 30 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${margin}%</span></td>
+                `;
+                tbody.appendChild(tr);
             });
         }
 
-        window.openPurchaseModal = (name, price) => {
-            document.getElementById('modal-product-name').textContent = name;
-            document.getElementById('modal-product-price').textContent = `${CONFIG.CURRENCY_SYMBOL}${price}`;
-            
-            const subject = encodeURIComponent(`Payment Sent: ${name} (${currentUserData.email})`);
-            const body = encodeURIComponent(`Hi Elliot,\n\nI have sent an e-transfer of $${price} for the ${name} package.\n\nAccount Email: ${currentUserData.email}\n\nThanks!`);
-            document.getElementById('notify-link').href = `mailto:e.chinerman@gmail.com?subject=${subject}&body=${body}`;
-            
-            document.getElementById('purchase-modal').classList.remove('hidden');
+        // --- ROSTER UI ---
+        function renderRoster(filter = "") {
+            const tbody = document.getElementById('roster-body');
+            tbody.innerHTML = '';
+            const filtered = allUsers.filter(u => 
+                (u.email && u.email.toLowerCase().includes(filter.toLowerCase())) || 
+                (u.full_name && u.full_name.toLowerCase().includes(filter.toLowerCase()))
+            );
+
+            filtered.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                
+                let statusColor = 'text-gray-500 bg-gray-100';
+                if(u.status === 'Active') statusColor = 'text-green-700 bg-green-100';
+                if(u.status === 'Pending') statusColor = 'text-yellow-700 bg-yellow-100';
+                if(u.status === 'Expired') statusColor = 'text-red-700 bg-red-100';
+
+                // Check licenses count
+                const licCount = u.licenses ? u.licenses.length : (u.username_8k ? 1 : 0);
+                
+                // Expiry Logic: Find latest expiry date from licenses
+                let expiryDisplay = 'N/A';
+                if (u.licenses && u.licenses.length > 0) {
+                    const dates = u.licenses.map(l => l.expiry_date).sort();
+                    expiryDisplay = dates[dates.length-1]; // Latest date
+                } else if (u.expiry_date) {
+                    expiryDisplay = u.expiry_date; // Legacy fallback
+                }
+
+                // Icons
+                const has8K = licCount > 0 ? `<span class="text-brand-900 font-bold text-xs"><i class="fa-solid fa-server mr-1"></i>${licCount} Line(s)</span>` : '';
+                
+                // Check new license structure for EPGenius
+                let hasEPG = false;
+                if (u.licenses) {
+                    hasEPG = u.licenses.some(l => l.epgenius_key);
+                } else {
+                    hasEPG = !!u.epgenius_key; // Legacy check
+                }
+                const epgIcon = hasEPG ? '<i class="fa-solid fa-bolt text-blue-600 mr-1" title="EPGenius"></i>' : '';
+                const hasNotes = u.internal_notes ? '<i class="fa-regular fa-note-sticky text-yellow-500" title="Notes"></i>' : '';
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-gray-900">${u.full_name || 'No Name'}</div>
+                        <div class="text-xs text-gray-500">${u.email}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold ${statusColor}">${u.status}</span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-600">
+                        <div class="flex items-center gap-2 mb-1">${has8K} ${epgIcon} ${hasNotes}</div>
+                        <div class="text-xs">
+                            <span class="font-bold">Latest Exp:</span> ${expiryDisplay}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-right flex justify-end gap-2 items-center">
+                        <button onclick="copyUserToClipboard(false, '${u.id}')" class="text-gray-400 hover:text-brand-900" title="Copy Info"><i class="fa-regular fa-copy"></i></button>
+                        <button onclick="editUser('${u.id}')" class="text-brand-900 font-bold hover:underline">Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        document.getElementById('search-input').addEventListener('input', (e) => renderRoster(e.target.value));
+
+        // --- LICENSE MANAGER LOGIC ---
+
+        window.renderLicenseList = () => {
+            const tbody = document.getElementById('license-list-body');
+            tbody.innerHTML = '';
+            if (currentLicenses.length === 0) {
+                document.getElementById('no-licenses-msg').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('no-licenses-msg').classList.add('hidden');
+
+            currentLicenses.forEach((lic, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-100 hover:bg-gray-50';
+                
+                let badgeClass = 'bg-gray-100 text-gray-600';
+                if(lic.status === 'Active') badgeClass = 'bg-green-100 text-green-700';
+                if(lic.status === 'Expired') badgeClass = 'bg-red-100 text-red-700';
+
+                // Resolve package name from ID if stored as ID, or use stored name
+                let pkgName = lic.package_name || '-';
+                // Try to match ID to Product Name if simpler display needed
+                const p = products.find(prod => prod.id === lic.package_name);
+                if(p) pkgName = p.name;
+
+                tr.innerHTML = `
+                    <td class="p-2 font-medium">
+                        ${lic.label || 'Line '+(index+1)}
+                        ${lic.epgenius_key ? '<i class="fa-solid fa-bolt text-blue-400 ml-1 text-[10px]" title="EPGenius"></i>' : ''}
+                    </td>
+                    <td class="p-2 text-gray-600 text-[11px]">
+                        <div><span class="font-bold text-gray-400">U:</span> ${lic.username_8k}</div>
+                        <div><span class="font-bold text-gray-400">P:</span> ${lic.password_8k}</div>
+                    </td>
+                    <td class="p-2 text-gray-600 text-[10px]">
+                        <div>${pkgName}</div>
+                        <div>$${lic.price_paid || '0'}</div>
+                    </td>
+                    <td class="p-2 text-gray-600 text-[11px]">${lic.expiry_date}</td>
+                    <td class="p-2">
+                         <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${lic.status}</span>
+                    </td>
+                    <td class="p-2 text-right space-x-2">
+                         <button type="button" onclick="startRenewal(${index})" class="text-green-600 font-bold text-[10px] hover:underline" title="Renew"><i class="fa-solid fa-arrows-rotate"></i></button>
+                        <button type="button" onclick="loadLicenseIntoForm(${index})" class="text-brand-900 font-bold text-[10px] hover:underline" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button type="button" onclick="removeLicense(${index})" class="text-red-400 hover:text-red-600" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
         };
 
-        // --- DEVICE INVENTORY (GRID / SCHOOL A) ---
+        window.toggleLicenseForm = (mode) => {
+            document.getElementById('renewal-form-container').classList.add('hidden'); // Close renewal
+            const form = document.getElementById('license-form-container');
+            
+            if (mode === 'add') {
+                form.classList.remove('hidden');
+                document.getElementById('lic-form-title').textContent = "Add New License";
+                document.getElementById('btn-save-lic').innerHTML = '<i class="fa-solid fa-plus mr-1"></i> Add';
+                document.getElementById('editing-lic-index').value = "-1";
+                clearLicenseInputs();
+                // Default Date Paid to Today
+                document.getElementById('new-lic-date-paid').value = new Date().toISOString().split('T')[0];
+            } else {
+                form.classList.add('hidden');
+            }
+        };
 
-        function renderConfigUI() {
-            const renderTags = (containerId, selectedList, allOptions, type) => {
-                const container = document.getElementById(containerId);
-                container.innerHTML = '';
-                selectedList.forEach(item => {
-                    const btn = document.createElement('button');
-                    btn.className = 'bg-brand-900 text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 hover:bg-red-600 transition';
-                    btn.innerHTML = `${item} <i class="fa-solid fa-times"></i>`;
-                    btn.onclick = () => togglePref(type, item);
-                    container.appendChild(btn);
-                });
+        window.cancelLicenseEdit = () => {
+            document.getElementById('license-form-container').classList.add('hidden');
+            document.getElementById('renewal-form-container').classList.add('hidden');
+            clearLicenseInputs();
+        };
 
-                const select = document.getElementById(type === 'live' ? 'live-pref-select' : 'vod-pref-select');
-                select.innerHTML = `<option value="">+ Add...</option>`;
-                allOptions.forEach(opt => {
-                    if(!selectedList.includes(opt)) {
-                        const o = document.createElement('option');
-                        o.value = opt;
-                        o.textContent = opt;
-                        select.appendChild(o);
-                    }
-                });
+        window.loadLicenseIntoForm = (index) => {
+            document.getElementById('renewal-form-container').classList.add('hidden');
+            const lic = currentLicenses[index];
+            document.getElementById('license-form-container').classList.remove('hidden');
+            document.getElementById('lic-form-title').textContent = "View / Edit License";
+            document.getElementById('btn-save-lic').innerHTML = '<i class="fa-solid fa-save mr-1"></i> Update';
+            document.getElementById('editing-lic-index').value = index;
+
+            // Populate fields
+            document.getElementById('new-lic-label').value = lic.label || '';
+            document.getElementById('new-lic-status').value = lic.status || 'Active';
+            document.getElementById('new-lic-user').value = lic.username_8k || '';
+            document.getElementById('new-lic-pass').value = lic.password_8k || '';
+            document.getElementById('new-lic-expiry').value = lic.expiry_date || '';
+            document.getElementById('new-lic-credits').value = lic.credits || 0;
+            
+            // Set select value
+            const pkgSelect = document.getElementById('new-lic-package');
+            pkgSelect.value = lic.package_name || ''; 
+            
+            document.getElementById('new-lic-price').value = lic.price_paid || '';
+            document.getElementById('new-lic-date-paid').value = lic.date_paid || '';
+
+            document.getElementById('new-lic-m3u').value = lic.m3u_url_8k || '';
+            document.getElementById('new-lic-epg').value = lic.epg_url_8k || '';
+            document.getElementById('new-lic-epg-key').value = lic.epgenius_key || '';
+            document.getElementById('new-lic-drive').value = lic.epgenius_url || '';
+        };
+
+        window.clearLicenseInputs = () => {
+             const ids = ['new-lic-label', 'new-lic-user', 'new-lic-pass', 'new-lic-expiry', 'new-lic-credits', 
+                        'new-lic-m3u', 'new-lic-epg', 'new-lic-epg-key', 'new-lic-drive', 
+                        'new-lic-package', 'new-lic-price', 'new-lic-date-paid'];
+            ids.forEach(id => document.getElementById(id).value = '');
+            document.getElementById('new-lic-status').value = 'Active';
+            document.getElementById('editing-lic-index').value = "-1";
+        };
+
+        // --- RENEWAL LOGIC ---
+        window.startRenewal = (index) => {
+            document.getElementById('license-form-container').classList.add('hidden');
+            document.getElementById('renewal-form-container').classList.remove('hidden');
+            document.getElementById('renew-lic-index').value = index;
+            document.getElementById('renew-package').value = "";
+            document.getElementById('renew-expiry-preview').textContent = currentLicenses[index].expiry_date || "N/A";
+        };
+
+        // Calc preview date on change
+        document.getElementById('renew-package').addEventListener('change', (e) => {
+            const pid = e.target.value;
+            const index = document.getElementById('renew-lic-index').value;
+            const currentExpiryStr = currentLicenses[index].expiry_date;
+            
+            if(!pid) {
+                 document.getElementById('renew-expiry-preview').textContent = currentExpiryStr;
+                 return;
+            }
+
+            // Determine duration (Months)
+            let durationMonths = 0;
+            let durationDays = 0;
+            if(pid.includes('1_month')) durationMonths = 1;
+            else if(pid.includes('3_month')) durationMonths = 3;
+            else if(pid.includes('6_month')) durationMonths = 6;
+            else if(pid.includes('12_month')) durationMonths = 12;
+            else if(pid.includes('demo') || pid.includes('day')) durationDays = 1;
+
+            // Calc Date
+            // Logic: If current expiry is in future, add to it. If past, add to Today.
+            let baseDate = new Date();
+            const today = new Date();
+            
+            if(currentExpiryStr) {
+                const expDate = new Date(currentExpiryStr);
+                if(expDate > today) baseDate = expDate;
+            }
+
+            // Add Duration
+            if(durationMonths > 0) baseDate.setMonth(baseDate.getMonth() + durationMonths);
+            if(durationDays > 0) baseDate.setDate(baseDate.getDate() + durationDays);
+
+            document.getElementById('renew-expiry-preview').textContent = baseDate.toISOString().split('T')[0];
+        });
+
+        window.confirmRenewal = () => {
+            const index = document.getElementById('renew-lic-index').value;
+            const pid = document.getElementById('renew-package').value;
+            const newExpiry = document.getElementById('renew-expiry-preview').textContent;
+            
+            if(!pid) return alert("Select a package");
+
+            // Get product details for history
+            const p = products.find(prod => prod.id === pid);
+            
+            // Update History
+            if(!currentLicenses[index].history) currentLicenses[index].history = [];
+            currentLicenses[index].history.push({
+                date: new Date().toISOString().split('T')[0],
+                action: 'Renew',
+                package: p.name,
+                price: p.price,
+                previous_expiry: currentLicenses[index].expiry_date,
+                new_expiry: newExpiry
+            });
+
+            // Update License State
+            currentLicenses[index].expiry_date = newExpiry;
+            currentLicenses[index].package_name = pid;
+            currentLicenses[index].price_paid = p.price;
+            currentLicenses[index].date_paid = new Date().toISOString().split('T')[0];
+            currentLicenses[index].status = 'Active';
+
+            cancelLicenseEdit();
+            window.renderLicenseList();
+        };
+
+        window.saveLicenseLine = () => {
+            // Core
+            const label = document.getElementById('new-lic-label').value;
+            const status = document.getElementById('new-lic-status').value;
+            const user = document.getElementById('new-lic-user').value;
+            const pass = document.getElementById('new-lic-pass').value;
+            const expiry = document.getElementById('new-lic-expiry').value;
+            const credits = document.getElementById('new-lic-credits').value;
+            
+            // Sales
+            const pkg = document.getElementById('new-lic-package').value;
+            const price = document.getElementById('new-lic-price').value;
+            const datePaid = document.getElementById('new-lic-date-paid').value;
+
+            // Technical
+            const m3u = document.getElementById('new-lic-m3u').value;
+            const epg = document.getElementById('new-lic-epg').value;
+            
+            // EPGenius
+            const epgKey = document.getElementById('new-lic-epg-key').value;
+            const drive = document.getElementById('new-lic-drive').value;
+
+            if(!user || !pass || !expiry) {
+                alert("Username, Password, and Expiry are required.");
+                return;
+            }
+
+            const newLicObj = {
+                id: crypto.randomUUID(), 
+                label: label,
+                status: status,
+                username_8k: user,
+                password_8k: pass,
+                expiry_date: expiry,
+                credits: Number(credits) || 0,
+                package_name: pkg,
+                price_paid: price,
+                date_paid: datePaid,
+                m3u_url_8k: m3u,
+                epg_url_8k: epg,
+                epgenius_key: epgKey,
+                epgenius_url: drive,
+                history: [] // Init history
             };
 
-            renderTags('live-tags', currentUserData.live_preferences || [], contentOptions.live_list || [], 'live');
-            renderTags('vod-tags', currentUserData.vod_preferences || [], contentOptions.vod_list || [], 'vod');
-            
-            document.getElementById('live-pref-select').onchange = (e) => { if(e.target.value) togglePref('live', e.target.value); };
-            document.getElementById('vod-pref-select').onchange = (e) => { if(e.target.value) togglePref('vod', e.target.value); };
-            document.getElementById('custom-req').value = currentUserData.custom_request || '';
+            const editIndex = parseInt(document.getElementById('editing-lic-index').value);
 
-            renderDeviceGrid();
-        }
-
-        function renderDeviceGrid() {
-            const grid = document.getElementById('device-grid');
-            grid.innerHTML = '';
-            
-            const userDevices = currentUserData?.devices || [];
-            
-            userDevices.forEach(devStr => {
-                let name = devStr;
-                let icon = 'fa-tv';
-
-                if(devStr.includes('📱')) { icon = 'fa-mobile-screen'; name = devStr.replace('📱 ', ''); }
-                else if(devStr.includes('📦')) { icon = 'fa-box'; name = devStr.replace('📦 ', ''); }
-                else if(devStr.includes('💻')) { icon = 'fa-laptop'; name = devStr.replace('💻 ', ''); }
-                else if(devStr.includes('📺')) { icon = 'fa-tv'; name = devStr.replace('📺 ', ''); }
-
-                const el = document.createElement('div');
-                el.className = 'bg-white rounded-2xl p-4 shadow-md flex flex-col items-center justify-center gap-3 aspect-square relative group hover:shadow-xl transition';
-                el.innerHTML = `
-                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
-                        <button onclick="removeDevice('${devStr}')" class="text-red-300 hover:text-red-500"><i class="fa-solid fa-times-circle"></i></button>
-                    </div>
-                    <i class="fa-solid ${icon} text-4xl text-gray-300 group-hover:text-brand-900 transition"></i>
-                    <span class="text-xs font-bold text-gray-600 text-center leading-tight px-1 truncate w-full">${name}</span>
-                `;
-                grid.appendChild(el);
-            });
-
-            // Add Button Card
-            const addBtn = document.createElement('button');
-            addBtn.onclick = () => openAddDeviceModal();
-            addBtn.className = 'rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 aspect-square hover:border-brand-900 hover:bg-gray-50 transition group';
-            addBtn.innerHTML = `
-                <i class="fa-solid fa-plus text-2xl text-gray-300 group-hover:text-brand-900"></i>
-                <span class="text-[10px] font-bold text-gray-400 group-hover:text-brand-900 uppercase">Add Slot</span>
-            `;
-            grid.appendChild(addBtn);
-        }
-
-        // --- NEW DEVICE MODAL LOGIC ---
-        window.openAddDeviceModal = () => {
-            document.getElementById('add-device-modal').classList.remove('hidden');
-        };
-
-        window.selectDeviceType = (type) => {
-            document.getElementById('modal-device-type').value = type;
-            document.getElementById('device-type-selector').classList.add('opacity-50', 'pointer-events-none');
-            document.getElementById('device-name-input-group').classList.remove('hidden');
-            document.getElementById('modal-device-name').focus();
-        };
-
-        window.confirmAddDevice = async () => {
-            const name = document.getElementById('modal-device-name').value;
-            const type = document.getElementById('modal-device-type').value;
-            
-            if(!name) return;
-
-            let emoji = '📺';
-            if(type === 'mobile') emoji = '📱';
-            if(type === 'box') emoji = '📦';
-            if(type === 'laptop') emoji = '💻';
-
-            const val = `${emoji} ${name}`;
-
-            const userRef = doc(db, 'users', auth.currentUser.uid);
-            await updateDoc(userRef, { devices: arrayUnion(val) });
-            
-            if(!currentUserData.devices) currentUserData.devices = [];
-            currentUserData.devices.push(val);
-            
-            renderDeviceGrid();
-            closeModal('add-device-modal');
-            showToast('Device added');
-        };
-
-        window.removeDevice = async (device) => {
-            if(!confirm("Remove this device?")) return;
-            const userRef = doc(db, 'users', auth.currentUser.uid);
-            await updateDoc(userRef, { devices: arrayRemove(device) });
-            currentUserData.devices = currentUserData.devices.filter(d => d !== device);
-            renderDeviceGrid();
-            showToast('Device removed');
-        };
-
-        window.togglePref = async (type, val) => {
-            const field = type === 'live' ? 'live_preferences' : 'vod_preferences';
-            let list = currentUserData[field] || [];
-            if(list.includes(val)) list = list.filter(i => i !== val);
-            else list.push(val);
-            currentUserData[field] = list;
-            renderConfigUI(); 
-        };
-
-        document.getElementById('save-config-btn').addEventListener('click', async () => {
-            const userRef = doc(db, 'users', auth.currentUser.uid);
-            await updateDoc(userRef, {
-                live_preferences: currentUserData.live_preferences || [],
-                vod_preferences: currentUserData.vod_preferences || [],
-                custom_request: document.getElementById('custom-req').value
-            });
-            showToast('Preferences Saved');
-        });
-
-        // --- AUTH & MIGRATION ---
-
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const pass = document.getElementById('login-pass').value;
-            try {
-                await signInWithEmailAndPassword(auth, email, pass);
-            } catch (err) {
-                showToast(err.message);
-            }
-        });
-
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const code = document.getElementById('reg-code').value;
-            const email = document.getElementById('reg-email').value;
-            const pass = document.getElementById('reg-pass').value;
-
-            if (code !== CONFIG.INVITE_CODE) {
-                showToast("Invalid Invite Code");
-                return;
+            if (editIndex >= 0) {
+                // UPDATE existing
+                newLicObj.id = currentLicenses[editIndex].id; // Keep ID
+                newLicObj.history = currentLicenses[editIndex].history || []; // Keep History
+                currentLicenses[editIndex] = newLicObj;
+            } else {
+                // ADD new
+                // Log creation in history
+                newLicObj.history.push({
+                    date: datePaid || new Date().toISOString().split('T')[0],
+                    action: 'Created',
+                    package: pkg,
+                    price: price
+                });
+                currentLicenses.push(newLicObj);
             }
 
-            try {
-                const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-                const user = userCred.user;
+            // Reset UI
+            cancelLicenseEdit();
+            window.renderLicenseList();
+        };
 
-                // MIGRATION LOGIC
-                const q = query(collection(db, "users"), where("email", "==", email));
-                const querySnapshot = await getDocs(q);
+        window.removeLicense = (index) => {
+            if(!confirm("Delete this license line?")) return;
+            currentLicenses.splice(index, 1);
+            window.renderLicenseList();
+        };
 
-                if (!querySnapshot.empty) {
-                    const oldDoc = querySnapshot.docs[0];
-                    const oldData = oldDoc.data();
-                    
-                    await runTransaction(db, async (transaction) => {
-                        const newDocRef = doc(db, "users", user.uid);
-                        const oldDocRef = doc(db, "users", oldDoc.id);
-                        transaction.set(newDocRef, oldData);
-                        transaction.delete(oldDocRef);
-                    });
-                    showToast('Account claimed successfully!');
+        // Optional ID for when called from Roster row
+        window.copyUserToClipboard = (isFromModal, userId) => {
+            let u;
+            
+            if(isFromModal) {
+                 // Scrape from Form Inputs
+                 u = {
+                    full_name: document.getElementById('edit-name').value,
+                    email: document.getElementById('edit-email').value,
+                    domain_8k: document.getElementById('edit-domain-8k').value,
+                    domain_8k_backup: document.getElementById('edit-domain-backup-8k').value,
+                    licenses: currentLicenses
+                 };
+            } else {
+                 // Find in AllUsers
+                 u = allUsers.find(user => user.id === userId);
+                 if(!u) return;
+            }
+            
+            const name = u.full_name || "User";
+            const email = u.email || "";
+            const domain = u.domain_8k || "N/A";
+            const backup = u.domain_8k_backup || "N/A";
+            const licenses = u.licenses || [];
+            
+            let md = `# Client: ${name}\n`;
+            md += `**Email:** ${email}\n`;
+            md += `**8K Domain:** ${domain}\n`;
+            md += `**Backup Domain:** ${backup}\n\n`;
+            md += `## Licenses\n`;
+
+            if (licenses.length === 0) {
+                if(u.username_8k) {
+                     // Legacy fallback for roster copy
+                     md += `### 1. Primary (Legacy)\n`;
+                     md += `- **Username:** \`${u.username_8k}\`\n`;
+                     md += `- **Password:** \`${u.password_8k}\`\n`;
+                     md += `- **Expiry:** ${u.expiry_date}\n`;
                 } else {
-                    await setDoc(doc(db, "users", user.uid), {
-                        email: email,
-                        status: "Pending",
-                        created_at: new Date().toISOString(),
-                        devices: [],
-                        licenses: [], 
+                     md += "_No active licenses._";
+                }
+            } else {
+                licenses.forEach((lic, i) => {
+                    md += `### ${i+1}. ${lic.label || 'License'}\n`;
+                    md += `- **Status:** ${lic.status}\n`;
+                    md += `- **Username:** \`${lic.username_8k}\`\n`;
+                    md += `- **Password:** \`${lic.password_8k}\`\n`;
+                    md += `- **Expiry:** ${lic.expiry_date}\n`;
+                    if(lic.package_name) md += `- **Package:** ${lic.package_name} (${lic.price_paid ? '$'+lic.price_paid : ''})\n`;
+                    if(lic.m3u_url_8k) md += `- **8K M3U:** \`${lic.m3u_url_8k}\`\n`;
+                    if(lic.epg_url_8k) md += `- **8K EPG:** \`${lic.epg_url_8k}\`\n`;
+                    if(lic.epgenius_url) md += `- **EPGenius M3U:** ${lic.epgenius_url}\n`;
+                    md += `\n`;
+                });
+            }
+
+            navigator.clipboard.writeText(md).then(() => {
+                alert("Copied to clipboard!");
+            });
+        };
+
+        // --- ACTIONS ---
+
+        window.openUserModal = () => {
+            document.getElementById('user-form').reset();
+            document.getElementById('edit-uid').value = ''; 
+            document.getElementById('read-selections').innerHTML = '<span class="italic text-gray-400">New user</span>';
+            document.getElementById('btn-archive').classList.add('hidden');
+            
+            // Reset Licenses
+            currentLicenses = [];
+            window.renderLicenseList();
+            cancelLicenseEdit(); // Hide form
+            
+            document.getElementById('user-modal').classList.remove('hidden');
+        };
+
+        window.editUser = (id) => {
+            const u = allUsers.find(user => user.id === id);
+            if(!u) return;
+            
+            // Basic
+            document.getElementById('edit-uid').value = u.id;
+            document.getElementById('edit-name').value = u.full_name || '';
+            document.getElementById('edit-email').value = u.email;
+            document.getElementById('edit-status').value = u.status || 'Pending';
+            document.getElementById('edit-credits').value = u.credits_allocated || 0; // Wallet
+            
+            // Global 8K Details
+            document.getElementById('edit-domain-8k').value = u.domain_8k || '';
+            document.getElementById('edit-domain-backup-8k').value = u.domain_8k_backup || '';
+
+            // Notes
+            document.getElementById('edit-notes').value = u.internal_notes || '';
+
+            // --- LICENSE MIGRATION & LOADING ---
+            currentLicenses = u.licenses || [];
+            
+            // Legacy Migration: If no licenses array but singular fields exist, convert to license
+            if (currentLicenses.length === 0 && u.username_8k) {
+                currentLicenses.push({
+                    id: crypto.randomUUID(),
+                    label: "Primary (Legacy)",
+                    status: 'Active',
+                    username_8k: u.username_8k,
+                    password_8k: u.password_8k,
+                    expiry_date: u.expiry_date || '',
+                    credits: 0,
+                    // Legacy moves to License
+                    m3u_url_8k: u.m3u_url_8k || '',
+                    epg_url_8k: u.epg_url_8k || '',
+                    epgenius_key: u.epgenius_key || '',
+                    epgenius_url: u.epgenius_url || ''
+                });
+            }
+            window.renderLicenseList();
+            cancelLicenseEdit(); // Ensure form starts hidden
+
+            // Read Only Selections
+            const devices = (u.devices || []).join(', ') || 'None';
+            const live = (u.live_preferences || []).join(', ') || 'None';
+            const vod = (u.vod_preferences || []).join(', ') || 'None';
+            const custom = u.custom_request || '';
+            
+            document.getElementById('read-selections').innerHTML = `
+                <p><strong>Devices:</strong> ${devices}</p>
+                <p class="mt-1"><strong>Live TV:</strong> ${live}</p>
+                <p class="mt-1"><strong>VOD:</strong> ${vod}</p>
+                ${custom ? `<p class="mt-1 text-red-500"><strong>Custom:</strong> ${custom}</p>` : ''}
+            `;
+            
+            document.getElementById('btn-archive').classList.remove('hidden');
+            document.getElementById('user-modal').classList.remove('hidden');
+        };
+
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+        document.getElementById('user-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const uid = document.getElementById('edit-uid').value;
+            
+            const data = {
+                // Identity
+                full_name: document.getElementById('edit-name').value,
+                email: document.getElementById('edit-email').value,
+                status: document.getElementById('edit-status').value, // Global Status
+                credits_allocated: Number(document.getElementById('edit-credits').value), // Global Wallet
+                
+                // Global Config
+                domain_8k: document.getElementById('edit-domain-8k').value,
+                domain_8k_backup: document.getElementById('edit-domain-backup-8k').value,
+
+                // Licenses Array (The New Schema)
+                licenses: currentLicenses,
+
+                // Internal
+                internal_notes: document.getElementById('edit-notes').value
+            };
+
+            try {
+                if (uid) {
+                    await updateDoc(doc(db, 'users', uid), data);
+                } else {
+                    await addDoc(collection(db, 'users'), { 
+                        ...data, 
+                        devices: [], 
                         live_preferences: ["Elliot's Default (QC + Sports + English)"], 
                         vod_preferences: ["Elliot's Default (Movies & Series)"], 
                         custom_request: "",
-                        credits_allocated: 0
+                        created_at: new Date().toISOString() 
                     });
-                    showToast('Account created successfully!');
                 }
-            } catch (err) {
-                console.error(err);
-                showToast(err.message);
-            }
+                closeModal('user-modal');
+                loadData();
+            } catch (err) { alert(err.message); }
         });
 
-        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+        window.archiveUser = async () => {
+            const uid = document.getElementById('edit-uid').value;
+            if(!uid || !confirm('Are you sure? This hides the user from the list.')) return;
+            await updateDoc(doc(db, 'users', uid), { deleted: true });
+            closeModal('user-modal');
+            loadData();
+        };
+
+        // --- SUPPLY ACTIONS ---
+        window.openSupplyModal = () => document.getElementById('supply-modal').classList.remove('hidden');
+
+        document.getElementById('supply-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const credits = document.getElementById('supply-credits').value;
+            const cost = document.getElementById('supply-cost').value;
+            
+            const ledgerRef = doc(db, 'business_data', 'ledger');
+            try {
+                await setDoc(ledgerRef, {
+                    supply_log: arrayUnion({
+                        credits: Number(credits),
+                        cost: Number(cost),
+                        date: new Date().toISOString()
+                    })
+                }, { merge: true });
+                closeModal('supply-modal');
+                loadData();
+            } catch (err) { alert(err.message); }
+        });
+
+        // --- UTILITY (SEED DATA) ---
+        window.seedData = async () => {
+            if(!confirm("Warning: This will reset Devices, Categories, and Product Pricing. Continue?")) return;
+            try {
+                // 1. App Config - Devices
+                const devices = [
+                    'Stick: Amazon Fire TV 4K', 'Stick: Chromecast w/ Google TV', 'Stick: Roku 4K (Limited)',
+                    'Box: Formuler Z11 Pro', 'Box: Nvidia Shield Pro', 'Box: BuzzTV X5', 'Box: MAG 524 (Legacy)',
+                    'TV: Samsung Tizen', 'TV: LG WebOS', 'TV: Android Native (Sony/Hisense)',
+                    'Mobile: Android Phone', 'Mobile: iPhone (iOS)', 'Tablet: iPad', 'Tablet: Android Tablet',
+                    'PC: Windows', 'PC: Mac OS'
+                ];
+                await setDoc(doc(db, 'app_config', 'devices'), { list: devices });
+
+                // 2. App Config - Content Categories
+                const live_cats = ["Elliot's Default (QC + Sports + English)", "Quebec Premium (French)", "Canada & USA (English)", "International (Europe/Latino)", "Adult 18+", "Other / Custom Request"];
+                const vod_cats = ["Elliot's Default (Movies & Series)", "French Content Only", "English Content Only", "International", "Adult", "None", "Other / Custom Request"];
+                await setDoc(doc(db, 'app_config', 'content_options'), { live_list: live_cats, vod_list: vod_cats });
+                
+                // 3. Products
+                await setDoc(doc(db, 'products', 'demo_1day'), { name: 'Demo (1 Day)', price: 0, credits: 0 });
+                await setDoc(doc(db, 'products', '1_month'), { name: '1 Month Access', price: 10, credits: 1 });
+                await setDoc(doc(db, 'products', '3_month'), { name: '3 Months Bundle', price: 25, credits: 3 });
+                await setDoc(doc(db, 'products', '6_month'), { name: '6 Months Deal', price: 40, credits: 6 });
+                await setDoc(doc(db, 'products', '12_month'), { name: '1 Year VIP', price: 60, credits: 12 });
+                
+                alert("Database Seeded Successfully! Refresh to see changes.");
+                loadData();
+            } catch (err) { console.error(err); alert("Error seeding data: " + err.message); }
+        };
     </script>
 </body>
 </html>
