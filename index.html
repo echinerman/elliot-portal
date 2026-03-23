@@ -11,7 +11,7 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: { 50: '#fafaf9', 100: '#f5f5f4', 800: '#292524', 900: '#1c1917' } // Stone theme
+                        brand: { 50: '#fafaf9', 100: '#f5f5f4', 800: '#292524', 900: '#1c1917' } 
                     }
                 }
             }
@@ -20,7 +20,6 @@
 </head>
 <body class="bg-brand-50 text-brand-900 min-h-screen font-sans antialiased">
 
-    <!-- TOAST NOTIFICATION -->
     <div id="toast" class="fixed top-4 right-4 z-50 transform transition-all duration-300 translate-x-full opacity-0">
         <div class="bg-brand-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
             <i id="toast-icon" class="fa-solid fa-circle-check"></i>
@@ -28,12 +27,10 @@
         </div>
     </div>
 
-    <!-- AUTH CONTAINER -->
     <div id="auth-view" class="flex flex-col items-center justify-center min-h-screen p-4">
         <div class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl">
             <h1 class="text-2xl font-bold mb-6 text-center text-brand-800">Client Portal</h1>
             
-            <!-- Login Form -->
             <form id="login-form" class="space-y-4">
                 <input type="email" id="login-email" placeholder="Email" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
                 <input type="password" id="login-pass" placeholder="Password" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
@@ -43,7 +40,6 @@
                 </div>
             </form>
 
-            <!-- Register Form (Hidden) -->
             <form id="register-form" class="space-y-4 hidden">
                 <input type="text" id="reg-code" placeholder="Invite Code" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
                 <input type="email" id="reg-email" placeholder="Email" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
@@ -56,9 +52,7 @@
         </div>
     </div>
 
-    <!-- DASHBOARD CONTAINER (Hidden by default) -->
     <div id="dashboard-view" class="hidden max-w-7xl mx-auto p-4 lg:p-8 space-y-8">
-        <!-- Header -->
         <header class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm gap-4">
             <div>
                 <h2 class="text-xl font-bold">Welcome, <span id="user-name-display" class="font-normal text-gray-600">Client</span></h2>
@@ -72,36 +66,29 @@
             </div>
         </header>
 
-        <!-- MAIN LAYOUT: Masonry Grid -->
         <div class="columns-1 lg:columns-2 gap-8 space-y-8">
 
-            <!-- WIDGET 1: ACTIVE LICENSES -->
             <div class="break-inside-avoid space-y-4">
                 <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">My Active Licenses</h3>
                 <div id="licenses-container" class="space-y-4">
-                    <!-- Loaded via JS -->
                     <div class="bg-white p-8 rounded-2xl text-center text-gray-400">Loading licenses...</div>
                 </div>
             </div>
 
-            <!-- WIDGET 2: AVAILABLE PACKAGES -->
             <div class="break-inside-avoid space-y-4">
                 <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Available Packages</h3>
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                     <div id="product-list" class="divide-y divide-gray-100">
-                        <!-- Products Loaded JS -->
-                    </div>
+                        </div>
                 </div>
             </div>
 
-            <!-- WIDGET 3: VIEWING PREFERENCES -->
             <div class="break-inside-avoid space-y-4">
                 <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Viewing Category Preferences</h3>
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                     <p class="text-[11px] text-gray-400 mb-6">Customize your playlist content.</p>
                     
                     <div class="space-y-6">
-                        <!-- Live TV -->
                         <div>
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-xs font-bold uppercase text-brand-900">Live TV</h4>
@@ -110,7 +97,6 @@
                             <div id="live-tags" class="flex flex-wrap gap-2"></div>
                         </div>
 
-                        <!-- VOD -->
                         <div>
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-xs font-bold uppercase text-brand-900">Movies & Series</h4>
@@ -119,7 +105,6 @@
                             <div id="vod-tags" class="flex flex-wrap gap-2"></div>
                         </div>
 
-                        <!-- Custom Request -->
                         <div>
                             <h4 class="text-xs font-bold uppercase text-brand-900 mb-2">Special Requests</h4>
                             <textarea id="custom-req" rows="2" class="w-full p-3 bg-gray-50 rounded-xl text-sm border-none focus:ring-1 focus:ring-brand-900 outline-none resize-none" placeholder="e.g. Specific international channels..."></textarea>
@@ -129,7 +114,6 @@
                 </div>
             </div>
 
-            <!-- WIDGET 4: DEVICE INVENTORY -->
             <div class="break-inside-avoid space-y-4">
                 <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Device Inventory</h3>
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
@@ -149,11 +133,9 @@
                     </div>
 
                     <div id="device-list-container" class="space-y-2">
-                        <!-- Dynamic Device List -->
-                    </div>
+                        </div>
                 </div>
                 
-                <!-- Support Link -->
                 <div class="text-center pt-4">
                     <a id="contact-link" href="#" class="inline-flex items-center gap-2 text-gray-400 text-xs hover:text-brand-900 hover:underline transition">
                         <i class="fa-regular fa-envelope"></i> Contact Elliot for Support
@@ -161,10 +143,7 @@
                 </div>
             </div>
 
-        </div> <!-- End Masonry -->
-
-        <!-- Hidden Purchase Instructions Modal -->
-        <div id="purchase-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        </div> <div id="purchase-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
                 <div class="bg-brand-900 p-6 text-white text-center">
                     <h4 class="text-lg font-bold" id="modal-product-name">Package Name</h4>
@@ -369,7 +348,6 @@
                 </div>
 
                 <div class="space-y-3 bg-brand-50 p-4 rounded-xl">
-                    <!-- Global Server URLs (Moved Here) -->
                     <div class="grid grid-cols-1 gap-2 mb-4 pb-4 border-b border-gray-200/50">
                         <div class="flex items-center justify-between">
                             <span class="text-[9px] uppercase font-bold text-gray-400">Server URL</span>
@@ -388,7 +366,6 @@
                         </div>` : ''}
                     </div>
 
-                    <!-- User/Pass -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">Username</label>
@@ -656,6 +633,18 @@
                         custom_request: "",
                         credits_allocated: 0
                     });
+
+                    // FIRE n8n WEBHOOK FOR NEW USERS
+                    fetch('https://n8n.goelliot.vip/webhook/4c7a0486-fb49-43fb-ab83-eacb8ad5619e', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            username: email,
+                            event: 'new_user_registration',
+                            timestamp: new Date().toISOString()
+                        })
+                    }).catch(err => console.error("Webhook Error:", err));
+
                     showToast('Account created successfully!');
                 }
             } catch (err) {
