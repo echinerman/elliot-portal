@@ -307,12 +307,19 @@
                 <!-- Section 4: Preferences & Notes -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Internal Notes</label>
-                        <textarea id="edit-notes" rows="3" class="w-full p-2 border rounded-lg text-sm bg-yellow-50 focus:bg-white transition" placeholder="Private admin notes..."></textarea>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Client Setup Whiteboard</label>
+                        <p class="text-[11px] text-gray-400 mb-2">Shared with the client portal. Use this for the client's environment, devices, rooms, apps, or troubleshooting notes.</p>
+                        <textarea id="edit-setup-notes" rows="6" class="w-full p-2 border rounded-lg text-sm bg-gray-50 focus:bg-white transition" placeholder="Example: Living room Fire Stick on Wi-Fi, bedroom LG TV on WebOS, buffering mostly during live sports in the evening."></textarea>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Selections (Read Only)</label>
-                        <div class="p-2 bg-gray-100 rounded-lg text-xs text-gray-600 h-20 overflow-y-auto" id="read-selections"></div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Internal Notes</label>
+                            <textarea id="edit-notes" rows="3" class="w-full p-2 border rounded-lg text-sm bg-yellow-50 focus:bg-white transition" placeholder="Private admin notes..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Portal Preferences (Read Only)</label>
+                            <div class="p-2 bg-gray-100 rounded-lg text-xs text-gray-600 h-32 overflow-y-auto" id="read-selections"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -419,6 +426,33 @@
             renderRoster();
             renderProfitTable();
             populatePackageSelect();
+        }
+
+        function buildLegacySetupNotes(devices = []) {
+            if (!Array.isArray(devices) || devices.length === 0) return '';
+            const lines = devices
+                .map(device => String(device || '').replace(/^[^A-Za-z0-9]+/, '').trim())
+                .filter(Boolean)
+                .map(device => `- ${device}`);
+
+            if (lines.length === 0) return '';
+            return ['Legacy device inventory:', ...lines].join('\n');
+        }
+
+        function getSetupNotesValue(userData = {}) {
+            const savedNotes = typeof userData.setup_notes === 'string' ? userData.setup_notes : '';
+            if (savedNotes.trim()) return savedNotes;
+            return buildLegacySetupNotes(userData.devices || []);
+        }
+
+        function escapeHtml(value = '') {
+            return String(value).replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
         }
 
         function calculateStats() {
@@ -879,7 +913,8 @@
         window.openUserModal = () => {
             document.getElementById('user-form').reset();
             document.getElementById('edit-uid').value = ''; 
-            document.getElementById('read-selections').innerHTML = '<span class="italic text-gray-400">New user</span>';
+            document.getElementById('edit-setup-notes').value = '';
+            document.getElementById('read-selections').innerHTML = '<span class="italic text-gray-400">New user. No saved portal preferences yet.</span>';
             document.getElementById('btn-archive').classList.add('hidden');
             
             // Reset Licenses
@@ -906,6 +941,7 @@
             document.getElementById('edit-domain-backup-8k').value = u.domain_8k_backup || '';
 
             // Notes
+            document.getElementById('edit-setup-notes').value = getSetupNotesValue(u);
             document.getElementById('edit-notes').value = u.internal_notes || '';
 
             // --- LICENSE MIGRATION & LOADING ---
@@ -932,16 +968,20 @@
             cancelLicenseEdit(); // Ensure form starts hidden
 
             // Read Only Selections
-            const devices = (u.devices || []).join(', ') || 'None';
+            const setupNotes = getSetupNotesValue(u);
             const live = (u.live_preferences || []).join(', ') || 'None';
             const vod = (u.vod_preferences || []).join(', ') || 'None';
             const custom = u.custom_request || '';
+            const setupNotesHtml = setupNotes
+                ? `<div class="mt-1 whitespace-pre-wrap rounded bg-white/70 p-2 text-gray-700">${escapeHtml(setupNotes)}</div>`
+                : '<p class="mt-1 italic text-gray-400">No setup notes saved.</p>';
             
             document.getElementById('read-selections').innerHTML = `
-                <p><strong>Devices:</strong> ${devices}</p>
-                <p class="mt-1"><strong>Live TV:</strong> ${live}</p>
-                <p class="mt-1"><strong>VOD:</strong> ${vod}</p>
-                ${custom ? `<p class="mt-1 text-red-500"><strong>Custom:</strong> ${custom}</p>` : ''}
+                <p><strong>Setup Whiteboard:</strong></p>
+                ${setupNotesHtml}
+                <p class="mt-1"><strong>Live TV:</strong> ${escapeHtml(live)}</p>
+                <p class="mt-1"><strong>VOD:</strong> ${escapeHtml(vod)}</p>
+                ${custom ? `<p class="mt-1 text-red-500"><strong>Custom:</strong> ${escapeHtml(custom)}</p>` : ''}
             `;
             
             document.getElementById('btn-archive').classList.remove('hidden');
@@ -969,6 +1009,7 @@
                 licenses: currentLicenses,
 
                 // Internal
+                setup_notes: document.getElementById('edit-setup-notes').value,
                 internal_notes: document.getElementById('edit-notes').value
             };
 
@@ -1022,24 +1063,14 @@
 
         // --- UTILITY (SEED DATA) ---
         window.seedData = async () => {
-            if(!confirm("Warning: This will reset Devices, Categories, and Product Pricing. Continue?")) return;
+            if(!confirm("Warning: This will reset content categories and product pricing defaults. Continue?")) return;
             try {
-                // 1. App Config - Devices
-                const devices = [
-                    'Stick: Amazon Fire TV 4K', 'Stick: Chromecast w/ Google TV', 'Stick: Roku 4K (Limited)',
-                    'Box: Formuler Z11 Pro', 'Box: Nvidia Shield Pro', 'Box: BuzzTV X5', 'Box: MAG 524 (Legacy)',
-                    'TV: Samsung Tizen', 'TV: LG WebOS', 'TV: Android Native (Sony/Hisense)',
-                    'Mobile: Android Phone', 'Mobile: iPhone (iOS)', 'Tablet: iPad', 'Tablet: Android Tablet',
-                    'PC: Windows', 'PC: Mac OS'
-                ];
-                await setDoc(doc(db, 'app_config', 'devices'), { list: devices });
-
-                // 2. App Config - Content Categories
+                // 1. App Config - Content Categories
                 const live_cats = ["Elliot's Default (QC + Sports + English)", "Quebec Premium (French)", "Canada & USA (English)", "International (Europe/Latino)", "Adult 18+", "Other / Custom Request"];
                 const vod_cats = ["Elliot's Default (Movies & Series)", "French Content Only", "English Content Only", "International", "Adult", "None", "Other / Custom Request"];
                 await setDoc(doc(db, 'app_config', 'content_options'), { live_list: live_cats, vod_list: vod_cats });
                 
-                // 3. Products
+                // 2. Products
                 await setDoc(doc(db, 'products', 'demo_1day'), { name: 'Demo (1 Day)', price: 0, credits: 0 });
                 await setDoc(doc(db, 'products', '1_month'), { name: '1 Month Access', price: 10, credits: 1 });
                 await setDoc(doc(db, 'products', '3_month'), { name: '3 Months Bundle', price: 25, credits: 3 });
