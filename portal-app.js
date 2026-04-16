@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, handleAuthStateChange);
     window.addEventListener('hashchange', () => {
         if (state.authUser) {
-            routeAuthenticatedUser();
+            routeAuthenticatedUser().catch(handlePortalLoadError);
         }
     });
 });
@@ -177,9 +177,13 @@ async function handleAuthStateChange(user) {
         return;
     }
 
-    setView('loading-view');
-    await hydrateSession(user);
-    routeAuthenticatedUser();
+    try {
+        setView('loading-view');
+        await hydrateSession(user);
+        await routeAuthenticatedUser();
+    } catch (error) {
+        handlePortalLoadError(error);
+    }
 }
 
 async function hydrateSession(user) {
@@ -228,6 +232,16 @@ async function routeAuthenticatedUser() {
 
     renderNoAccess(pendingMemberships);
     setView('no-access-view');
+}
+
+function handlePortalLoadError(error) {
+    console.error('Portal load failed', error);
+    if (state.authUser?.email) {
+        byId('no-access-email').textContent = state.authUser.email;
+    }
+    byId('no-access-message').textContent = 'We could not load this portal view. Try signing out and back in, or contact Elliot if it keeps happening.';
+    setView('no-access-view');
+    showToast(error?.message || 'Portal load failed', 'error');
 }
 
 async function openApp(appId) {
@@ -464,7 +478,11 @@ function renderAppSwitcher(activeMemberships) {
         `;
         button.addEventListener('click', async () => {
             window.location.hash = app.route;
-            await openApp(appId);
+            try {
+                await openApp(appId);
+            } catch (error) {
+                handlePortalLoadError(error);
+            }
         });
         container.appendChild(button);
     });
@@ -764,10 +782,7 @@ async function loadPlayoffApp() {
 
     const standingsSnap = await getDocs(collection(db, 'playoff_pools', poolId, 'members'));
     const standings = sortStandings(standingsSnap.docs.map(item => normalizePlayoffMember({ id: item.id, ...item.data() }, pool)));
-
-    const paymentsSnap = await getDocs(collection(db, 'playoff_pools', poolId, 'payments'));
-    const payments = paymentsSnap.docs.map(item => normalizePaymentRecord(item.data(), standings.find(memberItem => memberItem.id === item.id || memberItem.uid === item.id) || {}, pool));
-    const collectedPot = computeCollectedPot(payments, standings);
+    const collectedPot = computeCollectedPot([], standings);
     const payoutSummary = mergeFinalizedPayouts(
         pool.suggested_payouts?.length ? pool.suggested_payouts : suggestPayouts({
             collectedPot,
