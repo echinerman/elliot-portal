@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Portal</title>
+    <title>Multi-App Client Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -11,649 +11,354 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: { 50: '#fafaf9', 100: '#f5f5f4', 800: '#292524', 900: '#1c1917' } 
+                        brand: {
+                            50: '#f7f6f2',
+                            100: '#ebe8de',
+                            800: '#2f2924',
+                            900: '#181410'
+                        }
+                    },
+                    boxShadow: {
+                        float: '0 24px 80px rgba(15, 23, 42, 0.18)'
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-brand-50 text-brand-900 min-h-screen font-sans antialiased">
-
-    <div id="toast" class="fixed top-4 right-4 z-50 transform transition-all duration-300 translate-x-full opacity-0">
-        <div class="bg-brand-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
+<body class="min-h-screen bg-[radial-gradient(circle_at_top,_#f7f6f2,_#e7edf5_45%,_#f1eee7_100%)] text-slate-900 antialiased">
+    <div id="toast" class="fixed right-4 top-4 z-50 translate-x-full opacity-0 transition-all duration-300">
+        <div class="flex items-center gap-3 rounded-2xl bg-slate-950 px-5 py-3 text-white shadow-float">
             <i id="toast-icon" class="fa-solid fa-circle-check"></i>
-            <span id="toast-msg">Success</span>
+            <span id="toast-msg">Saved</span>
         </div>
     </div>
 
-    <div id="auth-view" class="flex flex-col items-center justify-center min-h-screen p-4">
-        <div class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl">
-            <h1 class="text-2xl font-bold mb-6 text-center text-brand-800">Client Portal</h1>
-            
-            <form id="login-form" class="space-y-4">
-                <input type="email" id="login-email" placeholder="Email" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
-                <input type="password" id="login-pass" placeholder="Password" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
-                <button type="submit" class="w-full bg-brand-900 text-white font-semibold py-3 rounded-xl hover:bg-brand-800 transition">Sign In</button>
-                <div class="text-center text-sm text-gray-500 mt-4">
-                    Need an account? <a href="#" onclick="toggleAuth('register')" class="text-brand-900 font-bold hover:underline">Register</a>
-                </div>
-            </form>
-
-            <form id="register-form" class="space-y-4 hidden">
-                <input type="text" id="reg-code" placeholder="Invite Code" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
-                <input type="email" id="reg-email" placeholder="Email" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
-                <input type="password" id="reg-pass" placeholder="Password" class="w-full p-3 bg-brand-50 rounded-xl border-none focus:ring-2 focus:ring-brand-800 outline-none" required>
-                <button type="submit" class="w-full bg-brand-900 text-white font-semibold py-3 rounded-xl hover:bg-brand-800 transition">Create Account</button>
-                <div class="text-center text-sm text-gray-500 mt-4">
-                    Have an account? <a href="#" onclick="toggleAuth('login')" class="text-brand-900 font-bold hover:underline">Sign In</a>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="dashboard-view" class="hidden max-w-7xl mx-auto p-4 lg:p-8 space-y-8">
-        <header class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm gap-4">
-            <div>
-                <h2 class="text-xl font-bold">Welcome, <span id="user-name-display" class="font-normal text-gray-600">Client</span></h2>
-                <div class="text-xs text-gray-400 mt-1" id="user-email-display"></div>
+    <main>
+        <section id="loading-view" class="flex min-h-screen items-center justify-center">
+            <div class="rounded-3xl border border-white/60 bg-white/80 px-8 py-6 text-center shadow-float backdrop-blur">
+                <div class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900"></div>
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">Loading portal</p>
             </div>
-            <div class="flex items-center gap-4">
-                <button id="logout-btn" class="text-brand-900 hover:text-red-600 transition px-2 flex items-center gap-2">
-                    <span class="text-sm font-bold">Sign Out</span>
-                    <i class="fa-solid fa-right-from-bracket fa-lg"></i>
-                </button>
-            </div>
-        </header>
+        </section>
 
-        <div class="columns-1 lg:columns-2 gap-8 space-y-8">
-
-            <div class="break-inside-avoid space-y-4">
-                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">My Active Licenses</h3>
-                <div id="licenses-container" class="space-y-4">
-                    <div class="bg-white p-8 rounded-2xl text-center text-gray-400">Loading licenses...</div>
-                </div>
-            </div>
-
-            <div class="break-inside-avoid space-y-4">
-                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Available Packages</h3>
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <div id="product-list" class="divide-y divide-gray-100">
-                        </div>
-                </div>
-            </div>
-
-            <div class="break-inside-avoid space-y-4">
-                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Viewing Category Preferences</h3>
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <p class="text-[11px] text-gray-400 mb-6">Customize your playlist content.</p>
-                    
-                    <div class="space-y-6">
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-xs font-bold uppercase text-brand-900">Live TV</h4>
-                                <select id="live-pref-select" class="text-xs bg-transparent text-gray-400 outline-none cursor-pointer hover:text-brand-900 text-right w-1/2"></select>
-                            </div>
-                            <div id="live-tags" class="flex flex-wrap gap-2"></div>
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-xs font-bold uppercase text-brand-900">Movies & Series</h4>
-                                <select id="vod-pref-select" class="text-xs bg-transparent text-gray-400 outline-none cursor-pointer hover:text-brand-900 text-right w-1/2"></select>
-                            </div>
-                            <div id="vod-tags" class="flex flex-wrap gap-2"></div>
-                        </div>
-
-                        <div>
-                            <h4 class="text-xs font-bold uppercase text-brand-900 mb-2">Special Requests</h4>
-                            <textarea id="custom-req" rows="2" class="w-full p-3 bg-gray-50 rounded-xl text-sm border-none focus:ring-1 focus:ring-brand-900 outline-none resize-none" placeholder="e.g. Specific international channels..."></textarea>
-                        </div>
+        <section id="auth-view" class="hidden min-h-screen px-4 py-12">
+            <div class="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+                <div class="rounded-[2rem] bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-900 p-8 text-white shadow-float lg:p-12">
+                    <div class="max-w-xl">
+                        <p class="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-emerald-200">Shared Auth, Separate Apps</p>
+                        <h1 class="text-4xl font-black leading-tight lg:text-6xl">One sign-in. Two completely different experiences.</h1>
+                        <p class="mt-6 text-base leading-7 text-slate-200 lg:text-lg">
+                            Strong8K clients and playoff pool members use the same account system, but they land in different app shells with different data.
+                        </p>
                     </div>
-                    <button id="save-config-btn" class="mt-6 w-full bg-gray-100 text-brand-900 px-6 py-3 rounded-xl text-sm font-bold hover:bg-gray-200 transition">Save Preferences</button>
+                    <div class="mt-10 grid gap-4 md:grid-cols-2">
+                        <article class="rounded-3xl border border-white/10 bg-white/5 p-5">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-amber-200">Strong8K</p>
+                            <h2 class="mt-3 text-2xl font-bold">Client licenses, support notes, and package purchases</h2>
+                        </article>
+                        <article class="rounded-3xl border border-white/10 bg-white/5 p-5">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-200">Playoff Pool</p>
+                            <h2 class="mt-3 text-2xl font-bold">Round-by-round NHL series picks with no Strong8K leakage</h2>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-float backdrop-blur lg:p-10">
+                    <div class="mb-8">
+                        <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-400">Portal Access</p>
+                        <h2 class="mt-3 text-3xl font-black text-slate-950">Sign in or claim your invite</h2>
+                        <p id="auth-helper-text" class="mt-3 text-sm leading-6 text-slate-500"></p>
+                    </div>
+
+                    <form id="login-form" class="space-y-4">
+                        <input type="email" id="login-email" placeholder="Email" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-900" required>
+                        <input type="password" id="login-pass" placeholder="Password" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-900" required>
+                        <button type="submit" class="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Sign In</button>
+                        <p class="text-center text-sm text-slate-500">
+                            Need an account?
+                            <a href="#" id="show-register-link" class="font-bold text-slate-950 hover:underline">Use an invite code</a>
+                        </p>
+                    </form>
+
+                    <form id="register-form" class="hidden space-y-4">
+                        <input type="text" id="reg-code" placeholder="Invite Code" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 uppercase outline-none transition focus:border-slate-900" required>
+                        <input type="email" id="reg-email" placeholder="Email" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-900" required>
+                        <input type="password" id="reg-pass" placeholder="Password" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-900" required>
+                        <button type="submit" class="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-500">Create Access</button>
+                        <p class="text-center text-sm text-slate-500">
+                            Already have an account?
+                            <a href="#" id="show-login-link" class="font-bold text-slate-950 hover:underline">Sign in</a>
+                        </p>
+                    </form>
                 </div>
             </div>
+        </section>
 
-            <div class="break-inside-avoid space-y-4">
-                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Device Inventory</h3>
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <p class="text-[11px] text-gray-400 mb-4">List your hardware for support reference. Does not create a connection.</p>
-                    
-                    <div class="flex gap-2 mb-4">
-                        <div class="relative flex-1">
-                            <input type="text" id="new-device-name" placeholder="Device Name" class="w-full pl-3 pr-2 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-900 outline-none">
-                        </div>
-                        <select id="new-device-type" class="bg-gray-50 rounded-xl text-sm border-none outline-none px-2 text-brand-900 font-bold cursor-pointer w-24">
-                            <option value="tv">📺 TV</option>
-                            <option value="box">📦 Box</option>
-                            <option value="mobile">📱 Phone</option>
-                            <option value="laptop">💻 PC</option>
-                        </select>
-                        <button id="add-device-btn" class="bg-brand-900 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-brand-800 shadow-sm"><i class="fa-solid fa-plus"></i></button>
-                    </div>
-
-                    <div id="device-list-container" class="space-y-2">
-                        </div>
-                </div>
-                
-                <div class="text-center pt-4">
-                    <a id="contact-link" href="#" class="inline-flex items-center gap-2 text-gray-400 text-xs hover:text-brand-900 hover:underline transition">
-                        <i class="fa-regular fa-envelope"></i> Contact Elliot for Support
-                    </a>
-                </div>
-            </div>
-
-        </div> <div id="purchase-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
-                <div class="bg-brand-900 p-6 text-white text-center">
-                    <h4 class="text-lg font-bold" id="modal-product-name">Package Name</h4>
-                    <div class="text-3xl font-bold mt-2" id="modal-product-price">$0.00</div>
-                </div>
-                <div class="p-8 space-y-6">
-                    <div class="text-center space-y-2">
-                        <p class="text-sm text-gray-500 font-medium">To activate this license, please send an e-transfer to:</p>
-                        <div class="bg-gray-100 p-3 rounded-xl font-mono text-brand-900 font-bold select-all cursor-pointer hover:bg-gray-200 transition" onclick="copyString('e.chinerman@gmail.com')">
-                            e.chinerman@gmail.com
-                        </div>
-                        <p class="text-xs text-gray-400">Tap email to copy</p>
-                    </div>
-                    
-                    <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-xl text-xs text-yellow-800 leading-relaxed">
-                        <i class="fa-solid fa-circle-info mr-1"></i>
-                        <strong>Note:</strong> Elliot will process your order and activate your license only after payment is received.
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="closeModal('purchase-modal')" class="py-3 rounded-xl text-gray-500 font-bold hover:bg-gray-50">Cancel</button>
-                        <a id="notify-link" href="#" class="py-3 rounded-xl bg-brand-900 text-white font-bold text-center hover:bg-brand-800 shadow-lg shadow-brand-900/20">
-                            I've Sent Payment
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <script type="module">
-        import { CONFIG } from './config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { 
-            getAuth, 
-            createUserWithEmailAndPassword, 
-            signInWithEmailAndPassword, 
-            onAuthStateChanged,
-            signOut 
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            getDoc, 
-            setDoc, 
-            updateDoc, 
-            deleteDoc,
-            collection,
-            query, 
-            where,
-            getDocs,
-            runTransaction,
-            arrayUnion,
-            arrayRemove
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // --- INIT FIREBASE ---
-        const app = initializeApp(CONFIG.FIREBASE);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // --- GLOBAL STATE ---
-        let currentUserData = null;
-        let products = [];
-        let contentOptions = { live_list: [], vod_list: [] };
-
-        // --- UI FUNCTIONS ---
-        window.toggleAuth = (view) => {
-            document.getElementById('login-form').classList.toggle('hidden', view === 'register');
-            document.getElementById('register-form').classList.toggle('hidden', view !== 'register');
-        };
-
-        window.copyText = (elementId) => {
-            const el = document.getElementById(elementId);
-            const text = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ? el.value : el.textContent;
-            navigator.clipboard.writeText(text);
-            showToast('Copied to clipboard');
-        };
-
-        window.copyString = (str) => {
-            navigator.clipboard.writeText(str);
-            showToast('Copied to clipboard');
-        }
-
-        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-msg').textContent = msg;
-            toast.classList.remove('translate-x-full', 'opacity-0');
-            setTimeout(() => toast.classList.add('translate-x-full', 'opacity-0'), 3000);
-        }
-
-        // --- CORE LOGIC ---
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                document.getElementById('auth-view').classList.add('hidden');
-                document.getElementById('dashboard-view').classList.remove('hidden');
-                document.getElementById('user-email-display').textContent = user.email;
-                document.getElementById('contact-link').href = CONFIG.CONTACT_LINK;
-                
-                await loadDashboardData(user);
-            } else {
-                document.getElementById('auth-view').classList.remove('hidden');
-                document.getElementById('dashboard-view').classList.add('hidden');
-            }
-        });
-
-        async function loadDashboardData(user) {
-            // 1. Fetch User Data
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
-
-            if (userDoc.exists()) {
-                currentUserData = userDoc.data();
-                renderUserData(currentUserData);
-            } else {
-                console.error("User doc missing"); 
-                return;
-            }
-
-            // 2. Fetch Configs & Products
-            const configSnap = await getDocs(collection(db, 'app_config'));
-            const productSnap = await getDocs(collection(db, 'products'));
-            
-            configSnap.forEach(doc => {
-                if(doc.id === 'content_options') contentOptions = doc.data();
-            });
-
-            products = [];
-            productSnap.forEach(doc => {
-                const p = { id: doc.id, ...doc.data() };
-                products.push(p);
-            });
-            products.sort((a,b) => a.price - b.price);
-
-            // Conditional Donation Product
-            const hasEPGenius = currentUserData.licenses && currentUserData.licenses.some(l => l.epgenius_url && l.epgenius_url.trim() !== "");
-            if (hasEPGenius) {
-                products.push({ id: 'donation_epgenius', name: 'Donate to EPGenius Curator', price: 20 });
-            }
-
-            renderProductList();
-            renderConfigUI();
-        }
-
-        function renderUserData(data) {
-            document.getElementById('user-name-display').textContent = data.full_name || 'Client';
-            
-            const licContainer = document.getElementById('licenses-container');
-            licContainer.innerHTML = '';
-            
-            const licenses = data.licenses || [];
-            
-            if (licenses.length === 0) {
-                if(data.username_8k) {
-                     licContainer.innerHTML = createLicenseCard({
-                        label: 'Primary Connection',
-                        username_8k: data.username_8k,
-                        password_8k: data.password_8k,
-                        expiry_date: data.expiry_date,
-                        status: data.status,
-                        m3u_url_8k: data.m3u_url_8k,
-                        epg_url_8k: data.epg_url_8k
-                     });
-                } else {
-                     licContainer.innerHTML = `<div class="bg-gray-50 p-8 rounded-2xl text-center border-2 border-dashed border-gray-200 text-gray-400 col-span-full">
-                        <i class="fa-solid fa-ticket text-3xl mb-2 opacity-50"></i><br>
-                        No active licenses found.<br>Select a package to get started.
-                     </div>`;
-                }
-            } else {
-                licenses.forEach(lic => {
-                    licContainer.innerHTML += createLicenseCard(lic);
-                });
-            }
-        }
-
-        function createLicenseCard(lic) {
-            let statusColor = 'bg-gray-100 text-gray-500';
-            if(lic.status === 'Active') statusColor = 'bg-green-100 text-green-700';
-            if(lic.status === 'Expired') statusColor = 'bg-red-100 text-red-700';
-            if(lic.status === 'Banned') statusColor = 'bg-black text-white';
-
-            // Use Global or License specific domains
-            const mainDomain = currentUserData.domain_8k || 'Contact Admin';
-            const backDomain = currentUserData.domain_8k_backup || 'Contact Admin';
-
-            return `
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative group transition hover:shadow-md">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-900"><i class="fa-solid fa-tv"></i></div>
-                        <div>
-                            <h4 class="font-bold text-base text-brand-900 leading-tight">${lic.label || 'License'}</h4>
-                            <div class="text-[10px] text-gray-400 font-mono mt-0.5">EXP: ${lic.expiry_date || 'N/A'}</div>
-                        </div>
-                    </div>
-                    <span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold ${statusColor}">${lic.status || 'Unknown'}</span>
-                </div>
-
-                <div class="space-y-3 bg-brand-50 p-4 rounded-xl">
-                    <div class="grid grid-cols-1 gap-2 mb-4 pb-4 border-b border-gray-200/50">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[9px] uppercase font-bold text-gray-400">Server URL</span>
-                            <div class="flex items-center gap-2">
-                                <code class="text-[10px] font-mono text-gray-600">${mainDomain}</code>
-                                <button onclick="copyString('${mainDomain}')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy text-[10px]"></i></button>
-                            </div>
-                        </div>
-                        ${backDomain && backDomain !== 'Contact Admin' ? `
-                        <div class="flex items-center justify-between">
-                            <span class="text-[9px] uppercase font-bold text-gray-400">Backup URL</span>
-                            <div class="flex items-center gap-2">
-                                <code class="text-[10px] font-mono text-gray-600">${backDomain}</code>
-                                <button onclick="copyString('${backDomain}')" class="text-gray-400 hover:text-brand-900"><i class="fa-regular fa-copy text-[10px]"></i></button>
-                            </div>
-                        </div>` : ''}
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">Username</label>
-                            <div class="flex items-center justify-between bg-white p-1.5 rounded border border-gray-200 cursor-pointer hover:border-brand-900 group/input" onclick="copyString('${lic.username_8k}')">
-                                <span class="text-xs font-mono text-gray-700 select-all truncate">${lic.username_8k}</span>
-                                <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-brand-900"></i>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">Password</label>
-                            <div class="flex items-center justify-between bg-white p-1.5 rounded border border-gray-200 cursor-pointer hover:border-brand-900 group/input" onclick="copyString('${lic.password_8k}')">
-                                <span class="text-xs font-mono text-gray-700 select-all truncate">${lic.password_8k}</span>
-                                <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-brand-900"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    ${lic.m3u_url_8k ? `
+        <section id="app-switcher-view" class="hidden min-h-screen px-4 py-12">
+            <div class="mx-auto max-w-5xl">
+                <header class="flex flex-col gap-4 rounded-[2rem] border border-white/70 bg-white/85 p-8 shadow-float backdrop-blur md:flex-row md:items-center md:justify-between">
                     <div>
-                        <label class="text-[9px] uppercase font-bold text-gray-400 block mb-1">8K M3U URL</label>
-                        <div class="flex items-center justify-between bg-white p-1.5 rounded border border-gray-200 cursor-pointer hover:border-brand-900 group/input" onclick="copyString('${lic.m3u_url_8k}')">
-                            <input readonly value="${lic.m3u_url_8k}" class="w-full text-[10px] font-mono text-gray-500 bg-transparent outline-none cursor-pointer truncate">
-                            <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-brand-900 ml-1"></i>
-                        </div>
-                    </div>` : ''}
-                    
-                     ${lic.epgenius_url ? `
-                    <div>
-                        <label class="text-[9px] uppercase font-bold text-blue-400 block mb-1">EPGenius Playlist URL</label>
-                        <div class="flex items-center justify-between bg-white p-1.5 rounded border border-blue-100 cursor-pointer hover:border-blue-500 group/input" onclick="copyString('${lic.epgenius_url}')">
-                            <input readonly value="${lic.epgenius_url}" class="w-full text-[10px] font-mono text-gray-500 bg-transparent outline-none cursor-pointer truncate">
-                            <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/input:text-blue-500 ml-1"></i>
-                        </div>
-                    </div>` : ''}
-                </div>
-            </div>`;
-        }
-
-        // --- PRODUCT / ORDER LOGIC ---
-
-        function renderProductList() {
-            const list = document.getElementById('product-list');
-            list.innerHTML = '';
-            
-            products.forEach(p => {
-                // Determine icon based on product name keywords
-                let icon = 'fa-box-open';
-                if(p.name.toLowerCase().includes('month')) icon = 'fa-calendar-check';
-                if(p.name.toLowerCase().includes('year')) icon = 'fa-crown';
-                if(p.name.toLowerCase().includes('donate')) icon = 'fa-heart';
-
-                const html = `
-                <div class="flex items-center justify-between py-4 group">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-gray-400 group-hover:text-brand-900 group-hover:bg-gray-100 transition">
-                            <i class="fa-solid ${icon}"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-sm text-brand-900">${p.name}</h4>
-                            <div class="text-xs font-bold text-gray-500">${CONFIG.CURRENCY_SYMBOL}${p.price}</div>
-                        </div>
+                        <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-400">App Switcher</p>
+                        <h1 class="mt-3 text-4xl font-black text-slate-950">Choose your portal</h1>
+                        <p class="mt-2 text-sm text-slate-500">Signed in as <span id="switcher-email" class="font-semibold text-slate-700"></span></p>
                     </div>
-                    
-                    <button onclick="openPurchaseModal('${p.name}', '${p.price}')" class="px-4 py-2 rounded-lg bg-gray-50 text-brand-900 text-xs font-bold hover:bg-brand-900 hover:text-white transition">
-                        Purchase
+                    <button id="switcher-signout-btn" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">
+                        <i class="fa-solid fa-right-from-bracket mr-2"></i>Sign Out
                     </button>
-                </div>`;
-                list.innerHTML += html;
-            });
-        }
+                </header>
+                <div id="app-switcher-cards" class="mt-8 grid gap-6 md:grid-cols-2"></div>
+            </div>
+        </section>
 
-        window.openPurchaseModal = (name, price) => {
-            document.getElementById('modal-product-name').textContent = name;
-            document.getElementById('modal-product-price').textContent = `${CONFIG.CURRENCY_SYMBOL}${price}`;
-            
-            // Build Mailto Link
-            const subject = encodeURIComponent(`Payment Sent: ${name} (${currentUserData.email})`);
-            const body = encodeURIComponent(`Hi Elliot,\n\nI have sent an e-transfer of $${price} for the ${name} package.\n\nAccount Email: ${currentUserData.email}\n\nThanks!`);
-            document.getElementById('notify-link').href = `mailto:e.chinerman@gmail.com?subject=${subject}&body=${body}`;
-            
-            document.getElementById('purchase-modal').classList.remove('hidden');
-        };
+        <section id="no-access-view" class="hidden min-h-screen px-4 py-12">
+            <div class="mx-auto max-w-3xl rounded-[2rem] border border-white/70 bg-white/90 p-10 text-center shadow-float backdrop-blur">
+                <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-400">Membership Required</p>
+                <h1 class="mt-4 text-4xl font-black text-slate-950">No active portal access</h1>
+                <p id="no-access-message" class="mx-auto mt-4 max-w-xl text-base leading-7 text-slate-500"></p>
+                <p class="mt-2 text-sm text-slate-400">Signed in as <span id="no-access-email"></span></p>
+                <div class="mt-8 flex flex-wrap justify-center gap-3">
+                    <button id="no-access-home-btn" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Check Available Apps</button>
+                    <button id="no-access-signout-btn" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Sign Out</button>
+                </div>
+            </div>
+        </section>
 
-        // --- DEVICE INVENTORY (LIST STYLE) ---
-
-        function renderConfigUI() {
-            // Live/VOD Tags
-            const renderTags = (containerId, selectedList, allOptions, type) => {
-                const container = document.getElementById(containerId);
-                container.innerHTML = '';
-                selectedList.forEach(item => {
-                    const btn = document.createElement('button');
-                    btn.className = 'bg-brand-900 text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 hover:bg-red-600 transition';
-                    btn.innerHTML = `${item} <i class="fa-solid fa-times"></i>`;
-                    btn.onclick = () => togglePref(type, item);
-                    container.appendChild(btn);
-                });
-
-                const select = document.getElementById(type === 'live' ? 'live-pref-select' : 'vod-pref-select');
-                select.innerHTML = `<option value="">+ Add...</option>`;
-                allOptions.forEach(opt => {
-                    if(!selectedList.includes(opt)) {
-                        const o = document.createElement('option');
-                        o.value = opt;
-                        o.textContent = opt;
-                        select.appendChild(o);
-                    }
-                });
-            };
-
-            renderTags('live-tags', currentUserData.live_preferences || [], contentOptions.live_list || [], 'live');
-            renderTags('vod-tags', currentUserData.vod_preferences || [], contentOptions.vod_list || [], 'vod');
-            
-            // Event listeners for dropdowns
-            document.getElementById('live-pref-select').onchange = (e) => { if(e.target.value) togglePref('live', e.target.value); };
-            document.getElementById('vod-pref-select').onchange = (e) => { if(e.target.value) togglePref('vod', e.target.value); };
-
-            // Custom Request
-            document.getElementById('custom-req').value = currentUserData.custom_request || '';
-
-            // Render Device List
-            renderDeviceList();
-        }
-
-        function renderDeviceList() {
-            const list = document.getElementById('device-list-container');
-            list.innerHTML = '';
-            
-            const userDevices = currentUserData?.devices || [];
-            
-            if (userDevices.length === 0) {
-                list.innerHTML = '<div class="text-center text-[10px] text-gray-300 italic py-2">No devices listed</div>';
-                return;
-            }
-
-            userDevices.forEach(devStr => {
-                // Parse "Name (Type)" or just "Name"
-                let name = devStr;
-                let icon = 'fa-tv';
-
-                if(devStr.includes('📱')) { icon = 'fa-mobile-screen'; name = devStr.replace('📱 ', ''); }
-                else if(devStr.includes('📦')) { icon = 'fa-box'; name = devStr.replace('📦 ', ''); }
-                else if(devStr.includes('💻')) { icon = 'fa-laptop'; name = devStr.replace('💻 ', ''); }
-                else if(devStr.includes('📺')) { icon = 'fa-tv'; name = devStr.replace('📺 ', ''); }
-
-                const el = document.createElement('div');
-                el.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition';
-                el.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid ${icon} text-gray-400 text-xs"></i>
-                        <span class="text-xs font-bold text-gray-700">${name}</span>
+        <section id="strong8k-view" class="hidden px-4 py-8 lg:py-10">
+            <div class="mx-auto max-w-7xl space-y-8">
+                <header class="flex flex-col gap-4 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-sm backdrop-blur lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-400">Strong8K Portal</p>
+                        <h1 class="mt-2 text-3xl font-black text-slate-950">Welcome back, <span id="strong8k-user-name" class="text-slate-600"></span></h1>
+                        <p id="strong8k-user-email" class="mt-2 text-sm text-slate-400"></p>
                     </div>
-                    <button onclick="removeDevice('${devStr}')" class="text-gray-300 hover:text-red-500 transition"><i class="fa-solid fa-times"></i></button>
-                `;
-                list.appendChild(el);
-            });
-        }
+                    <div class="flex flex-wrap gap-3">
+                        <button data-action="app-home" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">
+                            <i class="fa-solid fa-grid-2 mr-2"></i>All Apps
+                        </button>
+                        <button data-action="signout" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">
+                            <i class="fa-solid fa-right-from-bracket mr-2"></i>Sign Out
+                        </button>
+                    </div>
+                </header>
 
-        document.getElementById('add-device-btn').addEventListener('click', async () => {
-            const name = document.getElementById('new-device-name').value;
-            const type = document.getElementById('new-device-type').value;
-            
-            if(!name) return;
+                <div class="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+                    <div class="space-y-8">
+                        <section>
+                            <h2 class="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-slate-400">My Active Licenses</h2>
+                            <div id="licenses-container" class="space-y-4"></div>
+                        </section>
 
-            // Encode type into string for storage (Simple approach)
-            let emoji = '📺';
-            if(type === 'mobile') emoji = '📱';
-            if(type === 'box') emoji = '📦';
-            if(type === 'laptop') emoji = '💻';
+                        <section class="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-sm">
+                            <h2 class="text-sm font-bold uppercase tracking-[0.3em] text-slate-400">Setup Whiteboard</h2>
+                            <p class="mt-3 text-sm leading-6 text-slate-500">Describe your devices, rooms, apps, and connection details for support. This note is shared with admin support.</p>
+                            <textarea id="setup-notes" rows="10" class="mt-5 w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 text-sm leading-7 outline-none transition focus:border-slate-900" placeholder="Example: Living room Fire Stick on Wi-Fi, bedroom TV on WebOS, sports buffering mostly at night."></textarea>
+                            <div class="mt-5 text-center">
+                                <a id="contact-link" href="#" class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-slate-400 transition hover:text-slate-950">
+                                    <i class="fa-regular fa-envelope"></i>Contact Elliot for Support
+                                </a>
+                            </div>
+                        </section>
+                    </div>
 
-            const val = `${emoji} ${name}`;
+                    <div class="space-y-8">
+                        <section class="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-sm">
+                            <h2 class="text-sm font-bold uppercase tracking-[0.3em] text-slate-400">Available Packages</h2>
+                            <div id="product-list" class="mt-4"></div>
+                        </section>
 
-            const userRef = doc(db, 'users', auth.currentUser.uid);
-            await updateDoc(userRef, { devices: arrayUnion(val) });
-            
-            if(!currentUserData.devices) currentUserData.devices = [];
-            currentUserData.devices.push(val);
-            
-            document.getElementById('new-device-name').value = ''; // Reset input
-            renderDeviceList();
-            showToast('Device added');
-        });
+                        <section class="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-sm">
+                            <h2 class="text-sm font-bold uppercase tracking-[0.3em] text-slate-400">Viewing Preferences</h2>
+                            <div class="mt-6 space-y-6">
+                                <div>
+                                    <div class="mb-3 flex items-center justify-between gap-4">
+                                        <h3 class="text-sm font-bold text-slate-950">Live TV</h3>
+                                        <select id="live-pref-select" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-500 outline-none"></select>
+                                    </div>
+                                    <div id="live-tags" class="flex flex-wrap gap-2"></div>
+                                </div>
+                                <div>
+                                    <div class="mb-3 flex items-center justify-between gap-4">
+                                        <h3 class="text-sm font-bold text-slate-950">Movies & Series</h3>
+                                        <select id="vod-pref-select" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-500 outline-none"></select>
+                                    </div>
+                                    <div id="vod-tags" class="flex flex-wrap gap-2"></div>
+                                </div>
+                                <div>
+                                    <label for="custom-req" class="mb-2 block text-sm font-bold text-slate-950">Special Requests</label>
+                                    <textarea id="custom-req" rows="3" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 text-sm outline-none transition focus:border-slate-900" placeholder="Specific international channels, sports priorities, language requests..."></textarea>
+                                </div>
+                            </div>
+                            <button id="save-config-btn" class="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Preferences & Notes</button>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-        window.removeDevice = async (device) => {
-            const userRef = doc(db, 'users', auth.currentUser.uid);
-            await updateDoc(userRef, { devices: arrayRemove(device) });
-            currentUserData.devices = currentUserData.devices.filter(d => d !== device);
-            renderDeviceList();
-            showToast('Device removed');
-        };
+        <section id="playoff-view" class="hidden min-h-screen bg-slate-950 px-4 py-8 text-white">
+            <div class="mx-auto max-w-7xl space-y-8">
+                <header class="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.35),_rgba(15,23,42,0.9)_45%,_rgba(2,6,23,1)_100%)] p-7 shadow-float">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-emerald-200">Private Playoff App</p>
+                            <h1 id="playoff-brand-name" class="mt-3 text-4xl font-black"></h1>
+                            <p class="mt-4 text-sm text-slate-300">Signed in as <span id="playoff-user-name" class="font-semibold text-white"></span> • <span id="playoff-user-email"></span></p>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <button data-action="app-home" class="rounded-full border border-white/20 px-5 py-3 text-sm font-bold text-white transition hover:border-white hover:bg-white/10">
+                                <i class="fa-solid fa-grid-2 mr-2"></i>All Apps
+                            </button>
+                            <button data-action="signout" class="rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-200">
+                                <i class="fa-solid fa-right-from-bracket mr-2"></i>Sign Out
+                            </button>
+                        </div>
+                    </div>
+                </header>
 
-        window.togglePref = async (type, val) => {
-            const field = type === 'live' ? 'live_preferences' : 'vod_preferences';
-            let list = currentUserData[field] || [];
-            
-            if(list.includes(val)) list = list.filter(i => i !== val);
-            else list.push(val);
+                <div id="playoff-empty-state" class="hidden rounded-[2rem] border border-white/10 bg-white/5 p-10 text-center">
+                    <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-400">Pool Setup Needed</p>
+                    <h2 class="mt-4 text-3xl font-black">Your playoff membership is active, but no pool is assigned yet.</h2>
+                    <p class="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-300">Ask the pool administrator to attach one or more `pool_ids` to your playoff membership. Once that’s set, this app will show your rounds, series picks, and standings.</p>
+                </div>
 
-            currentUserData[field] = list;
-            renderConfigUI(); // Optimistic UI update
-        };
+                <div id="playoff-main-state" class="hidden space-y-8">
+                    <section class="grid gap-6 xl:grid-cols-4">
+                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-emerald-300">Pool Overview</p>
+                            <h2 id="pool-name" class="mt-4 text-3xl font-black"></h2>
+                            <p id="pool-season" class="mt-2 text-sm text-slate-300"></p>
+                            <p id="pool-description" class="mt-4 text-sm leading-7 text-slate-300"></p>
+                        </article>
+                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-sky-300">Current Round</p>
+                            <h2 id="current-round-name" class="mt-4 text-3xl font-black"></h2>
+                            <p id="current-round-deadline" class="mt-2 text-sm text-slate-300"></p>
+                            <p id="pool-member-count" class="mt-6 text-sm font-semibold text-white"></p>
+                        </article>
+                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">Scoreboard</p>
+                            <div class="mt-4 grid gap-4">
+                                <div class="rounded-3xl bg-slate-950/50 p-4">
+                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Total Points</p>
+                                    <p id="playoff-points-total" class="mt-2 text-4xl font-black">0</p>
+                                </div>
+                                <div class="rounded-3xl bg-slate-950/50 p-4">
+                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">This Round</p>
+                                    <p id="playoff-round-points" class="mt-2 text-4xl font-black">0</p>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-fuchsia-200">Member Status</p>
+                            <div class="mt-4 space-y-4">
+                                <div class="rounded-3xl bg-slate-950/50 p-4">
+                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Team Name</p>
+                                    <p id="playoff-team-name" class="mt-2 text-2xl font-black text-white">Not set</p>
+                                </div>
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div class="rounded-3xl bg-slate-950/50 p-4">
+                                        <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Payment</p>
+                                        <p id="playoff-payment-status" class="mt-2 text-xl font-black text-white">Unpaid</p>
+                                    </div>
+                                    <div class="rounded-3xl bg-slate-950/50 p-4">
+                                        <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Paid / Due</p>
+                                        <p id="playoff-amount-paid" class="mt-2 text-xl font-black text-white">$0 / $0</p>
+                                    </div>
+                                </div>
+                                <div class="rounded-3xl bg-slate-950/50 p-4">
+                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Payout Status</p>
+                                    <p id="playoff-payout-status" class="mt-2 text-sm leading-6 text-slate-200">No payout assigned yet.</p>
+                                </div>
+                            </div>
+                        </article>
+                    </section>
 
-        document.getElementById('save-config-btn').addEventListener('click', async () => {
-            const userRef = doc(db, 'users', auth.currentUser.uid);
-            await updateDoc(userRef, {
-                live_preferences: currentUserData.live_preferences || [],
-                vod_preferences: currentUserData.vod_preferences || [],
-                custom_request: document.getElementById('custom-req').value
-            });
-            showToast('Preferences Saved');
-        });
+                    <section class="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
+                        <div class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-[0.35em] text-emerald-300">Current Picks</p>
+                                    <h2 class="mt-2 text-3xl font-black">Series by series</h2>
+                                </div>
+                                <p id="playoff-round-message" class="text-sm text-slate-300"></p>
+                            </div>
+                            <div id="series-container" class="mt-6 space-y-4"></div>
+                            <button id="playoff-submit-btn" class="mt-6 w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-300">
+                                Save Round Picks
+                            </button>
+                            <div id="playoff-current-summary" class="mt-6 rounded-3xl border border-white/10 bg-slate-950/40 p-5 text-sm text-slate-300"></div>
+                        </div>
 
-        // --- AUTH & MIGRATION ---
+                        <div class="space-y-8">
+                            <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                                <p class="text-xs font-bold uppercase tracking-[0.35em] text-sky-300">Standings</p>
+                                <div class="mt-5 overflow-hidden rounded-3xl border border-white/10">
+                                    <table class="w-full text-left">
+                                        <thead class="bg-slate-950/70 text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                                            <tr>
+                                                <th class="px-4 py-3">#</th>
+                                                <th class="px-4 py-3">Member</th>
+                                                <th class="px-4 py-3">Pts</th>
+                                                <th class="px-4 py-3">Round</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="standings-body"></tbody>
+                                    </table>
+                                </div>
+                            </section>
 
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const pass = document.getElementById('login-pass').value;
-            try {
-                await signInWithEmailAndPassword(auth, email, pass);
-            } catch (err) {
-                showToast(err.message);
-            }
-        });
+                            <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                                <p class="text-xs font-bold uppercase tracking-[0.35em] text-fuchsia-200">Payout Summary</p>
+                                <div id="playoff-payout-summary" class="mt-5 space-y-3"></div>
+                            </section>
 
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const code = document.getElementById('reg-code').value;
-            const email = document.getElementById('reg-email').value;
-            const pass = document.getElementById('reg-pass').value;
+                            <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                                <p class="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">Previous Picks</p>
+                                <div id="previous-picks" class="mt-5 space-y-4"></div>
+                            </section>
+                        </div>
+                    </section>
 
-            if (code !== CONFIG.INVITE_CODE) {
-                showToast("Invalid Invite Code");
-                return;
-            }
+                    <section class="grid gap-8 xl:grid-cols-2">
+                        <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-sky-300">Standings Trend</p>
+                            <div id="playoff-standings-trend" class="mt-5"></div>
+                        </section>
 
-            try {
-                const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-                const user = userCred.user;
+                        <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-emerald-300">Pick Distribution</p>
+                            <div id="playoff-pick-distribution" class="mt-5 space-y-4"></div>
+                        </section>
+                    </section>
+                </div>
+            </div>
+        </section>
+    </main>
 
-                // MIGRATION LOGIC
-                const q = query(collection(db, "users"), where("email", "==", email));
-                const querySnapshot = await getDocs(q);
+    <div id="purchase-modal" class="fixed inset-0 hidden flex items-center justify-center bg-black/70 p-4">
+        <div class="w-full max-w-md rounded-[2rem] bg-white shadow-float">
+            <div class="rounded-t-[2rem] bg-slate-950 p-6 text-center text-white">
+                <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-300">Strong8K Purchase</p>
+                <h3 id="modal-product-name" class="mt-3 text-2xl font-black"></h3>
+                <p id="modal-product-price" class="mt-3 text-4xl font-black"></p>
+            </div>
+            <div class="space-y-6 p-8">
+                <div class="rounded-3xl bg-slate-50 p-5 text-center">
+                    <p class="text-sm text-slate-500">Send an e-transfer to</p>
+                    <p class="mt-3 text-xl font-black text-slate-950">e.chinerman@gmail.com</p>
+                </div>
+                <div class="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                    Elliot will process the order and activate your license after payment is received.
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="purchase-close-btn" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Cancel</button>
+                    <a id="notify-link" href="#" class="rounded-2xl bg-slate-950 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-slate-800">I've Sent Payment</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                if (!querySnapshot.empty) {
-                    const oldDoc = querySnapshot.docs[0];
-                    const oldData = oldDoc.data();
-                    
-                    await runTransaction(db, async (transaction) => {
-                        const newDocRef = doc(db, "users", user.uid);
-                        const oldDocRef = doc(db, "users", oldDoc.id);
-                        transaction.set(newDocRef, oldData);
-                        transaction.delete(oldDocRef);
-                    });
-                    showToast('Account claimed successfully!');
-                } else {
-                    await setDoc(doc(db, "users", user.uid), {
-                        email: email,
-                        status: "Pending",
-                        created_at: new Date().toISOString(),
-                        devices: [],
-                        licenses: [], 
-                        live_preferences: ["Elliot's Default (QC + Sports + English)"], 
-                        vod_preferences: ["Elliot's Default (Movies & Series)"], 
-                        custom_request: "",
-                        credits_allocated: 0
-                    });
-
-                    // FIRE n8n WEBHOOK FOR NEW USERS
-                    fetch('https://n8n.goelliot.vip/webhook/4c7a0486-fb49-43fb-ab83-eacb8ad5619e', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            username: email,
-                            event: 'new_user_registration',
-                            timestamp: new Date().toISOString()
-                        })
-                    }).catch(err => console.error("Webhook Error:", err));
-
-                    showToast('Account created successfully!');
-                }
-            } catch (err) {
-                console.error(err);
-                showToast(err.message);
-            }
-        });
-
-        document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-    </script>
+    <script type="module" src="./portal-app.js"></script>
 </body>
 </html>

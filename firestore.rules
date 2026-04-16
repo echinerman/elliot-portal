@@ -1,47 +1,139 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- HELPER FUNCTIONS ---
-    
-    // Check if the requesting user is the Admin
-    // HARDCODED SECURITY: Grants full access only to this specific email
-    function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'e.chinerman@gmail.com';
+
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Check if the user is accessing their own data
+    function isPlatformAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/roles/$(request.auth.uid))
+        && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.platform_admin == true;
+    }
+
     function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- COLLECTION RULES ---
-
-    // USERS COLLECTION
-    // 1. Admin has full access.
-    // 2. Users can read/write their own document (by UID).
-    // 3. MIGRATION: Users can READ a document if the 'email' field matches their auth email.
-    match /users/{document} {
-      allow read: if isAdmin() || isOwner(document) || resource.data.email == request.auth.token.email;
-      allow write: if isAdmin() || isOwner(document);
+    function emailMatchesAccount(userId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(userId))
+        && get(/databases/$(database)/documents/users/$(userId)).data.email == request.auth.token.email;
     }
 
-    // APP CONFIG & PRODUCTS
-    // Public Read (Authenticated), Admin Write
-    match /app_config/{doc} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
-    }
-    
-    match /products/{doc} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
+    function canAccessOwnAccount(userId) {
+      return isOwner(userId) || emailMatchesAccount(userId);
     }
 
-    // BUSINESS DATA (Ledger, Financials)
-    // Admin Only
-    match /business_data/{doc} {
-      allow read, write: if isAdmin();
+    function hasAppMembership(userId, appId) {
+      return exists(/databases/$(database)/documents/users/$(userId)/memberships/$(appId))
+        && get(/databases/$(database)/documents/users/$(userId)/memberships/$(appId)).data.status == 'active';
+    }
+
+    function currentUserHasApp(appId) {
+      return isSignedIn() && hasAppMembership(request.auth.uid, appId);
+    }
+
+    function isPoolMember(poolId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/playoff_pools/$(poolId)/members/$(request.auth.uid));
+    }
+
+    function isRoundRevealed(poolId, roundId) {
+      return exists(/databases/$(database)/documents/playoff_pools/$(poolId)/rounds/$(roundId))
+        && (
+          get(/databases/$(database)/documents/playoff_pools/$(poolId)).data.pick_visibility == 'always' ||
+          get(/databases/$(database)/documents/playoff_pools/$(poolId)/rounds/$(roundId)).data.status == 'locked' ||
+          get(/databases/$(database)/documents/playoff_pools/$(poolId)/rounds/$(roundId)).data.status == 'complete' ||
+          get(/databases/$(database)/documents/playoff_pools/$(poolId)/rounds/$(roundId)).data.status == 'completed'
+        );
+    }
+
+    function validSelfMembership(appId) {
+      return request.resource.data.app_id == appId
+        && request.resource.data.role == 'member'
+        && (request.resource.data.status == 'active' || request.resource.data.status == 'pending')
+        && (
+          (appId == 'strong8k' && request.resource.data.invite_code_used == 'FAMILY8K') ||
+          (appId == 'playoff-pool' && request.resource.data.invite_code_used == 'PLAYOFF2026')
+        );
+    }
+
+    match /roles/{userId} {
+      allow read: if isPlatformAdmin() || isOwner(userId);
+      allow write: if isPlatformAdmin();
+    }
+
+    match /users/{userId} {
+      allow create: if isPlatformAdmin() || isOwner(userId);
+      allow read: if isPlatformAdmin() || canAccessOwnAccount(userId);
+      allow update, delete: if isPlatformAdmin() || canAccessOwnAccount(userId);
+    }
+
+    match /users/{userId}/memberships/{appId} {
+      allow read: if isPlatformAdmin() || canAccessOwnAccount(userId);
+      allow create: if isPlatformAdmin() || (isOwner(userId) && validSelfMembership(appId));
+      allow update, delete: if isPlatformAdmin() || canAccessOwnAccount(userId);
+    }
+
+    match /strong8k_profiles/{userId} {
+      allow read, write: if isPlatformAdmin() || (canAccessOwnAccount(userId) && (currentUserHasApp('strong8k') || hasAppMembership(userId, 'strong8k')));
+    }
+
+    match /strong8k_config/{docId} {
+      allow read: if isPlatformAdmin() || currentUserHasApp('strong8k');
+      allow write: if isPlatformAdmin();
+    }
+
+    match /strong8k_products/{docId} {
+      allow read: if isPlatformAdmin() || currentUserHasApp('strong8k');
+      allow write: if isPlatformAdmin();
+    }
+
+    match /playoff_pools/{poolId} {
+      allow read: if isPlatformAdmin() || isPoolMember(poolId);
+      allow write: if isPlatformAdmin();
+
+      match /members/{userId} {
+        allow read: if isPlatformAdmin() || isPoolMember(poolId);
+        allow write: if isPlatformAdmin();
+      }
+
+      match /payments/{userId} {
+        allow read: if isPlatformAdmin() || (isPoolMember(poolId) && isOwner(userId));
+        allow write: if isPlatformAdmin();
+      }
+
+      match /rounds/{roundId} {
+        allow read: if isPlatformAdmin() || isPoolMember(poolId);
+        allow write: if isPlatformAdmin();
+
+        match /series/{seriesId} {
+          allow read: if isPlatformAdmin() || isPoolMember(poolId);
+          allow write: if isPlatformAdmin();
+        }
+
+        match /picks/{userId} {
+          allow read: if isPlatformAdmin() || (isPoolMember(poolId) && (isOwner(userId) || isRoundRevealed(poolId, roundId)));
+          allow write: if isPlatformAdmin() || (isPoolMember(poolId) && isOwner(userId));
+        }
+      }
+    }
+
+    // Legacy Strong8K collections kept readable for migration fallback.
+    match /app_config/{docId} {
+      allow read: if isPlatformAdmin() || currentUserHasApp('strong8k');
+      allow write: if isPlatformAdmin();
+    }
+
+    match /products/{docId} {
+      allow read: if isPlatformAdmin() || currentUserHasApp('strong8k');
+      allow write: if isPlatformAdmin();
+    }
+
+    match /business_data/{docId} {
+      allow read, write: if isPlatformAdmin();
     }
   }
 }
