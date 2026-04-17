@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js';
+import { CONFIG } from './config.js?v=20260416-admin-access';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -10,7 +10,7 @@ import {
     normalizeStrong8kProfile,
     parseDelimitedList,
     slugify
-} from './app-model.js';
+} from './app-model.js?v=20260416-admin-access';
 import {
     buildCompactPickLabel,
     buildPickDistribution,
@@ -31,7 +31,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js';
+} from './playoff-logic.js?v=20260416-admin-access';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -99,6 +99,40 @@ function showToast(message, tone = 'default') {
     setTimeout(() => toast.classList.add('translate-x-full', 'opacity-0'), 3000);
 }
 
+function setAdminPanelsHidden(hidden) {
+    document.querySelectorAll('main > section').forEach(section => {
+        if (section.id === 'admin-access-state') {
+            return;
+        }
+        section.classList.toggle('hidden', hidden);
+    });
+}
+
+function showAdminAccessState(title, message, detail = '') {
+    const titleNode = byId('admin-access-title');
+    const messageNode = byId('admin-access-message');
+    const detailNode = byId('admin-access-detail');
+    const container = byId('admin-access-state');
+    if (!titleNode || !messageNode || !detailNode || !container) {
+        return;
+    }
+
+    titleNode.textContent = title;
+    messageNode.textContent = message;
+    detailNode.textContent = detail;
+    container.classList.remove('hidden');
+    setAdminPanelsHidden(true);
+}
+
+function hideAdminAccessState() {
+    const container = byId('admin-access-state');
+    if (!container) {
+        return;
+    }
+    container.classList.add('hidden');
+    setAdminPanelsHidden(false);
+}
+
 function isConfiguredAdminEmail(email) {
     if (!email) {
         return false;
@@ -111,7 +145,11 @@ function isConfiguredAdminEmail(email) {
 
 async function handleAdminAuth(user) {
     if (!user) {
-        window.location.href = 'index.html';
+        showAdminAccessState(
+            'Sign-in Required',
+            'This page could not find a saved signed-in admin session. Sign in on the portal first, then open the admin page again in the same browser.',
+            'Detected session: none'
+        );
         return;
     }
 
@@ -124,13 +162,28 @@ async function handleAdminAuth(user) {
     }
 
     if (!hasPlatformRole && !isConfiguredAdminEmail(user.email)) {
-        window.location.href = 'index.html';
+        showAdminAccessState(
+            'Admin Access Not Granted',
+            'This account is signed in successfully, but it is not recognized as a platform admin by the current site configuration.',
+            `Signed in as: ${user.email || 'unknown'}`
+        );
         return;
     }
 
     state.currentUser = user;
     byId('admin-email').textContent = user.email;
-    await loadAdminData();
+    hideAdminAccessState();
+    try {
+        await loadAdminData();
+    } catch (error) {
+        console.error('Admin bootstrap failed', error);
+        showAdminAccessState(
+            'Admin Data Failed to Load',
+            'The admin session was accepted, but the page could not load the Firestore data it needs. This usually means a rules mismatch or a Firestore permission error.',
+            `Signed in as: ${user.email || 'unknown'}`
+        );
+        showToast('Admin data failed to load. Check the browser console for the Firestore error.', 'error');
+    }
 }
 
 async function loadAdminData() {
