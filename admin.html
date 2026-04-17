@@ -306,21 +306,46 @@
                     <form id="round-form" class="rounded-[1.75rem] bg-white p-6 shadow-sm">
                         <input type="hidden" id="round-id">
                         <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Round Editor</p>
-                        <div class="mt-6 grid gap-4">
-                            <input id="round-name-input" type="text" placeholder="Round name" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900" required>
-                            <input id="round-number-input" type="number" placeholder="Round number" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <input id="round-order-input" type="number" placeholder="Sort order" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <select id="round-status-input" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                <option value="draft">Draft</option>
-                                <option value="open">Open</option>
-                                <option value="active">Active</option>
-                                <option value="locked">Locked</option>
-                                <option value="complete">Complete</option>
-                            </select>
-                            <input id="round-deadline-input" type="datetime-local" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <input id="round-lock-at-input" type="datetime-local" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <input id="round-winner-points-input" type="number" placeholder="Winner points" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <input id="round-games-points-input" type="number" placeholder="Games points" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                        <p class="mt-3 text-sm leading-6 text-slate-500">Set the round identity, deadlines, visibility state, and scoring values without having to rely on placeholder text.</p>
+                        <div class="mt-6 grid gap-4 md:grid-cols-2">
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Round Name</span>
+                                <input id="round-name-input" type="text" placeholder="Round 1" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900" required>
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Round Number</span>
+                                <input id="round-number-input" type="number" placeholder="1" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Sort Order</span>
+                                <input id="round-order-input" type="number" placeholder="1" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Round Status</span>
+                                <select id="round-status-input" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                                    <option value="draft">Draft</option>
+                                    <option value="open">Open</option>
+                                    <option value="active">Active</option>
+                                    <option value="locked">Locked</option>
+                                    <option value="complete">Complete</option>
+                                </select>
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Pick Deadline</span>
+                                <input id="round-deadline-input" type="datetime-local" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Lock At</span>
+                                <input id="round-lock-at-input" type="datetime-local" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Winner Points</span>
+                                <input id="round-winner-points-input" type="number" placeholder="2" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Exact Games Points</span>
+                                <input id="round-games-points-input" type="number" placeholder="1" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
                         </div>
                         <button type="submit" class="mt-6 rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Round</button>
                     </form>
@@ -354,21 +379,52 @@
                     <form id="series-form" class="rounded-[1.75rem] bg-white p-6 shadow-sm">
                         <input type="hidden" id="series-id">
                         <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Series Editor</p>
+                        <p class="mt-3 text-sm leading-6 text-slate-500">Define the matchup label, teams, result state, and any commissioner notes with clear field labels the whole way through.</p>
                         <div class="mt-6 grid gap-4 md:grid-cols-2">
-                            <input id="series-order-input" type="number" placeholder="Sort order" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <input id="series-label-input" type="text" placeholder="Matchup label" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <input id="series-home-id-input" type="text" placeholder="Home team ID" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <input id="series-home-name-input" type="text" placeholder="Home team name" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <input id="series-away-id-input" type="text" placeholder="Away team ID" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <input id="series-away-name-input" type="text" placeholder="Away team name" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <select id="series-status-input" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                <option value="open">Open</option>
-                                <option value="locked">Locked</option>
-                                <option value="complete">Complete</option>
-                            </select>
-                            <input id="series-result-winner-input" type="text" placeholder="Result winner team ID" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <input id="series-result-games-input" type="number" placeholder="Result games" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <textarea id="series-notes-input" rows="4" placeholder="Notes or matchup context" class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900 md:col-span-2"></textarea>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Sort Order</span>
+                                <input id="series-order-input" type="number" placeholder="1" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Matchup Label</span>
+                                <input id="series-label-input" type="text" placeholder="Atlantic 1 vs Wild Card 2" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Home Team ID</span>
+                                <input id="series-home-id-input" type="text" placeholder="TBL" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Home Team Name</span>
+                                <input id="series-home-name-input" type="text" placeholder="Tampa Bay Lightning" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Away Team ID</span>
+                                <input id="series-away-id-input" type="text" placeholder="TOR" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Away Team Name</span>
+                                <input id="series-away-name-input" type="text" placeholder="Toronto Maple Leafs" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Series Status</span>
+                                <select id="series-status-input" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                                    <option value="open">Open</option>
+                                    <option value="locked">Locked</option>
+                                    <option value="complete">Complete</option>
+                                </select>
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Result Winner Team ID</span>
+                                <input id="series-result-winner-input" type="text" placeholder="TBL" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Result Games</span>
+                                <input id="series-result-games-input" type="number" placeholder="6" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            </label>
+                            <label class="space-y-2 md:col-span-2">
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Notes or Matchup Context</span>
+                                <textarea id="series-notes-input" rows="4" placeholder="Home ice, seeding context, injury notes, or commissioner notes" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900"></textarea>
+                            </label>
                         </div>
                         <button type="submit" class="mt-6 rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Series</button>
                     </form>
