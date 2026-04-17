@@ -1078,7 +1078,7 @@ function renderPlayoffApp() {
     byId('pool-name').textContent = state.playoff.pool.name || CONFIG.PLAYOFF_BRAND_NAME;
     byId('pool-season').textContent = state.playoff.pool.season_label || 'Current Season';
     byId('pool-member-count').textContent = `${state.playoff.standings.length} members`;
-    byId('pool-description').textContent = state.playoff.pool.description || 'Round-by-round NHL playoff picks.';
+    byId('pool-description').textContent = 'Round-by-round NHL playoff picks.';
     byId('current-round-name').textContent = state.playoff.currentRound?.name || 'No round configured';
     byId('current-round-deadline').textContent = state.playoff.currentRound?.lock_at
         ? `Lock ${formatDateTime(state.playoff.currentRound.lock_at)}`
@@ -1093,11 +1093,9 @@ function renderPlayoffApp() {
     byId('playoff-payout-status').textContent = buildPayoutStatusText();
     byId('playoff-rank-summary').textContent = buildCurrentRankSummary();
     byId('playoff-live-scoreboard-note').textContent = buildLiveScoreboardNote();
-    byId('playoff-guide-steps').innerHTML = buildPlayoffGuideSteps();
+    byId('playoff-rules-content').innerHTML = buildPoolRulesMarkup();
     byId('playoff-payment-instructions').textContent = buildPaymentInstructions();
     byId('playoff-payment-link').href = buildPlayoffPaymentLink();
-    byId('playoff-deadline-detail').textContent = buildDeadlineInstructions();
-    byId('playoff-guide-note').textContent = buildPlayoffGuideNote();
 
     renderTeamNameEditor();
     renderSeriesCards();
@@ -1373,18 +1371,6 @@ function hasReadyTeamNameForPicks() {
         && (isTeamNameLockedForMember() || !isTeamNameDirty());
 }
 
-function buildPlayoffGuideSteps() {
-    const deadlineValue = state.playoff.currentRound?.lock_at || state.playoff.currentRound?.pick_deadline || '';
-    const deadlineLabel = deadlineValue ? formatDateTime(deadlineValue) : 'the posted deadline';
-    return `
-        <div class="space-y-3 text-sm leading-6 text-slate-200">
-            <p><span class="font-bold text-white">1.</span> Set the team name you want shown on the scoreboard.</p>
-            <p><span class="font-bold text-white">2.</span> Click one logo in every series to choose your winner.</p>
-            <p><span class="font-bold text-white">3.</span> Choose the exact series length from 4 to 7 games before ${escapeHtml(deadlineLabel)}.</p>
-        </div>
-    `;
-}
-
 function buildPaymentInstructions() {
     const dueAmount = state.playoff.payment?.amount_due || state.playoff.member?.amount_due || state.playoff.pool?.entry_fee_default || CONFIG.PLAYOFF_DEFAULT_ENTRY_FEE;
     const paidAmount = state.playoff.payment?.amount_paid || state.playoff.member?.amount_paid || 0;
@@ -1400,25 +1386,219 @@ function buildPlayoffPaymentLink() {
     return `mailto:${CONFIG.PAYMENT_EMAIL}?subject=${subject}&body=${body}`;
 }
 
-function buildDeadlineInstructions() {
-    const deadlineValue = state.playoff.currentRound?.lock_at || state.playoff.currentRound?.pick_deadline || '';
-    if (!deadlineValue) {
-        return 'The next pick deadline has not been posted yet.';
+function getPoolRulesSourceText() {
+    const description = String(state.playoff.pool?.description || '').trim();
+    if (description) {
+        return description;
     }
 
-    const revealLine = isRoundRevealed(state.playoff.currentRound, state.playoff.pool)
-        ? 'Picks for this round are already revealed.'
-        : 'Everyone’s picks stay hidden until the round locks.';
-    return `Submit your ${state.playoff.currentRound?.name || 'current round'} picks by ${formatDateTime(deadlineValue)}. ${revealLine}`;
+    return [
+        'Sign up + join',
+        '',
+        'Open the pool link, create an account, then follow the on-screen instructions. If you can see the Playoff Pool page, you’re in.',
+        '',
+        'Hard deadline (payment + picks)',
+        '',
+        'You must be PAID ($25 entry fee) and have ALL Round 1 picks saved before puck drop of Game 1:',
+        'Saturday, April 18, 2026 — 3:00 PM ET (Hurricanes vs Senators).',
+        'No pay = no picks. If you’re unpaid at puck drop, you’re done for the year.',
+        '',
+        'Payment',
+        '',
+        'Entry fee is $25.',
+        'Pay using the instructions in the app. Add your team name in the note so it matches up without a forensic audit.',
+        '',
+        'Team name (scoreboard name)',
+        '',
+        'Pick the name you want shown on the standings board (max 40 characters).',
+        'Set it early so people know who’s who before the chaos starts.',
+        '',
+        'Making picks',
+        '',
+        'For every series, you choose:',
+        'the series winner (click the logo), and',
+        'the exact series length (4–7 games).',
+        'You can edit picks up until the deadline. After that, they lock.',
+        '',
+        'Scoring (it doubles each round)',
+        '',
+        'Each series has two ways to score:',
+        'Winner = points',
+        'Exact games = points',
+        'Points by round:',
+        'Round 1: Winner 2, Games 1',
+        'Round 2: Winner 4, Games 2',
+        'Round 3: Winner 8, Games 4',
+        'Round 4: Winner 16, Games 8',
+        '',
+        'Prize pool + payouts (Top 3 + Pity)',
+        '',
+        'Prize pool = the money collected from paid entries.',
+        'Payout template: 1st / 2nd / 3rd / Pity.',
+        'Payout amounts scale with the pot and are shown in the app.',
+        '',
+        'Ties (golf-style payout splits)',
+        '',
+        'If there’s a tie in a paying position, we combine the money for the tied places and split it evenly, then skip the next place(s).',
+        'Example: tie for 2nd → (2nd + 3rd money) split evenly between the tied entries → next payout position becomes 4th.',
+        '',
+        'Admin reality clause',
+        '',
+        'If the NHL updates results, corrections happen, and scores may be rescored. The standings follow the official outcomes, not vibes.'
+    ].join('\n');
 }
 
-function buildPlayoffGuideNote() {
-    const poolDescription = state.playoff.pool?.description?.trim();
-    if (poolDescription) {
-        return poolDescription;
+function parsePoolRulesSections(rawText = '') {
+    return String(rawText || '')
+        .split(/\r?\n\s*\r?\n/)
+        .map(block => block
+            .split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(Boolean))
+        .filter(lines => lines.length)
+        .map(lines => ({
+            heading: lines[0],
+            lines: lines.slice(1)
+        }));
+}
+
+function buildPoolRulesMarkup() {
+    const sections = parsePoolRulesSections(getPoolRulesSourceText());
+    if (!sections.length) {
+        return '<p class="text-sm leading-[1.4] text-slate-300">Pool rules will appear here once they are posted.</p>';
     }
 
-    return 'You are automatically added to the live pool as soon as you open it. Save your team name, pay in, and keep your picks updated before lock.';
+    return `
+        <div class="space-y-5">
+            ${sections.map(section => renderPoolRulesSection(section)).join('')}
+        </div>
+    `;
+}
+
+function renderPoolRulesSection(section) {
+    const heading = String(section.heading || '');
+    const lines = Array.isArray(section.lines) ? section.lines : [];
+    const accentClass = getRulesHeadingAccentClass(heading);
+
+    if (heading === 'Scoring (it doubles each round)') {
+        return renderScoringRulesSection(heading, lines, accentClass);
+    }
+
+    if (heading === 'Ties (golf-style payout splits)') {
+        return renderTiebreakRulesSection(heading, lines, accentClass);
+    }
+
+    if (heading === 'Hard deadline (payment + picks)') {
+        return renderDeadlineRulesSection(heading, lines, accentClass);
+    }
+
+    return `
+        <section class="space-y-3 rounded-[1.1rem] border border-white/10 bg-white/[0.03] p-4">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-[0.3em] ${accentClass}">${escapeHtml(heading)}</p>
+            </div>
+            <div class="space-y-2 text-sm leading-[1.4] text-slate-200">
+                ${renderPoolRulesBody(lines)}
+            </div>
+        </section>
+    `;
+}
+
+function renderPoolRulesBody(lines = []) {
+    if (!lines.length) {
+        return '';
+    }
+
+    if (lines[0].endsWith(':') && lines.length > 1) {
+        const intro = lines[0];
+        const listItems = lines.slice(1);
+        return `
+            <p>${escapeHtml(intro)}</p>
+            <ul class="space-y-1.5 pl-5 text-slate-300 list-disc">
+                ${listItems.map(line => `<li>${escapeHtml(line)}</li>`).join('')}
+            </ul>
+        `;
+    }
+
+    return lines.map(line => `<p>${escapeHtml(line)}</p>`).join('');
+}
+
+function renderDeadlineRulesSection(heading, lines, accentClass) {
+    const intro = lines[0] || '';
+    const deadlineLine = lines[1] || '';
+    const warningLine = lines[2] || '';
+
+    return `
+        <section class="space-y-3 rounded-[1.1rem] border border-amber-300/30 bg-amber-300/10 p-4">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-[0.3em] ${accentClass}">${escapeHtml(heading)}</p>
+            </div>
+            <div class="space-y-2 text-sm leading-[1.4] text-slate-100">
+                ${intro ? `<p>${escapeHtml(intro)}</p>` : ''}
+                ${deadlineLine ? `<div class="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-semibold text-white">${escapeHtml(deadlineLine)}</div>` : ''}
+                ${warningLine ? `<div class="rounded-2xl border border-rose-300/30 bg-rose-400/10 px-4 py-3 font-semibold text-rose-100">${escapeHtml(warningLine)}</div>` : ''}
+            </div>
+        </section>
+    `;
+}
+
+function renderScoringRulesSection(heading, lines, accentClass) {
+    const roundRows = lines.filter(line => /^Round\s+\d+:/i.test(line));
+    const introLines = lines.filter(line => !/^Round\s+\d+:/i.test(line));
+
+    return `
+        <section class="space-y-3 rounded-[1.1rem] border border-white/10 bg-white/[0.03] p-4">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-[0.3em] ${accentClass}">${escapeHtml(heading)}</p>
+            </div>
+            <div class="space-y-2 text-sm leading-[1.4] text-slate-200">
+                ${renderPoolRulesBody(introLines)}
+            </div>
+            <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                ${roundRows.map(line => {
+                    const [roundLabel, details] = line.split(':');
+                    return `
+                        <div class="rounded-2xl border border-white/10 bg-slate-950/55 px-4 py-3">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">${escapeHtml(roundLabel || '')}</p>
+                            <p class="mt-1 text-sm font-semibold leading-[1.35] text-white">${escapeHtml((details || '').trim())}</p>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </section>
+    `;
+}
+
+function renderTiebreakRulesSection(heading, lines, accentClass) {
+    const exampleLine = lines.find(line => /^Example:/i.test(line)) || '';
+    const baseLines = lines.filter(line => line !== exampleLine);
+
+    return `
+        <section class="space-y-3 rounded-[1.1rem] border border-white/10 bg-white/[0.03] p-4">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-[0.3em] ${accentClass}">${escapeHtml(heading)}</p>
+            </div>
+            <div class="space-y-2 text-sm leading-[1.4] text-slate-200">
+                ${renderPoolRulesBody(baseLines)}
+            </div>
+            ${exampleLine ? `
+                <div class="rounded-2xl border border-sky-300/25 bg-sky-400/10 px-4 py-3">
+                    <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-sky-200">Example</p>
+                    <p class="mt-1 text-sm leading-[1.4] text-slate-100">${escapeHtml(exampleLine.replace(/^Example:\s*/i, ''))}</p>
+                </div>
+            ` : ''}
+        </section>
+    `;
+}
+
+function getRulesHeadingAccentClass(heading = '') {
+    if (heading === 'Hard deadline (payment + picks)') return 'text-amber-300';
+    if (heading === 'Payment') return 'text-amber-300';
+    if (heading === 'Scoring (it doubles each round)') return 'text-emerald-300';
+    if (heading === 'Prize pool + payouts (Top 3 + Pity)') return 'text-fuchsia-200';
+    if (heading === 'Ties (golf-style payout splits)') return 'text-sky-300';
+    if (heading === 'Admin reality clause') return 'text-rose-200';
+    return 'text-emerald-300';
 }
 
 function buildCurrentRankSummary() {
