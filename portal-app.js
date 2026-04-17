@@ -990,7 +990,7 @@ async function ensurePlayoffSelfServeAccess(uid, email) {
     await setDoc(paymentRef, {
         ...existingPayment,
         member_uid: uid,
-        amount_due: Number(existingPayment.amount_due ?? pool.entry_fee_default || 0)
+        amount_due: Number(existingPayment.amount_due ?? pool.entry_fee_default ?? 0)
     }, { merge: true });
 }
 
