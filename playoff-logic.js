@@ -11,6 +11,24 @@ export const PLAYOFF_PAYOUT_TEMPLATE = [
     { place_key: 'pity', label: 'Pity', share: 0.0454 }
 ];
 const NHL_TEAM_LOGO_BASE_URL = 'https://assets.nhle.com/logos/nhl/svg';
+const NHL_TEAM_PRIMARY_COLORS = {
+    ANA: '#F47A38',
+    BOS: '#FFB81C',
+    BUF: '#003087',
+    CAR: '#CE1126',
+    COL: '#6F263D',
+    DAL: '#006847',
+    EDM: '#041E42',
+    LAK: '#111111',
+    MIN: '#154734',
+    MTL: '#AF1E2D',
+    OTT: '#000000',
+    PHI: '#F74902',
+    PIT: '#000000',
+    TBL: '#002868',
+    UTA: '#6CACE3',
+    VGK: '#B4975A'
+};
 
 // Official 2026 Round 1 pairings captured from NHL.com bracket/lookahead pages on April 16, 2026.
 const OFFICIAL_PLAYOFF_BRACKETS = {
@@ -146,6 +164,10 @@ export function getTeamLogoUrl(teamId = '', variant = 'dark') {
     return `${NHL_TEAM_LOGO_BASE_URL}/${code}_${safeVariant}.svg`;
 }
 
+export function getTeamPrimaryColor(teamId = '') {
+    return NHL_TEAM_PRIMARY_COLORS[normalizeTeamCode(teamId)] || '#0F172A';
+}
+
 export function normalizePlayoffSeries(series = {}) {
     const homeTeamId = normalizeTeamCode(series.home_team_id);
     const awayTeamId = normalizeTeamCode(series.away_team_id);
@@ -156,7 +178,9 @@ export function normalizePlayoffSeries(series = {}) {
         home_team_logo_dark: series.home_team_logo_dark || getTeamLogoUrl(homeTeamId, 'dark'),
         home_team_logo_light: series.home_team_logo_light || getTeamLogoUrl(homeTeamId, 'light'),
         away_team_logo_dark: series.away_team_logo_dark || getTeamLogoUrl(awayTeamId, 'dark'),
-        away_team_logo_light: series.away_team_logo_light || getTeamLogoUrl(awayTeamId, 'light')
+        away_team_logo_light: series.away_team_logo_light || getTeamLogoUrl(awayTeamId, 'light'),
+        home_team_primary_color: series.home_team_primary_color || getTeamPrimaryColor(homeTeamId),
+        away_team_primary_color: series.away_team_primary_color || getTeamPrimaryColor(awayTeamId)
     };
 }
 
@@ -242,6 +266,7 @@ export function defaultPlayoffMember(sharedUser = {}, pool = {}) {
         paid_at: '',
         payment_method: '',
         payment_notes: '',
+        team_name_history: [],
         points_total: 0,
         round_points: 0,
         round_history: [],
@@ -270,6 +295,11 @@ export function normalizePlayoffMember(member = {}, pool = {}) {
         amount_remaining: Math.max(0, roundCurrency(amountDue - amountPaid)),
         eligible_for_payout: Boolean(member.eligible_for_payout ?? (paymentStatus === 'paid' || paymentStatus === 'waived')),
         late_payment_flag: Boolean(member.late_payment_flag),
+        team_name_history: Array.isArray(member.team_name_history) ? member.team_name_history.map(item => ({
+            team_name: item.team_name || '',
+            changed_at: item.changed_at || '',
+            source: item.source || 'portal'
+        })).filter(item => item.team_name) : [],
         points_total: Number(member.points_total || 0),
         round_points: Number(member.round_points || 0),
         payout_amount: Number(member.payout_amount || 0),

@@ -91,6 +91,7 @@ const state = {
         payoutSummary: [],
         pickDistribution: [],
         standingsTrend: [],
+        teamNameDraft: '',
         draft: {},
         scenarioDraft: {},
         isLocked: false
@@ -190,6 +191,7 @@ function resetSessionState() {
         payoutSummary: [],
         pickDistribution: [],
         standingsTrend: [],
+        teamNameDraft: '',
         draft: {},
         scenarioDraft: {},
         isLocked: false
@@ -954,6 +956,9 @@ async function loadPlayoffApp() {
     const preservedScenarioDraft = state.playoff.poolId === poolId && state.playoff.currentRound?.id === currentRoundId
         ? state.playoff.scenarioDraft
         : {};
+    const preservedTeamNameDraft = state.playoff.poolId === poolId
+        ? state.playoff.teamNameDraft
+        : '';
 
     state.playoff.poolId = poolId;
     state.playoff.pool = pool;
@@ -969,6 +974,7 @@ async function loadPlayoffApp() {
     state.playoff.payoutSummary = payoutSummary;
     state.playoff.pickDistribution = buildPickDistribution(series, roundPickDocs);
     state.playoff.standingsTrend = buildStandingsTrend(rounds, standings);
+    state.playoff.teamNameDraft = preservedTeamNameDraft || member.team_name || '';
     state.playoff.draft = buildDraftFromEntries(currentPick?.entries || []);
     state.playoff.scenarioDraft = buildScenarioDraft(series, preservedScenarioDraft);
     state.playoff.isLocked = isRoundLocked(currentRound);
@@ -1093,6 +1099,7 @@ function renderPlayoffApp() {
     byId('playoff-deadline-detail').textContent = buildDeadlineInstructions();
     byId('playoff-guide-note').textContent = buildPlayoffGuideNote();
 
+    renderTeamNameEditor();
     renderSeriesCards();
     renderStandings();
     renderPayoutSummary();
@@ -1122,71 +1129,77 @@ function renderSeriesCards() {
         return;
     }
 
-    state.playoff.series.forEach(series => {
-        const saved = state.playoff.draft[series.id] || {};
-        const savedEntry = state.playoff.currentPick?.entries?.find(entry => entry.series_id === series.id) || null;
-        const winnerChoice = saved.winner_team_id || '';
-        const card = document.createElement('article');
-        card.className = 'rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-5 shadow-[0_24px_60px_rgba(2,6,23,0.18)]';
-        card.innerHTML = `
-            <div class="mb-4 flex items-start justify-between gap-4">
+    const conferenceGroups = groupSeriesByConference(state.playoff.series);
+    container.innerHTML = conferenceGroups.map(group => `
+        <section class="rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/8 to-white/4 p-5 shadow-[0_24px_60px_rgba(2,6,23,0.18)]">
+            <div class="mb-5 flex items-end justify-between gap-4">
                 <div>
-                    <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-300">${series.conference || series.matchup_label || `Series ${series.sort_order || ''}`}</p>
-                    <h3 class="mt-2 text-xl font-bold text-white">${series.home_team_name || series.home_team_id} vs ${series.away_team_name || series.away_team_id}</h3>
-                    <p class="mt-2 text-sm text-slate-300">${series.notes || 'Click a logo to choose the winner, then lock in the exact series length.'}</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.3em] text-emerald-300">${escapeHtml(group.title)}</p>
+                    <h3 class="mt-2 text-2xl font-black text-white">${group.series.length} matchups</h3>
                 </div>
-                <span class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase text-slate-200">${series.status || 'Open'}</span>
+                <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Logo pick + exact length</p>
             </div>
-            <div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                <div>
-                    <span class="mb-3 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Winner</span>
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        ${buildWinnerOptionMarkup(series, 'home', winnerChoice)}
-                        ${buildWinnerOptionMarkup(series, 'away', winnerChoice)}
-                    </div>
-                </div>
-                <div>
-                    <span class="mb-3 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Games</span>
-                    <div class="grid grid-cols-2 gap-3">
-                        ${[4, 5, 6, 7].map(games => `
-                            <button type="button" class="${String(saved.games) === String(games)
-                                ? 'series-games-option rounded-2xl border border-amber-300 bg-amber-300/15 px-4 py-4 text-left text-white shadow-[0_0_0_1px_rgba(252,211,77,0.25)]'
-                                : 'series-games-option rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-left text-slate-200 transition hover:border-amber-300/60 hover:bg-slate-900'}" data-series-id="${series.id}" data-games="${games}">
-                                <span class="block text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Exact Length</span>
-                                <span class="mt-2 block text-2xl font-black">${games}</span>
-                                <span class="mt-1 block text-xs uppercase tracking-[0.18em] text-slate-400">Games</span>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
+            <div class="space-y-4">
+                ${group.series.map(series => {
+                    const saved = state.playoff.draft[series.id] || {};
+                    const savedEntry = state.playoff.currentPick?.entries?.find(entry => entry.series_id === series.id) || null;
+                    const winnerChoice = saved.winner_team_id || '';
+                    return `
+                        <article class="rounded-[1.75rem] border border-white/10 bg-slate-950/35 p-5">
+                            <div class="mb-4 flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">${escapeHtml(series.matchup_label || `Series ${series.sort_order || ''}`)}</p>
+                                    <h4 class="mt-2 text-xl font-black text-white">${escapeHtml((series.home_team_name || series.home_team_id) + ' vs ' + (series.away_team_name || series.away_team_id))}</h4>
+                                </div>
+                                <span class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase text-slate-200">${escapeHtml(series.status || 'Open')}</span>
+                            </div>
+                            <div class="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
+                                <div>
+                                    <span class="mb-3 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Pick The Winner</span>
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        ${buildPickTeamOptionMarkup(series, 'home', winnerChoice, 'live')}
+                                        ${buildPickTeamOptionMarkup(series, 'away', winnerChoice, 'live')}
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="mb-3 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300"># Games - Exact Length</span>
+                                    <div class="grid grid-cols-4 gap-2">
+                                        ${buildGamesOptionGroupMarkup(series.id, saved.games, 'live')}
+                                    </div>
+                                </div>
+                            </div>
+                            ${savedEntry ? `
+                                <div class="mt-4 rounded-2xl bg-slate-950/50 px-4 py-3 text-xs text-slate-300">
+                                    <div class="flex flex-wrap items-center justify-between gap-3">
+                                        <span>Winner pts: ${savedEntry.winner_points_awarded || 0}</span>
+                                        <span>Games pts: ${savedEntry.games_points_awarded || 0}</span>
+                                        <span>Total: ${savedEntry.series_points_total || 0}</span>
+                                    </div>
+                                    ${savedEntry.eligibility_reason ? `<p class="mt-2 text-[11px] uppercase tracking-[0.2em] text-amber-300">Override: ${escapeHtml(savedEntry.eligibility_reason)}</p>` : ''}
+                                </div>
+                            ` : ''}
+                        </article>
+                    `;
+                }).join('')}
             </div>
-            ${savedEntry ? `
-                <div class="mt-4 rounded-2xl bg-slate-950/40 px-4 py-3 text-xs text-slate-300">
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        <span>Winner pts: ${savedEntry.winner_points_awarded || 0}</span>
-                        <span>Games pts: ${savedEntry.games_points_awarded || 0}</span>
-                        <span>Total: ${savedEntry.series_points_total || 0}</span>
-                    </div>
-                    ${savedEntry.eligibility_reason ? `<p class="mt-2 text-[11px] uppercase tracking-[0.2em] text-amber-300">Override: ${escapeHtml(savedEntry.eligibility_reason)}</p>` : ''}
-                </div>
-            ` : ''}
-        `;
-        container.appendChild(card);
-    });
+        </section>
+    `).join('');
 
-    container.querySelectorAll('.series-team-option').forEach(button => {
+    container.querySelectorAll('.pick-team-option').forEach(button => {
         button.disabled = state.playoff.isLocked;
         button.addEventListener('click', event => updatePlayoffDraft(event.currentTarget.dataset.seriesId, 'winner_team_id', event.currentTarget.dataset.teamId));
     });
-    container.querySelectorAll('.series-games-option').forEach(button => {
+    container.querySelectorAll('.pick-games-option').forEach(button => {
         button.disabled = state.playoff.isLocked;
         button.addEventListener('click', event => updatePlayoffDraft(event.currentTarget.dataset.seriesId, 'games', event.currentTarget.dataset.games));
     });
 
-    submitButton.disabled = state.playoff.isLocked;
+    submitButton.disabled = state.playoff.isLocked || !hasReadyTeamNameForPicks();
     roundMessage.textContent = state.playoff.isLocked
         ? 'This round is locked. Your latest saved picks are shown below.'
-        : 'Click a team logo, choose 4 to 7 games, and save before the deadline.';
+        : hasReadyTeamNameForPicks()
+            ? 'Click a team logo, choose the exact series length, and save before the deadline.'
+            : 'Save your team name first, then lock in your series picks.';
     roundSummary.innerHTML = `
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -1201,14 +1214,174 @@ function renderSeriesCards() {
     `;
 }
 
+function renderTeamNameEditor() {
+    const input = byId('playoff-team-name-input');
+    const button = byId('playoff-team-name-save-btn');
+    const helper = byId('playoff-team-name-helper');
+    const locked = isTeamNameLockedForMember();
+    const savedTeamName = state.playoff.member?.team_name || '';
+    if (locked && normalizeTeamNameValue(state.playoff.teamNameDraft) !== normalizeTeamNameValue(savedTeamName)) {
+        state.playoff.teamNameDraft = savedTeamName;
+    }
+    const draftTeamName = state.playoff.teamNameDraft || '';
+
+    input.value = draftTeamName;
+    input.disabled = locked;
+    button.classList.toggle('hidden', locked);
+    button.disabled = locked || !normalizeTeamNameValue(draftTeamName) || !isTeamNameDirty();
+
+    if (locked) {
+        helper.textContent = savedTeamName
+            ? 'Round 1 is locked, so your saved team name is now read-only for the rest of the pool.'
+            : 'Round 1 is locked. Team name changes are no longer available from the portal.';
+        return;
+    }
+
+    if (!savedTeamName) {
+        helper.textContent = 'Set your scoreboard name first. You can change it as often as you want until Round 1 locks.';
+        return;
+    }
+
+    helper.textContent = isTeamNameDirty()
+        ? 'You have an unsaved team-name change. Save it before saving your picks.'
+        : 'This is the name everyone sees on the scoreboard. You can keep changing it until Round 1 locks.';
+}
+
+function groupSeriesByConference(seriesList = []) {
+    const desiredOrder = ['Eastern Conference', 'Western Conference'];
+    const grouped = desiredOrder.map(title => ({
+        title,
+        series: seriesList.filter(series => series.conference === title)
+    })).filter(group => group.series.length);
+
+    const extras = [];
+    const seen = new Set(desiredOrder);
+    seriesList.forEach(series => {
+        const conference = series.conference || 'Other Matchups';
+        if (seen.has(conference)) {
+            return;
+        }
+
+        const existing = extras.find(item => item.title === conference);
+        if (existing) {
+            existing.series.push(series);
+            return;
+        }
+
+        extras.push({ title: conference, series: [series] });
+    });
+
+    return [...grouped, ...extras];
+}
+
+function buildPickTeamOptionMarkup(series, side, selectedTeamId, mode = 'live') {
+    const isHome = side === 'home';
+    const teamId = isHome ? (series.home_team_id || series.home_team_name) : (series.away_team_id || series.away_team_name);
+    const teamName = isHome ? (series.home_team_name || series.home_team_id) : (series.away_team_name || series.away_team_id);
+    const seedLabel = isHome ? series.home_team_seed_label : series.away_team_seed_label;
+    const primaryColor = isHome ? (series.home_team_primary_color || '#0F172A') : (series.away_team_primary_color || '#0F172A');
+    const useDarkLogo = isLightColor(primaryColor);
+    const logoUrl = isHome
+        ? (useDarkLogo ? (series.home_team_logo_dark || series.home_team_logo_light || '') : (series.home_team_logo_light || series.home_team_logo_dark || ''))
+        : (useDarkLogo ? (series.away_team_logo_dark || series.away_team_logo_light || '') : (series.away_team_logo_light || series.away_team_logo_dark || ''));
+    const isSelected = selectedTeamId === teamId;
+    const frameClass = mode === 'scenario'
+        ? (isSelected
+            ? 'border-emerald-300 bg-emerald-400/12 shadow-[0_0_0_1px_rgba(110,231,183,0.25)]'
+            : 'border-white/10 bg-white/5 hover:border-emerald-300/60 hover:bg-white/10')
+        : (isSelected
+            ? 'border-emerald-300 bg-emerald-400/12 shadow-[0_0_0_1px_rgba(110,231,183,0.28)]'
+            : 'border-white/10 bg-slate-950/65 hover:border-emerald-300/60 hover:bg-slate-900');
+
+    return `
+        <button type="button" class="pick-team-option group min-h-[12.5rem] rounded-[1.6rem] border p-4 text-center transition ${frameClass}" data-series-id="${series.id}" data-team-id="${teamId}">
+            <div class="flex h-full flex-col items-center justify-between gap-3">
+                <span class="inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] ${isSelected ? 'bg-emerald-300/20 text-emerald-100' : 'bg-white/10 text-slate-300'}">${escapeHtml(seedLabel || 'Pick')}</span>
+                <div class="flex h-24 w-24 items-center justify-center rounded-[1.5rem] border border-black/10 p-3 shadow-sm" style="background:${escapeAttribute(primaryColor)};">
+                    <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamName)} logo" class="h-full w-full object-contain">
+                </div>
+                <div class="min-w-0">
+                    <p class="min-h-[2.75rem] text-base font-black leading-tight text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">${escapeHtml(teamName)}</p>
+                    <p class="mt-1 text-[10px] uppercase tracking-[0.18em] ${isSelected ? 'text-emerald-200' : 'text-slate-400'}">${escapeHtml(teamId)}</p>
+                </div>
+            </div>
+        </button>
+    `;
+}
+
+function buildGamesOptionGroupMarkup(seriesId, selectedGames, mode = 'live') {
+    return [4, 5, 6, 7].map(games => buildGamesOptionMarkup(seriesId, games, selectedGames, mode)).join('');
+}
+
+function buildGamesOptionMarkup(seriesId, games, selectedGames, mode = 'live') {
+    const isSelected = String(selectedGames) === String(games);
+    const classes = mode === 'scenario'
+        ? (isSelected
+            ? 'border-amber-300 bg-amber-300/15 text-white'
+            : 'border-white/10 bg-white/5 text-slate-300 hover:border-amber-300/60 hover:bg-white/10')
+        : (isSelected
+            ? 'border-amber-300 bg-amber-300/15 text-white shadow-[0_0_0_1px_rgba(252,211,77,0.25)]'
+            : 'border-white/10 bg-slate-950/70 text-slate-200 hover:border-amber-300/60 hover:bg-slate-900');
+
+    return `
+        <button type="button" class="pick-games-option rounded-2xl border px-3 py-3 text-center transition ${classes}" data-series-id="${seriesId}" data-games="${games}">
+            <span class="block text-lg font-black">${games}</span>
+            <span class="mt-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Exact Length</span>
+        </button>
+    `;
+}
+
+function isLightColor(hex) {
+    const normalized = String(hex || '').replace('#', '');
+    if (normalized.length !== 6) {
+        return false;
+    }
+
+    const red = parseInt(normalized.slice(0, 2), 16);
+    const green = parseInt(normalized.slice(2, 4), 16);
+    const blue = parseInt(normalized.slice(4, 6), 16);
+    if ([red, green, blue].some(Number.isNaN)) {
+        return false;
+    }
+
+    const luminance = ((red * 299) + (green * 587) + (blue * 114)) / 1000;
+    return luminance >= 160;
+}
+
+function getRoundOne() {
+    return state.playoff.rounds.find(round => Number(round.round_number || 0) === 1) || null;
+}
+
+function isTeamNameLockedForMember() {
+    const roundOne = getRoundOne();
+    return Boolean(roundOne && isRoundLocked(roundOne));
+}
+
+function normalizeTeamNameValue(value = '') {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeTeamNameComparison(value = '') {
+    return normalizeTeamNameValue(value).toLowerCase();
+}
+
+function isTeamNameDirty() {
+    return normalizeTeamNameValue(state.playoff.teamNameDraft) !== normalizeTeamNameValue(state.playoff.member?.team_name || '');
+}
+
+function hasReadyTeamNameForPicks() {
+    return Boolean(normalizeTeamNameValue(state.playoff.member?.team_name || ''))
+        && (isTeamNameLockedForMember() || !isTeamNameDirty());
+}
+
 function buildPlayoffGuideSteps() {
     const deadlineValue = state.playoff.currentRound?.lock_at || state.playoff.currentRound?.pick_deadline || '';
     const deadlineLabel = deadlineValue ? formatDateTime(deadlineValue) : 'the posted deadline';
     return `
         <div class="space-y-3 text-sm leading-6 text-slate-200">
-            <p><span class="font-bold text-white">1.</span> Click one logo in every series to choose your winner.</p>
-            <p><span class="font-bold text-white">2.</span> Choose the exact series length from 4 to 7 games.</p>
-            <p><span class="font-bold text-white">3.</span> Save everything before ${escapeHtml(deadlineLabel)}.</p>
+            <p><span class="font-bold text-white">1.</span> Set the team name you want shown on the scoreboard.</p>
+            <p><span class="font-bold text-white">2.</span> Click one logo in every series to choose your winner.</p>
+            <p><span class="font-bold text-white">3.</span> Choose the exact series length from 4 to 7 games before ${escapeHtml(deadlineLabel)}.</p>
         </div>
     `;
 }
@@ -1246,7 +1419,7 @@ function buildPlayoffGuideNote() {
         return poolDescription;
     }
 
-    return 'You are automatically added to the live pool as soon as you open it. Set your team name, pay in, and keep your picks saved before lock.';
+    return 'You are automatically added to the live pool as soon as you open it. Save your team name, pay in, and keep your picks updated before lock.';
 }
 
 function buildCurrentRankSummary() {
@@ -1370,29 +1543,28 @@ function renderScenarioLab() {
                 <span class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase text-slate-300">${series.status || 'Open'}</span>
             </div>
             <div class="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
-                <div class="grid gap-3 sm:grid-cols-2">
-                    ${buildScenarioWinnerOptionMarkup(series, 'home', draft.result_winner_team_id)}
-                    ${buildScenarioWinnerOptionMarkup(series, 'away', draft.result_winner_team_id)}
+                <div>
+                    <span class="mb-3 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Scenario Winner</span>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        ${buildPickTeamOptionMarkup(series, 'home', draft.result_winner_team_id, 'scenario')}
+                        ${buildPickTeamOptionMarkup(series, 'away', draft.result_winner_team_id, 'scenario')}
+                    </div>
                 </div>
-                <div class="grid grid-cols-4 gap-2">
-                    ${[4, 5, 6, 7].map(games => `
-                        <button type="button" class="${String(draft.result_games) === String(games)
-                            ? 'scenario-games-option rounded-2xl border border-amber-300 bg-amber-300/15 px-3 py-3 text-center text-white'
-                            : 'scenario-games-option rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-center text-slate-300 transition hover:border-amber-300/60 hover:bg-white/10'}" data-series-id="${series.id}" data-games="${games}">
-                            <span class="block text-lg font-black">${games}</span>
-                            <span class="block text-[10px] uppercase tracking-[0.18em] text-slate-400">Games</span>
-                        </button>
-                    `).join('')}
+                <div>
+                    <span class="mb-3 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300"># Games - Exact Length</span>
+                    <div class="grid grid-cols-4 gap-2">
+                        ${buildGamesOptionGroupMarkup(series.id, draft.result_games, 'scenario')}
+                    </div>
                 </div>
             </div>
         `;
         resultContainer.appendChild(card);
     });
 
-    resultContainer.querySelectorAll('.scenario-team-option').forEach(button => {
+    resultContainer.querySelectorAll('.pick-team-option').forEach(button => {
         button.addEventListener('click', event => updateScenarioDraft(event.currentTarget.dataset.seriesId, 'result_winner_team_id', event.currentTarget.dataset.teamId));
     });
-    resultContainer.querySelectorAll('.scenario-games-option').forEach(button => {
+    resultContainer.querySelectorAll('.pick-games-option').forEach(button => {
         button.addEventListener('click', event => updateScenarioDraft(event.currentTarget.dataset.seriesId, 'result_games', event.currentTarget.dataset.games));
     });
 
@@ -1441,31 +1613,6 @@ function renderScenarioLab() {
     }
 }
 
-function buildScenarioWinnerOptionMarkup(series, side, selectedTeamId) {
-    const isHome = side === 'home';
-    const teamId = isHome ? (series.home_team_id || series.home_team_name) : (series.away_team_id || series.away_team_name);
-    const teamName = isHome ? (series.home_team_name || series.home_team_id) : (series.away_team_name || series.away_team_id);
-    const logoUrl = isHome
-        ? (series.home_team_logo_dark || series.home_team_logo_light || '')
-        : (series.away_team_logo_dark || series.away_team_logo_light || '');
-    const isSelected = selectedTeamId === teamId;
-    return `
-        <button type="button" class="${isSelected
-            ? 'scenario-team-option rounded-[1.4rem] border border-emerald-300 bg-emerald-400/15 p-3 text-left shadow-[0_0_0_1px_rgba(110,231,183,0.25)]'
-            : 'scenario-team-option rounded-[1.4rem] border border-white/10 bg-white/5 p-3 text-left transition hover:border-emerald-300/60 hover:bg-white/10'}" data-series-id="${series.id}" data-team-id="${teamId}">
-            <div class="flex items-center gap-3">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl border ${isSelected ? 'border-emerald-300/50 bg-white/95' : 'border-white/10 bg-white/90'} p-2">
-                    <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamName)} logo" class="h-full w-full object-contain">
-                </div>
-                <div class="min-w-0">
-                    <p class="text-sm font-black text-white">${escapeHtml(teamName)}</p>
-                    <p class="mt-1 text-[10px] uppercase tracking-[0.18em] ${isSelected ? 'text-emerald-200' : 'text-slate-400'}">${escapeHtml(teamId)}</p>
-                </div>
-            </div>
-        </button>
-    `;
-}
-
 function updateScenarioDraft(seriesId, field, value) {
     const next = state.playoff.scenarioDraft[seriesId] || {};
     next[field] = value;
@@ -1473,32 +1620,6 @@ function updateScenarioDraft(seriesId, field, value) {
     renderScenarioLab();
 }
 
-function buildWinnerOptionMarkup(series, side, selectedTeamId) {
-    const isHome = side === 'home';
-    const teamId = isHome ? (series.home_team_id || series.home_team_name) : (series.away_team_id || series.away_team_name);
-    const teamName = isHome ? (series.home_team_name || series.home_team_id) : (series.away_team_name || series.away_team_id);
-    const seedLabel = isHome ? series.home_team_seed_label : series.away_team_seed_label;
-    const logoUrl = isHome
-        ? (series.home_team_logo_dark || series.home_team_logo_light || '')
-        : (series.away_team_logo_dark || series.away_team_logo_light || '');
-    const isSelected = selectedTeamId === teamId;
-    return `
-        <button type="button" class="${isSelected
-            ? 'series-team-option group rounded-[1.6rem] border border-emerald-300 bg-emerald-400/15 p-4 text-left shadow-[0_0_0_1px_rgba(110,231,183,0.28)]'
-            : 'series-team-option group rounded-[1.6rem] border border-white/10 bg-slate-950/65 p-4 text-left transition hover:border-emerald-300/60 hover:bg-slate-900'}" data-series-id="${series.id}" data-team-id="${teamId}">
-            <div class="flex items-center gap-4">
-                <div class="flex h-16 w-16 items-center justify-center rounded-2xl border ${isSelected ? 'border-emerald-300/50 bg-white/95' : 'border-white/10 bg-white/90'} p-2 shadow-sm">
-                    <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamName)} logo" class="h-full w-full object-contain">
-                </div>
-                <div class="min-w-0">
-                    <span class="inline-flex rounded-full ${isSelected ? 'bg-emerald-300/20 text-emerald-200' : 'bg-white/10 text-slate-300'} px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">${escapeHtml(seedLabel || 'Pick')}</span>
-                    <p class="mt-3 text-lg font-black text-white">${escapeHtml(teamName)}</p>
-                    <p class="mt-1 text-xs uppercase tracking-[0.18em] ${isSelected ? 'text-emerald-200' : 'text-slate-400'}">${escapeHtml(teamId)}</p>
-                </div>
-            </div>
-        </button>
-    `;
-}
 
 function renderStandings() {
     const tbody = byId('standings-body');
@@ -1660,16 +1781,88 @@ function updatePlayoffDraft(seriesId, field, value) {
 
 function bindPlayoffEvents() {
     byId('playoff-submit-btn').addEventListener('click', submitPlayoffPicks);
+    byId('playoff-team-name-input').addEventListener('input', event => {
+        state.playoff.teamNameDraft = event.currentTarget.value;
+        renderTeamNameEditor();
+    });
+    byId('playoff-team-name-save-btn').addEventListener('click', savePlayoffTeamName);
     byId('playoff-whatif-reset-btn').addEventListener('click', () => {
         state.playoff.scenarioDraft = buildScenarioDraft(state.playoff.series);
         renderScenarioLab();
     });
 }
 
+async function savePlayoffTeamName() {
+    if (!state.playoff.pool || !state.playoff.member) return;
+    if (isTeamNameLockedForMember()) {
+        showToast('Round 1 is locked, so team names are now read-only.', 'error');
+        return;
+    }
+
+    const nextTeamName = normalizeTeamNameValue(state.playoff.teamNameDraft);
+    if (!nextTeamName) {
+        showToast('Enter a team name before saving.', 'error');
+        return;
+    }
+
+    const previousTeamName = state.playoff.member?.team_name || '';
+    const previousHistory = Array.isArray(state.playoff.member?.team_name_history)
+        ? [...state.playoff.member.team_name_history]
+        : [];
+    const normalizedPrevious = normalizeTeamNameComparison(previousTeamName);
+    const normalizedNext = normalizeTeamNameComparison(nextTeamName);
+    const nextHistory = normalizedPrevious !== normalizedNext
+        ? [
+            ...previousHistory,
+            {
+                team_name: nextTeamName,
+                changed_at: new Date().toISOString(),
+                source: 'portal'
+            }
+        ]
+        : previousHistory;
+
+    await setDoc(doc(db, 'playoff_pools', state.playoff.poolId, 'members', state.authUser.uid), {
+        team_name: nextTeamName,
+        team_name_history: nextHistory,
+        updated_at: new Date().toISOString()
+    }, { merge: true });
+
+    state.playoff.member = normalizePlayoffMember({
+        ...state.playoff.member,
+        team_name: nextTeamName,
+        team_name_history: nextHistory,
+        updated_at: new Date().toISOString()
+    }, state.playoff.pool);
+    state.playoff.teamNameDraft = nextTeamName;
+    state.playoff.standings = sortStandings(state.playoff.standings.map(member => (
+        member.id === state.authUser.uid
+            ? normalizePlayoffMember({
+                ...member,
+                team_name: nextTeamName,
+                team_name_history: nextHistory,
+                updated_at: new Date().toISOString()
+            }, state.playoff.pool)
+            : member
+    )));
+    renderPlayoffApp();
+    showToast('Team name saved');
+}
+
 async function submitPlayoffPicks() {
     if (!state.playoff.pool || !state.playoff.currentRound) return;
     if (state.playoff.isLocked) {
         showToast('This round is locked', 'error');
+        return;
+    }
+
+    if (!normalizeTeamNameValue(state.playoff.member?.team_name || '')) {
+        showToast('Save your team name before saving picks.', 'error');
+        return;
+    }
+
+    if (!isTeamNameLockedForMember() && isTeamNameDirty()) {
+        showToast('Save your team name change before saving picks.', 'error');
         return;
     }
 
