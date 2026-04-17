@@ -1325,8 +1325,7 @@ function buildGamesOptionMarkup(seriesId, games, selectedGames, mode = 'live') {
 
     return `
         <button type="button" class="pick-games-option rounded-2xl border px-3 py-3 text-center transition ${classes}" data-series-id="${seriesId}" data-games="${games}">
-            <span class="block text-lg font-black">${games}</span>
-            <span class="mt-1 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Exact Length</span>
+            <span class="block text-2xl font-black">${games}</span>
         </button>
     `;
 }
@@ -1533,18 +1532,18 @@ function renderScenarioLab() {
     state.playoff.series.forEach(series => {
         const draft = state.playoff.scenarioDraft[series.id] || {};
         const card = document.createElement('article');
-        card.className = 'rounded-3xl border border-white/10 bg-slate-950/40 p-4';
+        card.className = 'rounded-[1.75rem] border border-white/10 bg-slate-950/35 p-5';
         card.innerHTML = `
-            <div class="flex items-start justify-between gap-4">
+            <div class="mb-4 flex items-start justify-between gap-4">
                 <div>
-                    <p class="text-sm font-bold text-white">${escapeHtml(series.matchup_label || `${series.home_team_name || series.home_team_id} vs ${series.away_team_name || series.away_team_id}`)}</p>
-                    <p class="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">Scenario result</p>
+                    <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">${escapeHtml(series.matchup_label || `${series.home_team_name || series.home_team_id} vs ${series.away_team_name || series.away_team_id}`)}</p>
+                    <h4 class="mt-2 text-xl font-black text-white">${escapeHtml((series.home_team_name || series.home_team_id) + ' vs ' + (series.away_team_name || series.away_team_id))}</h4>
                 </div>
                 <span class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase text-slate-300">${series.status || 'Open'}</span>
             </div>
-            <div class="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+            <div class="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
                 <div>
-                    <span class="mb-3 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Scenario Winner</span>
+                    <span class="mb-3 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Pick The Winner</span>
                     <div class="grid gap-3 sm:grid-cols-2">
                         ${buildPickTeamOptionMarkup(series, 'home', draft.result_winner_team_id, 'scenario')}
                         ${buildPickTeamOptionMarkup(series, 'away', draft.result_winner_team_id, 'scenario')}
