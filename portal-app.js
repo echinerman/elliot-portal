@@ -1386,7 +1386,7 @@ function buildPlayoffPaymentLink() {
     return `mailto:${CONFIG.PAYMENT_EMAIL}?subject=${subject}&body=${body}`;
 }
 
-function getPoolRulesSourceText() {
+function getPoolRulesSourceTextLegacy() {
     const description = String(state.playoff.pool?.description || '').trim();
     if (description) {
         return description;
@@ -1448,7 +1448,7 @@ function getPoolRulesSourceText() {
     ].join('\n');
 }
 
-function parsePoolRulesSections(rawText = '') {
+function parsePoolRulesSectionsLegacy(rawText = '') {
     return String(rawText || '')
         .split(/\r?\n\s*\r?\n/)
         .map(block => block
@@ -1462,23 +1462,23 @@ function parsePoolRulesSections(rawText = '') {
         }));
 }
 
-function buildPoolRulesMarkup() {
-    const sections = parsePoolRulesSections(getPoolRulesSourceText());
+function buildPoolRulesMarkupLegacy() {
+    const sections = parsePoolRulesSectionsLegacy(getPoolRulesSourceTextLegacy());
     if (!sections.length) {
         return '<p class="text-sm leading-[1.4] text-slate-300">Pool rules will appear here once they are posted.</p>';
     }
 
     return `
         <div class="space-y-5">
-            ${sections.map(section => renderPoolRulesSection(section)).join('')}
+            ${sections.map(section => renderPoolRulesSectionLegacy(section)).join('')}
         </div>
     `;
 }
 
-function renderPoolRulesSection(section) {
+function renderPoolRulesSectionLegacy(section) {
     const heading = String(section.heading || '');
     const lines = Array.isArray(section.lines) ? section.lines : [];
-    const accentClass = getRulesHeadingAccentClass(heading);
+    const accentClass = getRulesHeadingAccentClassLegacy(heading);
 
     if (heading === 'Scoring (it doubles each round)') {
         return renderScoringRulesSection(heading, lines, accentClass);
@@ -1591,7 +1591,7 @@ function renderTiebreakRulesSection(heading, lines, accentClass) {
     `;
 }
 
-function getRulesHeadingAccentClass(heading = '') {
+function getRulesHeadingAccentClassLegacy(heading = '') {
     if (heading === 'Hard deadline (payment + picks)') return 'text-amber-300';
     if (heading === 'Payment') return 'text-amber-300';
     if (heading === 'Scoring (it doubles each round)') return 'text-emerald-300';
