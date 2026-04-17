@@ -209,20 +209,22 @@
             </div>
         </section>
 
-        <section id="playoff-view" class="hidden min-h-screen bg-slate-950 px-4 py-8 text-white">
-            <div class="mx-auto max-w-7xl space-y-8">
-                <header class="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.35),_rgba(15,23,42,0.9)_45%,_rgba(2,6,23,1)_100%)] p-7 shadow-float">
-                    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                        <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-emerald-200">Private Playoff App</p>
-                            <h1 id="playoff-brand-name" class="mt-3 text-4xl font-black"></h1>
+        <section id="playoff-view" class="hidden min-h-screen bg-slate-950 px-4 py-5 text-white">
+            <div class="mx-auto max-w-7xl space-y-5">
+                <header class="rounded-[1.5rem] border border-white/10 bg-[linear-gradient(90deg,rgba(6,78,89,0.85),rgba(15,23,42,0.95)_35%,rgba(2,6,23,1)_100%)] px-5 py-4 shadow-float">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.35em] text-emerald-200">Private Playoff App</p>
+                                <h1 id="playoff-brand-name" class="text-2xl font-black"></h1>
+                            </div>
                             <p class="mt-4 text-sm text-slate-300">Signed in as <span id="playoff-user-name" class="font-semibold text-white"></span> • <span id="playoff-user-email"></span></p>
                         </div>
-                        <div class="flex flex-wrap gap-3">
-                            <button data-action="app-home" class="rounded-full border border-white/20 px-5 py-3 text-sm font-bold text-white transition hover:border-white hover:bg-white/10">
+                        <div class="flex flex-wrap gap-2">
+                            <button data-action="app-home" class="rounded-full border border-white/20 px-4 py-2.5 text-sm font-bold text-white transition hover:border-white hover:bg-white/10">
                                 <i class="fa-solid fa-grid-2 mr-2"></i>All Apps
                             </button>
-                            <button data-action="signout" class="rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-200">
+                            <button data-action="signout" class="rounded-full bg-white px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-200">
                                 <i class="fa-solid fa-right-from-bracket mr-2"></i>Sign Out
                             </button>
                         </div>
@@ -235,80 +237,92 @@
                     <p class="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-300">Once the live pool is seeded and marked active, this page will automatically add you in and open your picks, payment instructions, and standings.</p>
                 </div>
 
-                <div id="playoff-main-state" class="hidden space-y-8">
-                    <section class="grid gap-6 xl:grid-cols-4">
-                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-emerald-300">Pool Overview</p>
-                            <h2 id="pool-name" class="mt-4 text-3xl font-black"></h2>
-                            <p id="pool-season" class="mt-2 text-sm text-slate-300"></p>
-                            <p id="pool-description" class="mt-4 text-sm leading-7 text-slate-300"></p>
-                        </article>
-                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-sky-300">Current Round</p>
-                            <h2 id="current-round-name" class="mt-4 text-3xl font-black"></h2>
-                            <p id="current-round-deadline" class="mt-2 text-sm text-slate-300"></p>
-                            <p id="pool-member-count" class="mt-6 text-sm font-semibold text-white"></p>
-                        </article>
-                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">Scoreboard</p>
-                            <div class="mt-4 grid gap-4">
-                                <div class="rounded-3xl bg-slate-950/50 p-4">
-                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Total Points</p>
-                                    <p id="playoff-points-total" class="mt-2 text-4xl font-black">0</p>
+                <div id="playoff-main-state" class="hidden space-y-5">
+                    <section class="rounded-[1.75rem] border border-white/10 bg-white/5 p-4">
+                        <div class="grid gap-3 xl:grid-cols-4">
+                            <article class="rounded-[1.25rem] border border-white/10 bg-slate-950/45 p-4">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-emerald-300">Pool Overview</p>
+                                <h2 id="pool-name" class="mt-3 text-2xl font-black leading-[1.05]"></h2>
+                                <p id="pool-season" class="mt-1 text-sm leading-[1.35] text-slate-300"></p>
+                                <p id="pool-description" class="mt-3 text-sm leading-[1.35] text-slate-300"></p>
+                            </article>
+                            <article class="rounded-[1.25rem] border border-white/10 bg-slate-950/45 p-4">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-sky-300">Current Round</p>
+                                <div class="mt-3 space-y-2">
+                                    <h2 id="current-round-name" class="text-2xl font-black leading-[1.05]"></h2>
+                                    <p id="current-round-deadline" class="text-sm leading-[1.35] text-slate-300"></p>
+                                    <p id="pool-member-count" class="text-sm font-semibold leading-[1.35] text-white"></p>
                                 </div>
-                                <div class="rounded-3xl bg-slate-950/50 p-4">
-                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">This Round</p>
-                                    <p id="playoff-round-points" class="mt-2 text-4xl font-black">0</p>
+                            </article>
+                            <article class="rounded-[1.25rem] border border-white/10 bg-slate-950/45 p-4">
+                                <div class="flex items-center justify-between gap-3">
+                                    <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-amber-300">Scoreboard</p>
+                                    <p id="playoff-rank-summary" class="text-sm font-semibold leading-[1.35] text-emerald-200"></p>
                                 </div>
-                            </div>
-                            <p id="playoff-rank-summary" class="mt-4 text-sm font-semibold text-emerald-200"></p>
-                        </article>
-                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-fuchsia-200">Member Status</p>
-                            <div class="mt-4 space-y-4">
-                                <div class="rounded-3xl bg-slate-950/50 p-4">
-                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Team Name</p>
-                                    <p id="playoff-team-name" class="mt-2 text-2xl font-black text-white">Not set</p>
-                                </div>
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <div class="rounded-3xl bg-slate-950/50 p-4">
-                                        <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Payment</p>
-                                        <p id="playoff-payment-status" class="mt-2 text-xl font-black text-white">Unpaid</p>
+                                <div class="mt-3 grid grid-cols-2 gap-3">
+                                    <div class="rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3">
+                                        <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Total Points</p>
+                                        <p id="playoff-points-total" class="mt-1 text-3xl font-black leading-none">0</p>
                                     </div>
-                                    <div class="rounded-3xl bg-slate-950/50 p-4">
-                                        <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Paid / Due</p>
-                                        <p id="playoff-amount-paid" class="mt-2 text-xl font-black text-white">$0 / $0</p>
+                                    <div class="rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3">
+                                        <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">This Round</p>
+                                        <p id="playoff-round-points" class="mt-1 text-3xl font-black leading-none">0</p>
                                     </div>
                                 </div>
-                                <div class="rounded-3xl bg-slate-950/50 p-4">
-                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Payout Status</p>
-                                    <p id="playoff-payout-status" class="mt-2 text-sm leading-6 text-slate-200">No payout assigned yet.</p>
+                            </article>
+                            <article class="rounded-[1.25rem] border border-white/10 bg-slate-950/45 p-4">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-fuchsia-200">Member Status</p>
+                                <div class="mt-3 space-y-3">
+                                    <div>
+                                        <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Team Name</p>
+                                        <p id="playoff-team-name" class="mt-1 text-xl font-black leading-[1.15] text-white">Not set</p>
+                                    </div>
+                                    <div class="rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-sm leading-[1.35] text-slate-200">
+                                        <span class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Payment</span>
+                                        <p class="mt-1 font-semibold text-white"><span id="playoff-payment-status">Unpaid</span> • <span id="playoff-amount-paid">$0 / $0</span></p>
+                                    </div>
+                                    <div class="rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3">
+                                        <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Payout Status</p>
+                                        <p id="playoff-payout-status" class="mt-1 text-sm leading-[1.35] text-slate-200">No payout assigned yet.</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </article>
+                            </article>
+                        </div>
                     </section>
 
-                    <section class="grid gap-6 xl:grid-cols-3">
-                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-emerald-300">How To Play</p>
-                            <h2 class="mt-4 text-2xl font-black text-white">Join and pick in one stop</h2>
-                            <div id="playoff-guide-steps" class="mt-4"></div>
-                        </article>
-                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">Payment</p>
-                            <h2 class="mt-4 text-2xl font-black text-white">Entry details</h2>
-                            <p id="playoff-payment-instructions" class="mt-4 text-sm leading-7 text-slate-300"></p>
-                            <a id="playoff-payment-link" href="#" class="mt-5 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-3 text-sm font-bold text-white transition hover:border-white hover:bg-white/10">
-                                <i class="fa-regular fa-envelope"></i>Email Elliot
-                            </a>
-                        </article>
-                        <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                            <p class="text-xs font-bold uppercase tracking-[0.35em] text-sky-300">Deadline</p>
-                            <h2 class="mt-4 text-2xl font-black text-white">Save before lock</h2>
-                            <p id="playoff-deadline-detail" class="mt-4 text-sm leading-7 text-slate-300"></p>
-                            <p id="playoff-guide-note" class="mt-4 text-sm leading-7 text-slate-400"></p>
-                        </article>
-                    </section>
+                    <details class="group rounded-[1.75rem] border border-white/10 bg-white/5 p-4">
+                        <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+                            <div>
+                                <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-emerald-300">Pool Info</p>
+                                <p class="mt-1 text-sm leading-[1.35] text-slate-300">How to play, payment details, and the current deadline.</p>
+                            </div>
+                            <span class="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm font-bold text-white transition group-open:border-emerald-300/40 group-open:text-emerald-200">
+                                <i class="fa-solid fa-chevron-down text-xs transition group-open:rotate-180"></i>
+                                Expand
+                            </span>
+                        </summary>
+                        <div class="mt-4 grid gap-3 xl:grid-cols-3">
+                            <article class="rounded-[1.25rem] border border-white/10 bg-slate-950/45 p-4">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-emerald-300">How To Play</p>
+                                <h2 class="mt-2 text-xl font-black text-white">Join and pick in one stop</h2>
+                                <div id="playoff-guide-steps" class="mt-3"></div>
+                            </article>
+                            <article class="rounded-[1.25rem] border border-white/10 bg-slate-950/45 p-4">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-amber-300">Payment</p>
+                                <h2 class="mt-2 text-xl font-black text-white">Entry details</h2>
+                                <p id="playoff-payment-instructions" class="mt-3 text-sm leading-[1.35] text-slate-300"></p>
+                                <a id="playoff-payment-link" href="#" class="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2.5 text-sm font-bold text-white transition hover:border-white hover:bg-white/10">
+                                    <i class="fa-regular fa-envelope"></i>Email Elliot
+                                </a>
+                            </article>
+                            <article class="rounded-[1.25rem] border border-white/10 bg-slate-950/45 p-4">
+                                <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-sky-300">Deadline</p>
+                                <h2 class="mt-2 text-xl font-black text-white">Save before lock</h2>
+                                <p id="playoff-deadline-detail" class="mt-3 text-sm leading-[1.35] text-slate-300"></p>
+                                <p id="playoff-guide-note" class="mt-3 text-sm leading-[1.35] text-slate-400"></p>
+                            </article>
+                        </div>
+                    </details>
 
                     <section class="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
                         <div class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
@@ -441,6 +455,6 @@
         </div>
     </div>
 
-    <script type="module" src="./portal-app.js?v=20260417-scoreboard-admin"></script>
+    <script type="module" src="./portal-app.js?v=20260417-playoff-brand-compact"></script>
 </body>
 </html>

@@ -29,6 +29,11 @@ const NHL_TEAM_PRIMARY_COLORS = {
     UTA: '#6CACE3',
     VGK: '#B4975A'
 };
+const NHL_TEAM_LOGO_OVERRIDES = {
+    TBL: {
+        light: 'https://cdn.brandfetch.io/idzkS0hq1D/theme/light/logo.svg?c=1dxbfHSJFAPEGdCLU4o5B'
+    }
+};
 
 // Official 2026 Round 1 pairings captured from NHL.com bracket/lookahead pages on April 16, 2026.
 const OFFICIAL_PLAYOFF_BRACKETS = {
@@ -161,6 +166,10 @@ export function getTeamLogoUrl(teamId = '', variant = 'dark') {
     }
 
     const safeVariant = variant === 'light' ? 'light' : 'dark';
+    const override = NHL_TEAM_LOGO_OVERRIDES[code]?.[safeVariant];
+    if (override) {
+        return override;
+    }
     return `${NHL_TEAM_LOGO_BASE_URL}/${code}_${safeVariant}.svg`;
 }
 

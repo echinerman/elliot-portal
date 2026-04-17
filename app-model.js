@@ -20,9 +20,9 @@ export const APP_DEFINITIONS = {
     },
     [APP_IDS.PLAYOFF]: {
         id: APP_IDS.PLAYOFF,
-        label: 'Playoff Pool',
+        label: 'NHL Playoff Pool',
         shortLabel: 'Pool',
-        authTitle: 'Family Playoff Pool',
+        authTitle: 'NHL Playoff Pool',
         authDescription: 'Pick each NHL playoff series winner and the number of games each round.',
         adminLabel: 'Playoff Pool',
         accent: 'emerald',

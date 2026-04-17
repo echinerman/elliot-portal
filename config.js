@@ -27,6 +27,6 @@ export const CONFIG = {
     // UI Constants
     CURRENCY_SYMBOL: "$",
     CRYPTO_SYMBOL: "BTC",
-    PLAYOFF_BRAND_NAME: "Family Playoff Pool",
+    PLAYOFF_BRAND_NAME: "NHL Playoff Pool",
     PLAYOFF_DEFAULT_ENTRY_FEE: 20
 };

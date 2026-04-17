@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260416-bracket-ui';
+import { CONFIG } from './config.js?v=20260417-playoff-brand-compact';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -10,7 +10,7 @@ import {
     normalizeStrong8kProfile,
     parseDelimitedList,
     slugify
-} from './app-model.js?v=20260416-bracket-ui';
+} from './app-model.js?v=20260417-playoff-brand-compact';
 import {
     buildOfficialRoundOneSeries,
     buildCompactPickLabel,
@@ -33,7 +33,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260416-bracket-ui';
+} from './playoff-logic.js?v=20260417-playoff-brand-compact';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {

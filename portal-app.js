@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260416-bracket-ui';
+import { CONFIG } from './config.js?v=20260417-playoff-brand-compact';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260416-bracket-ui';
+} from './app-model.js?v=20260417-playoff-brand-compact';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -29,7 +29,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260416-bracket-ui';
+} from './playoff-logic.js?v=20260417-playoff-brand-compact';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
