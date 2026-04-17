@@ -6,10 +6,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isPlatformAdmin() {
+    function isConfiguredAdminEmail() {
       return isSignedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email == 'e.chinerman@gmail.com';
+    }
+
+    function isPlatformAdmin() {
+      return isConfiguredAdminEmail() || (
+        isSignedIn()
         && exists(/databases/$(database)/documents/roles/$(request.auth.uid))
-        && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.platform_admin == true;
+        && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.platform_admin == true
+      );
     }
 
     function isOwner(userId) {

@@ -19,6 +19,7 @@ export const CONFIG = {
     },
 
     // Business Logic
+    ADMIN_EMAILS: ["e.chinerman@gmail.com"],
     SUPPORT_EMAIL: "e.chinerman@gmail.com",
     PAYMENT_EMAIL: "e.chinerman@gmail.com",
     CONTACT_LINK: "mailto:whaleshark809@flounderfantasy.com",

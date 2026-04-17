@@ -99,14 +99,31 @@ function showToast(message, tone = 'default') {
     setTimeout(() => toast.classList.add('translate-x-full', 'opacity-0'), 3000);
 }
 
+function isConfiguredAdminEmail(email) {
+    if (!email) {
+        return false;
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    return Array.isArray(CONFIG.ADMIN_EMAILS)
+        && CONFIG.ADMIN_EMAILS.some(candidate => String(candidate).trim().toLowerCase() === normalizedEmail);
+}
+
 async function handleAdminAuth(user) {
     if (!user) {
         window.location.href = 'index.html';
         return;
     }
 
-    const roleSnap = await getDoc(doc(db, 'roles', user.uid));
-    if (!roleSnap.exists() || roleSnap.data().platform_admin !== true) {
+    let hasPlatformRole = false;
+    try {
+        const roleSnap = await getDoc(doc(db, 'roles', user.uid));
+        hasPlatformRole = roleSnap.exists() && roleSnap.data().platform_admin === true;
+    } catch (error) {
+        console.warn('Unable to load admin role document, falling back to configured admin emails.', error);
+    }
+
+    if (!hasPlatformRole && !isConfiguredAdminEmail(user.email)) {
         window.location.href = 'index.html';
         return;
     }
