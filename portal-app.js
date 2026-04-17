@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bindStrong8kEvents();
     bindPlayoffEvents();
     bindSharedActions();
+    setView('auth-view');
     onAuthStateChanged(auth, handleAuthStateChange);
     window.addEventListener('hashchange', () => {
         if (state.authUser) {
