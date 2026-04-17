@@ -10,6 +10,168 @@ export const PLAYOFF_PAYOUT_TEMPLATE = [
     { place_key: '3rd', label: '3rd', share: 0.0909 },
     { place_key: 'pity', label: 'Pity', share: 0.0454 }
 ];
+const NHL_TEAM_LOGO_BASE_URL = 'https://assets.nhle.com/logos/nhl/svg';
+
+// Official 2026 Round 1 pairings captured from NHL.com bracket/lookahead pages on April 16, 2026.
+const OFFICIAL_PLAYOFF_BRACKETS = {
+    2026: {
+        round1: [
+            {
+                id: 'r1-east-atlantic',
+                official_key: '2026-round-1-east-atlantic',
+                conference: 'Eastern Conference',
+                bracket_group: 'Atlantic',
+                sort_order: 1,
+                matchup_label: 'Atlantic 1 vs Wild Card 1',
+                home_team_id: 'BUF',
+                home_team_name: 'Buffalo Sabres',
+                home_team_seed_label: 'A1',
+                away_team_id: 'BOS',
+                away_team_name: 'Boston Bruins',
+                away_team_seed_label: 'WC1'
+            },
+            {
+                id: 'r1-east-atlantic-2-3',
+                official_key: '2026-round-1-east-atlantic-2-3',
+                conference: 'Eastern Conference',
+                bracket_group: 'Atlantic',
+                sort_order: 2,
+                matchup_label: 'Atlantic 2 vs Atlantic 3',
+                home_team_id: 'TBL',
+                home_team_name: 'Tampa Bay Lightning',
+                home_team_seed_label: 'A2',
+                away_team_id: 'MTL',
+                away_team_name: 'Montreal Canadiens',
+                away_team_seed_label: 'A3'
+            },
+            {
+                id: 'r1-east-metro',
+                official_key: '2026-round-1-east-metro',
+                conference: 'Eastern Conference',
+                bracket_group: 'Metropolitan',
+                sort_order: 3,
+                matchup_label: 'Metro 1 vs Wild Card 2',
+                home_team_id: 'CAR',
+                home_team_name: 'Carolina Hurricanes',
+                home_team_seed_label: 'M1',
+                away_team_id: 'OTT',
+                away_team_name: 'Ottawa Senators',
+                away_team_seed_label: 'WC2'
+            },
+            {
+                id: 'r1-east-metro-2-3',
+                official_key: '2026-round-1-east-metro-2-3',
+                conference: 'Eastern Conference',
+                bracket_group: 'Metropolitan',
+                sort_order: 4,
+                matchup_label: 'Metro 2 vs Metro 3',
+                home_team_id: 'PIT',
+                home_team_name: 'Pittsburgh Penguins',
+                home_team_seed_label: 'M2',
+                away_team_id: 'PHI',
+                away_team_name: 'Philadelphia Flyers',
+                away_team_seed_label: 'M3'
+            },
+            {
+                id: 'r1-west-central',
+                official_key: '2026-round-1-west-central',
+                conference: 'Western Conference',
+                bracket_group: 'Central',
+                sort_order: 5,
+                matchup_label: 'Central 1 vs Wild Card 2',
+                home_team_id: 'COL',
+                home_team_name: 'Colorado Avalanche',
+                home_team_seed_label: 'C1',
+                away_team_id: 'LAK',
+                away_team_name: 'Los Angeles Kings',
+                away_team_seed_label: 'WC2'
+            },
+            {
+                id: 'r1-west-central-2-3',
+                official_key: '2026-round-1-west-central-2-3',
+                conference: 'Western Conference',
+                bracket_group: 'Central',
+                sort_order: 6,
+                matchup_label: 'Central 2 vs Central 3',
+                home_team_id: 'DAL',
+                home_team_name: 'Dallas Stars',
+                home_team_seed_label: 'C2',
+                away_team_id: 'MIN',
+                away_team_name: 'Minnesota Wild',
+                away_team_seed_label: 'C3'
+            },
+            {
+                id: 'r1-west-pacific',
+                official_key: '2026-round-1-west-pacific',
+                conference: 'Western Conference',
+                bracket_group: 'Pacific',
+                sort_order: 7,
+                matchup_label: 'Pacific 1 vs Wild Card 1',
+                home_team_id: 'VGK',
+                home_team_name: 'Vegas Golden Knights',
+                home_team_seed_label: 'P1',
+                away_team_id: 'UTA',
+                away_team_name: 'Utah Mammoth',
+                away_team_seed_label: 'WC1'
+            },
+            {
+                id: 'r1-west-pacific-2-3',
+                official_key: '2026-round-1-west-pacific-2-3',
+                conference: 'Western Conference',
+                bracket_group: 'Pacific',
+                sort_order: 8,
+                matchup_label: 'Pacific 2 vs Pacific 3',
+                home_team_id: 'EDM',
+                home_team_name: 'Edmonton Oilers',
+                home_team_seed_label: 'P2',
+                away_team_id: 'ANA',
+                away_team_name: 'Anaheim Ducks',
+                away_team_seed_label: 'P3'
+            }
+        ]
+    }
+};
+
+export function normalizeTeamCode(teamId = '') {
+    return String(teamId || '').trim().toUpperCase();
+}
+
+export function getTeamLogoUrl(teamId = '', variant = 'dark') {
+    const code = normalizeTeamCode(teamId);
+    if (!code) {
+        return '';
+    }
+
+    const safeVariant = variant === 'light' ? 'light' : 'dark';
+    return `${NHL_TEAM_LOGO_BASE_URL}/${code}_${safeVariant}.svg`;
+}
+
+export function normalizePlayoffSeries(series = {}) {
+    const homeTeamId = normalizeTeamCode(series.home_team_id);
+    const awayTeamId = normalizeTeamCode(series.away_team_id);
+    return {
+        ...series,
+        home_team_id: homeTeamId,
+        away_team_id: awayTeamId,
+        home_team_logo_dark: series.home_team_logo_dark || getTeamLogoUrl(homeTeamId, 'dark'),
+        home_team_logo_light: series.home_team_logo_light || getTeamLogoUrl(homeTeamId, 'light'),
+        away_team_logo_dark: series.away_team_logo_dark || getTeamLogoUrl(awayTeamId, 'dark'),
+        away_team_logo_light: series.away_team_logo_light || getTeamLogoUrl(awayTeamId, 'light')
+    };
+}
+
+export function buildOfficialRoundOneSeries(seasonYear) {
+    const bracket = OFFICIAL_PLAYOFF_BRACKETS[Number(seasonYear)];
+    if (!bracket?.round1?.length) {
+        return [];
+    }
+
+    return bracket.round1.map(series => normalizePlayoffSeries({
+        ...series,
+        status: 'open',
+        notes: 'Official NHL Round 1 matchup synced from the current bracket.'
+    }));
+}
 
 export function getRoundScoring(roundNumber = 1) {
     const safeRound = Math.max(1, Number(roundNumber) || 1);
@@ -316,7 +478,12 @@ export function buildPickDistribution(seriesList = [], pickDocs = []) {
             const entry = (pickDoc.entries || []).find(item => item.series_id === series.id);
             if (!entry) return;
             if (entry.winner_team_id) {
-                winnerCounts[entry.winner_team_id] = (winnerCounts[entry.winner_team_id] || 0) + 1;
+                const winnerLabel = entry.winner_team_id === series.home_team_id
+                    ? (series.home_team_name || series.home_team_id)
+                    : entry.winner_team_id === series.away_team_id
+                        ? (series.away_team_name || series.away_team_id)
+                        : entry.winner_team_id;
+                winnerCounts[winnerLabel] = (winnerCounts[winnerLabel] || 0) + 1;
             }
             if (entry.games) {
                 gamesCounts[entry.games] = (gamesCounts[entry.games] || 0) + 1;

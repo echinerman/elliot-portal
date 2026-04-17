@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js';
+import { CONFIG } from './config.js?v=20260416-bracket-ui';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js';
+} from './app-model.js?v=20260416-bracket-ui';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -25,12 +25,13 @@ import {
     normalizePlayoffMember,
     normalizePlayoffPool,
     normalizePlayoffRound,
+    normalizePlayoffSeries,
     normalizePickDoc,
     pickCurrentRound,
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js';
+} from './playoff-logic.js?v=20260416-bracket-ui';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -853,7 +854,7 @@ async function loadPlayoffApp() {
     const series = currentRoundId
         ? (await getDocs(query(collection(db, 'playoff_pools', poolId, 'rounds', currentRoundId, 'series'), orderBy('sort_order'))))
             .docs
-            .map(item => ({ id: item.id, ...item.data() }))
+            .map(item => normalizePlayoffSeries({ id: item.id, ...item.data() }))
         : [];
     const memberSnap = await getDoc(doc(db, 'playoff_pools', poolId, 'members', state.authUser.uid));
     const rawMember = memberSnap.exists() ? { id: memberSnap.id, ...memberSnap.data() } : null;
@@ -889,7 +890,7 @@ async function loadPlayoffApp() {
     for (const round of rounds) {
         if (!currentRound || round.id === currentRound.id) continue;
         const previousSeriesSnap = await getDocs(query(collection(db, 'playoff_pools', poolId, 'rounds', round.id, 'series'), orderBy('sort_order')));
-        const previousSeries = previousSeriesSnap.docs.map(item => ({ id: item.id, ...item.data() }));
+        const previousSeries = previousSeriesSnap.docs.map(item => normalizePlayoffSeries({ id: item.id, ...item.data() }));
         const pickSnap = await getDoc(doc(db, 'playoff_pools', poolId, 'rounds', round.id, 'picks', state.authUser.uid));
         if (pickSnap.exists()) {
             previousPicks.push({
@@ -1056,33 +1057,40 @@ function renderSeriesCards() {
     state.playoff.series.forEach(series => {
         const saved = state.playoff.draft[series.id] || {};
         const savedEntry = state.playoff.currentPick?.entries?.find(entry => entry.series_id === series.id) || null;
+        const winnerChoice = saved.winner_team_id || '';
         const card = document.createElement('article');
-        card.className = 'rounded-3xl border border-white/10 bg-white/5 p-5';
+        card.className = 'rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-5 shadow-[0_24px_60px_rgba(2,6,23,0.18)]';
         card.innerHTML = `
             <div class="mb-4 flex items-start justify-between gap-4">
                 <div>
-                    <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-300">${series.matchup_label || `Series ${series.sort_order || ''}`}</p>
+                    <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-300">${series.conference || series.matchup_label || `Series ${series.sort_order || ''}`}</p>
                     <h3 class="mt-2 text-xl font-bold text-white">${series.home_team_name || series.home_team_id} vs ${series.away_team_name || series.away_team_id}</h3>
-                    <p class="mt-2 text-sm text-slate-300">${series.notes || 'Pick the winner and exact series length.'}</p>
+                    <p class="mt-2 text-sm text-slate-300">${series.notes || 'Click a logo to choose the winner, then lock in the exact series length.'}</p>
                 </div>
                 <span class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase text-slate-200">${series.status || 'Open'}</span>
             </div>
-            <div class="grid gap-4 md:grid-cols-2">
-                <label class="block">
-                    <span class="mb-2 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Winner</span>
-                    <select class="series-winner w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-400" data-series-id="${series.id}">
-                        <option value="">Select winner</option>
-                        <option value="${series.home_team_id || series.home_team_name}" ${saved.winner_team_id === (series.home_team_id || series.home_team_name) ? 'selected' : ''}>${series.home_team_name || series.home_team_id}</option>
-                        <option value="${series.away_team_id || series.away_team_name}" ${saved.winner_team_id === (series.away_team_id || series.away_team_name) ? 'selected' : ''}>${series.away_team_name || series.away_team_id}</option>
-                    </select>
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Games</span>
-                    <select class="series-games w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-400" data-series-id="${series.id}">
-                        <option value="">Select games</option>
-                        ${[4, 5, 6, 7].map(games => `<option value="${games}" ${String(saved.games) === String(games) ? 'selected' : ''}>${games} games</option>`).join('')}
-                    </select>
-                </label>
+            <div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                <div>
+                    <span class="mb-3 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Winner</span>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        ${buildWinnerOptionMarkup(series, 'home', winnerChoice)}
+                        ${buildWinnerOptionMarkup(series, 'away', winnerChoice)}
+                    </div>
+                </div>
+                <div>
+                    <span class="mb-3 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Games</span>
+                    <div class="grid grid-cols-2 gap-3">
+                        ${[4, 5, 6, 7].map(games => `
+                            <button type="button" class="${String(saved.games) === String(games)
+                                ? 'series-games-option rounded-2xl border border-amber-300 bg-amber-300/15 px-4 py-4 text-left text-white shadow-[0_0_0_1px_rgba(252,211,77,0.25)]'
+                                : 'series-games-option rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-left text-slate-200 transition hover:border-amber-300/60 hover:bg-slate-900'}" data-series-id="${series.id}" data-games="${games}">
+                                <span class="block text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Exact Length</span>
+                                <span class="mt-2 block text-2xl font-black">${games}</span>
+                                <span class="mt-1 block text-xs uppercase tracking-[0.18em] text-slate-400">Games</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
             </div>
             ${savedEntry ? `
                 <div class="mt-4 rounded-2xl bg-slate-950/40 px-4 py-3 text-xs text-slate-300">
@@ -1098,13 +1106,13 @@ function renderSeriesCards() {
         container.appendChild(card);
     });
 
-    container.querySelectorAll('.series-winner').forEach(select => {
-        select.disabled = state.playoff.isLocked;
-        select.addEventListener('change', event => updatePlayoffDraft(event.target.dataset.seriesId, 'winner_team_id', event.target.value));
+    container.querySelectorAll('.series-team-option').forEach(button => {
+        button.disabled = state.playoff.isLocked;
+        button.addEventListener('click', event => updatePlayoffDraft(event.currentTarget.dataset.seriesId, 'winner_team_id', event.currentTarget.dataset.teamId));
     });
-    container.querySelectorAll('.series-games').forEach(select => {
-        select.disabled = state.playoff.isLocked;
-        select.addEventListener('change', event => updatePlayoffDraft(event.target.dataset.seriesId, 'games', event.target.value));
+    container.querySelectorAll('.series-games-option').forEach(button => {
+        button.disabled = state.playoff.isLocked;
+        button.addEventListener('click', event => updatePlayoffDraft(event.currentTarget.dataset.seriesId, 'games', event.currentTarget.dataset.games));
     });
 
     submitButton.disabled = state.playoff.isLocked;
@@ -1122,6 +1130,33 @@ function renderSeriesCards() {
                 <p class="mt-2 text-sm text-slate-200">${isRoundRevealed(state.playoff.currentRound, state.playoff.pool) ? 'Picks are revealed for this round.' : 'All picks stay hidden until the round locks.'}</p>
             </div>
         </div>
+    `;
+}
+
+function buildWinnerOptionMarkup(series, side, selectedTeamId) {
+    const isHome = side === 'home';
+    const teamId = isHome ? (series.home_team_id || series.home_team_name) : (series.away_team_id || series.away_team_name);
+    const teamName = isHome ? (series.home_team_name || series.home_team_id) : (series.away_team_name || series.away_team_id);
+    const seedLabel = isHome ? series.home_team_seed_label : series.away_team_seed_label;
+    const logoUrl = isHome
+        ? (series.home_team_logo_dark || series.home_team_logo_light || '')
+        : (series.away_team_logo_dark || series.away_team_logo_light || '');
+    const isSelected = selectedTeamId === teamId;
+    return `
+        <button type="button" class="${isSelected
+            ? 'series-team-option group rounded-[1.6rem] border border-emerald-300 bg-emerald-400/15 p-4 text-left shadow-[0_0_0_1px_rgba(110,231,183,0.28)]'
+            : 'series-team-option group rounded-[1.6rem] border border-white/10 bg-slate-950/65 p-4 text-left transition hover:border-emerald-300/60 hover:bg-slate-900'}" data-series-id="${series.id}" data-team-id="${teamId}">
+            <div class="flex items-center gap-4">
+                <div class="flex h-16 w-16 items-center justify-center rounded-2xl border ${isSelected ? 'border-emerald-300/50 bg-white/95' : 'border-white/10 bg-white/90'} p-2 shadow-sm">
+                    <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamName)} logo" class="h-full w-full object-contain">
+                </div>
+                <div class="min-w-0">
+                    <span class="inline-flex rounded-full ${isSelected ? 'bg-emerald-300/20 text-emerald-200' : 'bg-white/10 text-slate-300'} px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">${escapeHtml(seedLabel || 'Pick')}</span>
+                    <p class="mt-3 text-lg font-black text-white">${escapeHtml(teamName)}</p>
+                    <p class="mt-1 text-xs uppercase tracking-[0.18em] ${isSelected ? 'text-emerald-200' : 'text-slate-400'}">${escapeHtml(teamId)}</p>
+                </div>
+            </div>
+        </button>
     `;
 }
 
@@ -1278,6 +1313,7 @@ function updatePlayoffDraft(seriesId, field, value) {
     const next = state.playoff.draft[seriesId] || {};
     next[field] = value;
     state.playoff.draft[seriesId] = next;
+    renderSeriesCards();
 }
 
 function bindPlayoffEvents() {

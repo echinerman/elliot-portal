@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260416-admin-access';
+import { CONFIG } from './config.js?v=20260416-bracket-ui';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -10,8 +10,9 @@ import {
     normalizeStrong8kProfile,
     parseDelimitedList,
     slugify
-} from './app-model.js?v=20260416-admin-access';
+} from './app-model.js?v=20260416-bracket-ui';
 import {
+    buildOfficialRoundOneSeries,
     buildCompactPickLabel,
     buildPickDistribution,
     computeCollectedPot,
@@ -26,12 +27,13 @@ import {
     normalizePlayoffMember,
     normalizePlayoffPool,
     normalizePlayoffRound,
+    normalizePlayoffSeries,
     normalizePickDoc,
     normalizePayoutTemplate,
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260416-admin-access';
+} from './playoff-logic.js?v=20260416-bracket-ui';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -265,7 +267,7 @@ async function loadSelectedPoolData() {
 
     if (state.selectedRoundId) {
         const seriesSnap = await getDocs(query(collection(db, 'playoff_pools', state.selectedPoolId, 'rounds', state.selectedRoundId, 'series'), orderBy('sort_order')));
-        state.series = seriesSnap.docs.map(item => ({ id: item.id, ...item.data() }));
+        state.series = seriesSnap.docs.map(item => normalizePlayoffSeries({ id: item.id, ...item.data() }));
         const picksSnap = await getDocs(collection(db, 'playoff_pools', state.selectedPoolId, 'rounds', state.selectedRoundId, 'picks'));
         state.roundPickDocs = picksSnap.docs.map(item => normalizePickDoc({ id: item.id, ...item.data() }));
     } else {
@@ -482,7 +484,16 @@ function renderSeries() {
         row.className = 'border-b border-slate-100 text-sm';
         row.innerHTML = `
             <td class="px-4 py-4 text-slate-500">${series.sort_order || 0}</td>
-            <td class="px-4 py-4 font-semibold text-slate-950">${escapeHtml(series.matchup_label || `${series.home_team_name || series.home_team_id} vs ${series.away_team_name || series.away_team_id}`)}</td>
+            <td class="px-4 py-4">
+                <div class="flex items-center gap-3">
+                    <img src="${escapeAttribute(series.home_team_logo_light || '')}" alt="${escapeAttribute(series.home_team_name || series.home_team_id || 'Home team')} logo" class="h-8 w-8 rounded-full border border-slate-200 bg-white object-contain p-1">
+                    <div class="min-w-0">
+                        <p class="font-semibold text-slate-950">${escapeHtml(series.matchup_label || `${series.home_team_name || series.home_team_id} vs ${series.away_team_name || series.away_team_id}`)}</p>
+                        <p class="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">${escapeHtml(series.home_team_id || '')} vs ${escapeHtml(series.away_team_id || '')}</p>
+                    </div>
+                    <img src="${escapeAttribute(series.away_team_logo_light || '')}" alt="${escapeAttribute(series.away_team_name || series.away_team_id || 'Away team')} logo" class="ml-auto h-8 w-8 rounded-full border border-slate-200 bg-white object-contain p-1">
+                </div>
+            </td>
             <td class="px-4 py-4 text-slate-500">${escapeHtml(series.status || 'open')}</td>
             <td class="px-4 py-4 text-slate-500">${escapeHtml(series.result_winner_team_id || '-')}</td>
             <td class="px-4 py-4 text-right">
@@ -925,6 +936,7 @@ async function seedStrong8kDefaults() {
 
 function bindPlayoffForms() {
     byId('seed-playoff-btn').addEventListener('click', seedPlayoffDefaults);
+    byId('seed-official-round1-btn').addEventListener('click', seedOfficialRoundOneSeries);
     byId('new-pool-btn').addEventListener('click', clearPoolForm);
     byId('pool-form').addEventListener('submit', savePool);
     byId('new-round-btn').addEventListener('click', clearRoundForm);
@@ -997,10 +1009,69 @@ async function seedPlayoffDefaults() {
         }, { merge: true });
     }
 
+    try {
+        await applyOfficialRoundOneSeries(poolId, seasonYear);
+    } catch (error) {
+        console.warn('Official Round 1 sync skipped during playoff seeding.', error);
+    }
     state.selectedPoolId = poolId;
     state.selectedRoundId = 'round-1';
     showToast(`Seeded playoff defaults for ${seasonYear}`);
     await loadAdminData();
+}
+
+async function seedOfficialRoundOneSeries() {
+    if (!state.selectedPoolId) {
+        showToast('Choose or seed a playoff pool first', 'error');
+        return;
+    }
+
+    const seasonYear = Number((getSelectedPool()?.season_label || '').match(/20\d{2}/)?.[0] || new Date().getFullYear());
+    try {
+        await applyOfficialRoundOneSeries(state.selectedPoolId, seasonYear);
+    } catch (error) {
+        showToast(error.message, 'error');
+        return;
+    }
+    state.selectedRoundId = 'round-1';
+    showToast(`Loaded official ${seasonYear} Round 1 matchups`);
+    await loadAdminData();
+}
+
+async function applyOfficialRoundOneSeries(poolId, seasonYear) {
+    const officialSeries = buildOfficialRoundOneSeries(seasonYear);
+    if (!officialSeries.length) {
+        throw new Error(`No official Round 1 dataset is bundled for ${seasonYear}`);
+    }
+
+    const roundRef = doc(db, 'playoff_pools', poolId, 'rounds', 'round-1');
+    const roundSnap = await getDoc(roundRef);
+    const currentRound = roundSnap.exists()
+        ? normalizePlayoffRound({ id: 'round-1', ...roundSnap.data() })
+        : defaultPlayoffRound(1);
+    await setDoc(roundRef, {
+        ...currentRound,
+        name: currentRound.name || 'Round 1',
+        round_number: 1,
+        sort_order: 1,
+        status: currentRound.status || 'open'
+    }, { merge: true });
+
+    for (const seededSeries of officialSeries) {
+        const seriesRef = doc(db, 'playoff_pools', poolId, 'rounds', 'round-1', 'series', seededSeries.id);
+        const seriesSnap = await getDoc(seriesRef);
+        const existingSeries = seriesSnap.exists()
+            ? normalizePlayoffSeries({ id: seededSeries.id, ...seriesSnap.data() })
+            : {};
+        await setDoc(seriesRef, {
+            ...existingSeries,
+            ...seededSeries,
+            status: existingSeries.status || seededSeries.status || 'open',
+            result_winner_team_id: existingSeries.result_winner_team_id || '',
+            result_games: Number(existingSeries.result_games || 0),
+            notes: existingSeries.notes || seededSeries.notes
+        }, { merge: true });
+    }
 }
 
 function loadPoolIntoForm(poolId) {
@@ -1153,7 +1224,7 @@ async function saveSeries(event) {
     }
 
     const seriesId = byId('series-id').value || slugify(byId('series-label-input').value) || crypto.randomUUID();
-    await setDoc(doc(db, 'playoff_pools', state.selectedPoolId, 'rounds', state.selectedRoundId, 'series', seriesId), {
+    const nextSeries = normalizePlayoffSeries({
         sort_order: Number(byId('series-order-input').value || 0),
         matchup_label: byId('series-label-input').value,
         home_team_id: byId('series-home-id-input').value,
@@ -1164,7 +1235,8 @@ async function saveSeries(event) {
         result_winner_team_id: byId('series-result-winner-input').value,
         result_games: Number(byId('series-result-games-input').value || 0),
         notes: byId('series-notes-input').value
-    }, { merge: true });
+    });
+    await setDoc(doc(db, 'playoff_pools', state.selectedPoolId, 'rounds', state.selectedRoundId, 'series', seriesId), nextSeries, { merge: true });
     showToast('Series saved');
     await loadAdminData();
 }
