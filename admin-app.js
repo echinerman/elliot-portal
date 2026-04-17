@@ -854,6 +854,7 @@ async function seedStrong8kDefaults() {
 }
 
 function bindPlayoffForms() {
+    byId('seed-playoff-btn').addEventListener('click', seedPlayoffDefaults);
     byId('new-pool-btn').addEventListener('click', clearPoolForm);
     byId('pool-form').addEventListener('submit', savePool);
     byId('new-round-btn').addEventListener('click', clearRoundForm);
@@ -874,6 +875,62 @@ function bindPlayoffForms() {
         renderAdmin();
     });
     byId('rescore-round-btn').addEventListener('click', rescoreSelectedRound);
+}
+
+async function seedPlayoffDefaults() {
+    const seasonYear = new Date().getFullYear();
+    const poolId = `nhl-playoff-pool-${seasonYear}`;
+    const poolRef = doc(db, 'playoff_pools', poolId);
+    const existingPoolSnap = await getDoc(poolRef);
+    const existingPool = existingPoolSnap.exists()
+        ? normalizePlayoffPool({ id: poolId, ...existingPoolSnap.data() })
+        : normalizePlayoffPool({});
+
+    const seededPool = normalizePlayoffPool({
+        ...existingPool,
+        id: poolId,
+        name: existingPool.name || `NHL Playoff Pool ${seasonYear}`,
+        season_label: existingPool.season_label || `${seasonYear} NHL Playoffs`,
+        status: existingPool.status || 'active',
+        description: existingPool.description || 'Self-serve NHL playoff pool for friends and family. Pick the winner of each series and the number of games.',
+        entry_fee_default: existingPool.entry_fee_default || CONFIG.PLAYOFF_DEFAULT_ENTRY_FEE,
+        pick_visibility: existingPool.pick_visibility || 'after-lock',
+        lock_policy: existingPool.lock_policy || 'deadline',
+        payout_template: existingPool.payout_template?.length ? existingPool.payout_template : defaultPayoutTemplate()
+    });
+
+    await setDoc(poolRef, seededPool, { merge: true });
+
+    const roundSeeds = [
+        { roundNumber: 1, name: 'Round 1', status: 'open' },
+        { roundNumber: 2, name: 'Round 2', status: 'draft' },
+        { roundNumber: 3, name: 'Conference Finals', status: 'draft' },
+        { roundNumber: 4, name: 'Stanley Cup Final', status: 'draft' }
+    ];
+
+    for (const roundSeed of roundSeeds) {
+        const roundId = `round-${roundSeed.roundNumber}`;
+        const roundRef = doc(db, 'playoff_pools', poolId, 'rounds', roundId);
+        const existingRoundSnap = await getDoc(roundRef);
+        const existingRound = existingRoundSnap.exists()
+            ? normalizePlayoffRound({ id: roundId, ...existingRoundSnap.data() })
+            : defaultPlayoffRound(roundSeed.roundNumber);
+        const roundDefaults = defaultPlayoffRound(roundSeed.roundNumber);
+
+        await setDoc(roundRef, {
+            ...existingRound,
+            ...roundDefaults,
+            name: existingRound.name || roundSeed.name,
+            round_number: roundSeed.roundNumber,
+            sort_order: existingRound.sort_order || roundSeed.roundNumber,
+            status: existingRound.status || roundSeed.status
+        }, { merge: true });
+    }
+
+    state.selectedPoolId = poolId;
+    state.selectedRoundId = 'round-1';
+    showToast(`Seeded playoff defaults for ${seasonYear}`);
+    await loadAdminData();
 }
 
 function loadPoolIntoForm(poolId) {
