@@ -261,6 +261,7 @@
                                     <p id="playoff-round-points" class="mt-2 text-4xl font-black">0</p>
                                 </div>
                             </div>
+                            <p id="playoff-rank-summary" class="mt-4 text-sm font-semibold text-emerald-200"></p>
                         </article>
                         <article class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
                             <p class="text-xs font-bold uppercase tracking-[0.35em] text-fuchsia-200">Member Status</p>
@@ -327,7 +328,12 @@
 
                         <div class="space-y-8">
                             <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                                <p class="text-xs font-bold uppercase tracking-[0.35em] text-sky-300">Standings</p>
+                                <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                                    <div>
+                                        <p class="text-xs font-bold uppercase tracking-[0.35em] text-sky-300">Live Scoreboard</p>
+                                        <p id="playoff-live-scoreboard-note" class="mt-2 text-sm text-slate-300"></p>
+                                    </div>
+                                </div>
                                 <div class="mt-5 overflow-hidden rounded-3xl border border-white/10">
                                     <table class="w-full text-left">
                                         <thead class="bg-slate-950/70 text-[11px] uppercase tracking-[0.22em] text-slate-400">
@@ -353,6 +359,33 @@
                                 <div id="previous-picks" class="mt-5 space-y-4"></div>
                             </section>
                         </div>
+                    </section>
+
+                    <section class="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
+                        <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">What If Lab</p>
+                                    <h2 class="mt-2 text-3xl font-black text-white">Run your own scenarios</h2>
+                                </div>
+                                <button id="playoff-whatif-reset-btn" type="button" class="rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-white transition hover:border-white hover:bg-white/10">
+                                    Reset To Live Results
+                                </button>
+                            </div>
+                            <div id="playoff-whatif-series" class="mt-6 space-y-4"></div>
+                        </section>
+
+                        <section class="space-y-8">
+                            <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                                <p class="text-xs font-bold uppercase tracking-[0.35em] text-emerald-300">Projection Summary</p>
+                                <div id="playoff-whatif-summary" class="mt-5"></div>
+                            </section>
+
+                            <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+                                <p class="text-xs font-bold uppercase tracking-[0.35em] text-fuchsia-200">Projected Scoreboard</p>
+                                <div id="playoff-whatif-scoreboard" class="mt-5"></div>
+                            </section>
+                        </section>
                     </section>
 
                     <section class="grid gap-8 xl:grid-cols-2">
@@ -394,6 +427,6 @@
         </div>
     </div>
 
-    <script type="module" src="./portal-app.js?v=20260416-single-pool"></script>
+    <script type="module" src="./portal-app.js?v=20260417-scoreboard-admin"></script>
 </body>
 </html>

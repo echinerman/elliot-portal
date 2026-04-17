@@ -74,7 +74,8 @@ const state = {
     editingProductId: '',
     editingPoolId: '',
     editingRoundId: '',
-    editingSeriesId: ''
+    editingSeriesId: '',
+    playoffWorkspace: 'setup'
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -298,12 +299,14 @@ function renderAdmin() {
     renderStats();
     renderUsers();
     renderStrong8kSection();
+    renderPlayoffAdminSummary();
     renderPools();
     renderRounds();
     renderSeries();
     renderPoolMembers();
     renderSelectedPoolMember();
     renderPlayoffReportSummary();
+    setPlayoffWorkspace(state.playoffWorkspace);
 }
 
 function bindNavigation() {
@@ -319,6 +322,10 @@ function bindNavigation() {
                 panel.classList.toggle('hidden', panel.dataset.panel !== tabId);
             });
         });
+    });
+
+    document.querySelectorAll('[data-playoff-nav]').forEach(button => {
+        button.addEventListener('click', () => setPlayoffWorkspace(button.dataset.playoffNav));
     });
 }
 
@@ -431,6 +438,7 @@ function renderPools() {
         button.addEventListener('click', async () => {
             state.selectedPoolId = button.dataset.selectPool;
             state.selectedRoundId = '';
+            state.playoffWorkspace = 'setup';
             await loadSelectedPoolData();
             renderAdmin();
             loadPoolIntoForm(state.selectedPoolId);
@@ -465,6 +473,7 @@ function renderRounds() {
     tbody.querySelectorAll('[data-select-round]').forEach(button => {
         button.addEventListener('click', async () => {
             state.selectedRoundId = button.dataset.selectRound;
+            state.playoffWorkspace = 'schedule';
             await loadSelectedPoolData();
             renderAdmin();
             loadRoundIntoForm(state.selectedRoundId);
@@ -504,7 +513,11 @@ function renderSeries() {
     });
 
     tbody.querySelectorAll('[data-edit-series]').forEach(button => {
-        button.addEventListener('click', () => loadSeriesIntoForm(button.dataset.editSeries));
+        button.addEventListener('click', () => {
+            state.playoffWorkspace = 'schedule';
+            loadSeriesIntoForm(button.dataset.editSeries);
+            setPlayoffWorkspace(state.playoffWorkspace);
+        });
     });
 }
 
@@ -534,9 +547,43 @@ function renderPoolMembers() {
     tbody.querySelectorAll('[data-edit-pool-member]').forEach(button => {
         button.addEventListener('click', () => {
             state.selectedMemberId = button.dataset.editPoolMember;
+            state.playoffWorkspace = 'entrants';
             renderPoolMembers();
             renderSelectedPoolMember();
+            renderPlayoffAdminSummary();
+            setPlayoffWorkspace(state.playoffWorkspace);
         });
+    });
+}
+
+function renderPlayoffAdminSummary() {
+    const selectedPool = getSelectedPool();
+    const selectedRound = getSelectedRound();
+    const selectedMember = getSelectedMember();
+    byId('playoff-admin-selected-pool').textContent = selectedPool
+        ? `${selectedPool.name || selectedPool.id} (${selectedPool.status || 'draft'})`
+        : 'No pool selected';
+    byId('playoff-admin-selected-round').textContent = selectedRound
+        ? `${selectedRound.name || selectedRound.id} - ${selectedRound.status || 'draft'}`
+        : 'No round selected';
+    byId('playoff-admin-selected-member').textContent = selectedMember
+        ? (selectedMember.team_name || selectedMember.display_name || selectedMember.email || selectedMember.id)
+        : 'No entrant selected';
+}
+
+function setPlayoffWorkspace(workspace = 'setup') {
+    state.playoffWorkspace = workspace;
+    document.querySelectorAll('[data-playoff-nav]').forEach(button => {
+        const active = button.dataset.playoffNav === workspace;
+        button.classList.toggle('bg-slate-950', active);
+        button.classList.toggle('text-white', active);
+        button.classList.toggle('border-slate-950', active);
+        button.classList.toggle('border-slate-200', !active);
+        button.classList.toggle('text-slate-700', !active);
+    });
+
+    document.querySelectorAll('[data-playoff-panel-view]').forEach(panel => {
+        panel.classList.toggle('hidden', panel.dataset.playoffPanelView !== workspace);
     });
 }
 

@@ -94,6 +94,7 @@ const state = {
         pickDistribution: [],
         standingsTrend: [],
         draft: {},
+        scenarioDraft: {},
         isLocked: false
     }
 };
@@ -192,6 +193,7 @@ function resetSessionState() {
         pickDistribution: [],
         standingsTrend: [],
         draft: {},
+        scenarioDraft: {},
         isLocked: false
     };
 }
@@ -694,17 +696,9 @@ function renderStrong8kLicenses(profile) {
                 <span class="rounded-full px-3 py-1 text-[11px] font-bold uppercase ${statusClass}">${status}</span>
             </div>
             <div class="grid gap-4 rounded-2xl bg-slate-50 p-4">
-                <div class="grid gap-2 text-xs text-slate-500">
-                    <div class="flex items-center justify-between gap-3">
-                        <span class="font-bold uppercase tracking-[0.2em] text-slate-400">Server</span>
-                        <button type="button" class="font-mono text-slate-700 hover:text-slate-950" data-copy="${escapeAttribute(domain)}">${domain}</button>
-                    </div>
-                    ${backup ? `
-                        <div class="flex items-center justify-between gap-3">
-                            <span class="font-bold uppercase tracking-[0.2em] text-slate-400">Backup</span>
-                            <button type="button" class="font-mono text-slate-700 hover:text-slate-950" data-copy="${escapeAttribute(backup)}">${backup}</button>
-                        </div>
-                    ` : ''}
+                <div class="grid gap-3 md:grid-cols-2">
+                    ${copyField('Primary Domain', domain)}
+                    ${backup ? copyField('Backup Domain', backup) : ''}
                 </div>
                 <div class="grid gap-3 md:grid-cols-2">
                     ${copyField('Username', license.username_8k)}
@@ -922,6 +916,10 @@ async function loadPlayoffApp() {
         roundPickDocs = roundPicksSnap.docs.map(item => normalizePickDoc({ id: item.id, ...item.data() }));
     }
 
+    const preservedScenarioDraft = state.playoff.poolId === poolId && state.playoff.currentRound?.id === currentRoundId
+        ? state.playoff.scenarioDraft
+        : {};
+
     state.playoff.poolId = poolId;
     state.playoff.pool = pool;
     state.playoff.member = member;
@@ -937,6 +935,7 @@ async function loadPlayoffApp() {
     state.playoff.pickDistribution = buildPickDistribution(series, roundPickDocs);
     state.playoff.standingsTrend = buildStandingsTrend(rounds, standings);
     state.playoff.draft = buildDraftFromEntries(currentPick?.entries || []);
+    state.playoff.scenarioDraft = buildScenarioDraft(series, preservedScenarioDraft);
     state.playoff.isLocked = isRoundLocked(currentRound);
     renderPlayoffApp();
 }
@@ -1064,6 +1063,8 @@ function renderPlayoffApp() {
     byId('playoff-payment-status').textContent = prettifyStatus(state.playoff.payment?.status || state.playoff.member?.payment_status || 'unpaid');
     byId('playoff-amount-paid').textContent = `${formatCurrency(state.playoff.payment?.amount_paid || state.playoff.member?.amount_paid || 0)} / ${formatCurrency(state.playoff.payment?.amount_due || state.playoff.member?.amount_due || 0)}`;
     byId('playoff-payout-status').textContent = buildPayoutStatusText();
+    byId('playoff-rank-summary').textContent = buildCurrentRankSummary();
+    byId('playoff-live-scoreboard-note').textContent = buildLiveScoreboardNote();
     byId('playoff-guide-steps').innerHTML = buildPlayoffGuideSteps();
     byId('playoff-payment-instructions').textContent = buildPaymentInstructions();
     byId('playoff-payment-link').href = buildPlayoffPaymentLink();
@@ -1076,6 +1077,7 @@ function renderPlayoffApp() {
     renderStandingsTrend();
     renderPickDistribution();
     renderPreviousPicks();
+    renderScenarioLab();
 }
 
 function renderSeriesCards() {
@@ -1225,6 +1227,230 @@ function buildPlayoffGuideNote() {
     return 'You are automatically added to the live pool as soon as you open it. Set your team name, pay in, and keep your picks saved before lock.';
 }
 
+function buildCurrentRankSummary() {
+    const currentRank = state.playoff.standings.findIndex(member => member.id === state.authUser.uid);
+    if (currentRank < 0) {
+        return 'Your live placement will show up here once you are on the standings board.';
+    }
+
+    return `Currently ${ordinal(currentRank + 1)} of ${state.playoff.standings.length}`;
+}
+
+function buildLiveScoreboardNote() {
+    if (!state.playoff.currentRound) {
+        return 'No round is active yet.';
+    }
+
+    return isRoundRevealed(state.playoff.currentRound, state.playoff.pool)
+        ? 'This board reflects the saved pool totals and updates when results are rescored.'
+        : 'This board shows official saved totals. Use the what-if lab below for your own projections before picks unlock.';
+}
+
+function buildScenarioDraft(seriesList = [], existingDraft = {}) {
+    return Object.fromEntries(seriesList.map(series => [
+        series.id,
+        {
+            result_winner_team_id: existingDraft[series.id]?.result_winner_team_id || series.result_winner_team_id || '',
+            result_games: String(existingDraft[series.id]?.result_games || series.result_games || '')
+        }
+    ]));
+}
+
+function buildScenarioSeriesList() {
+    return state.playoff.series.map(series => ({
+        ...series,
+        result_winner_team_id: state.playoff.scenarioDraft[series.id]?.result_winner_team_id || '',
+        result_games: Number(state.playoff.scenarioDraft[series.id]?.result_games || 0)
+    }));
+}
+
+function buildCurrentUserScenarioPickDoc() {
+    if (state.playoff.currentPick?.entries?.length) {
+        return normalizePickDoc(state.playoff.currentPick);
+    }
+
+    return normalizePickDoc({
+        id: state.authUser.uid,
+        entries: state.playoff.series.map(series => ({
+            series_id: series.id,
+            winner_team_id: state.playoff.draft[series.id]?.winner_team_id || '',
+            games: Number(state.playoff.draft[series.id]?.games || 0)
+        }))
+    });
+}
+
+function buildScenarioSnapshot() {
+    const scenarioSeries = buildScenarioSeriesList();
+    const currentRound = state.playoff.currentRound;
+    const currentRoundId = currentRound?.id || '';
+    const actualUserRoundPoints = Number((state.playoff.member?.round_history || []).find(item => item.round_id === currentRoundId)?.points || 0);
+    const selfScoredPick = scorePickDocument(buildCurrentUserScenarioPickDoc(), scenarioSeries, currentRound);
+    const selfProjectedTotal = Number(state.playoff.member?.points_total || 0) - actualUserRoundPoints + Number(selfScoredPick.round_total || 0);
+    const scoreboardVisible = Boolean(state.playoff.roundPickDocs.length) && isRoundRevealed(currentRound, state.playoff.pool);
+
+    if (!scoreboardVisible) {
+        return {
+            scoreboardVisible,
+            selfScoredPick,
+            selfProjectedTotal,
+            projectedStandings: [],
+            projectedRank: null
+        };
+    }
+
+    const projectedStandings = sortStandings(state.playoff.standings.map(member => {
+        const actualRoundPoints = Number((member.round_history || []).find(item => item.round_id === currentRoundId)?.points || 0);
+        const pickDoc = state.playoff.roundPickDocs.find(item => item.id === member.id) || normalizePickDoc({
+            id: member.id,
+            entries: state.playoff.series.map(series => ({ series_id: series.id }))
+        });
+        const scoredPick = scorePickDocument(pickDoc, scenarioSeries, currentRound);
+        return normalizePlayoffMember({
+            ...member,
+            round_points: Number(scoredPick.round_total || 0),
+            points_total: Number(member.points_total || 0) - actualRoundPoints + Number(scoredPick.round_total || 0)
+        }, state.playoff.pool);
+    }));
+
+    return {
+        scoreboardVisible,
+        selfScoredPick,
+        selfProjectedTotal,
+        projectedStandings,
+        projectedRank: projectedStandings.findIndex(member => member.id === state.authUser.uid)
+    };
+}
+
+function renderScenarioLab() {
+    const resultContainer = byId('playoff-whatif-series');
+    const summary = byId('playoff-whatif-summary');
+    const scoreboard = byId('playoff-whatif-scoreboard');
+    resultContainer.innerHTML = '';
+    summary.innerHTML = '';
+    scoreboard.innerHTML = '';
+
+    if (!state.playoff.currentRound || !state.playoff.series.length) {
+        resultContainer.innerHTML = '<p class="text-sm text-slate-400">Once a round is loaded, you can run hypothetical results here.</p>';
+        summary.innerHTML = '<p class="text-sm text-slate-400">No scenario data is available yet.</p>';
+        return;
+    }
+
+    state.playoff.series.forEach(series => {
+        const draft = state.playoff.scenarioDraft[series.id] || {};
+        const card = document.createElement('article');
+        card.className = 'rounded-3xl border border-white/10 bg-slate-950/40 p-4';
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-sm font-bold text-white">${escapeHtml(series.matchup_label || `${series.home_team_name || series.home_team_id} vs ${series.away_team_name || series.away_team_id}`)}</p>
+                    <p class="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">Scenario result</p>
+                </div>
+                <span class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase text-slate-300">${series.status || 'Open'}</span>
+            </div>
+            <div class="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    ${buildScenarioWinnerOptionMarkup(series, 'home', draft.result_winner_team_id)}
+                    ${buildScenarioWinnerOptionMarkup(series, 'away', draft.result_winner_team_id)}
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    ${[4, 5, 6, 7].map(games => `
+                        <button type="button" class="${String(draft.result_games) === String(games)
+                            ? 'scenario-games-option rounded-2xl border border-amber-300 bg-amber-300/15 px-3 py-3 text-center text-white'
+                            : 'scenario-games-option rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-center text-slate-300 transition hover:border-amber-300/60 hover:bg-white/10'}" data-series-id="${series.id}" data-games="${games}">
+                            <span class="block text-lg font-black">${games}</span>
+                            <span class="block text-[10px] uppercase tracking-[0.18em] text-slate-400">Games</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        resultContainer.appendChild(card);
+    });
+
+    resultContainer.querySelectorAll('.scenario-team-option').forEach(button => {
+        button.addEventListener('click', event => updateScenarioDraft(event.currentTarget.dataset.seriesId, 'result_winner_team_id', event.currentTarget.dataset.teamId));
+    });
+    resultContainer.querySelectorAll('.scenario-games-option').forEach(button => {
+        button.addEventListener('click', event => updateScenarioDraft(event.currentTarget.dataset.seriesId, 'result_games', event.currentTarget.dataset.games));
+    });
+
+    const snapshot = buildScenarioSnapshot();
+    summary.innerHTML = `
+        <div class="grid gap-4 md:grid-cols-2">
+            <div class="rounded-3xl bg-white/5 p-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Your Projected Round</p>
+                <p class="mt-2 text-3xl font-black text-white">${snapshot.selfScoredPick.round_total || 0}</p>
+            </div>
+            <div class="rounded-3xl bg-white/5 p-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Your Projected Total</p>
+                <p class="mt-2 text-3xl font-black text-white">${snapshot.selfProjectedTotal}</p>
+                <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-400">${snapshot.projectedRank >= 0 ? `Projected ${ordinal(snapshot.projectedRank + 1)} place if these results happen.` : 'Projected rank appears once the round is revealed.'}</p>
+            </div>
+        </div>
+    `;
+
+    if (!snapshot.scoreboardVisible) {
+        scoreboard.innerHTML = '<p class="text-sm text-slate-400">Full projected standings unlock after the round locks and everyone’s picks are revealed. Until then, this lab only shows your own projection.</p>';
+    } else {
+        scoreboard.innerHTML = `
+            <div class="overflow-hidden rounded-3xl border border-white/10">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-950/70 text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                        <tr>
+                            <th class="px-4 py-3">#</th>
+                            <th class="px-4 py-3">Member</th>
+                            <th class="px-4 py-3">Projected Pts</th>
+                            <th class="px-4 py-3">Projected Round</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${snapshot.projectedStandings.map((member, index) => `
+                            <tr class="${member.id === state.authUser.uid ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm' : 'border-b border-white/10 text-sm'}">
+                                <td class="px-4 py-3 text-slate-300">${index + 1}</td>
+                                <td class="px-4 py-3 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
+                                <td class="px-4 py-3 text-slate-200">${member.points_total || 0}</td>
+                                <td class="px-4 py-3 text-slate-400">${member.round_points || 0}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+}
+
+function buildScenarioWinnerOptionMarkup(series, side, selectedTeamId) {
+    const isHome = side === 'home';
+    const teamId = isHome ? (series.home_team_id || series.home_team_name) : (series.away_team_id || series.away_team_name);
+    const teamName = isHome ? (series.home_team_name || series.home_team_id) : (series.away_team_name || series.away_team_id);
+    const logoUrl = isHome
+        ? (series.home_team_logo_dark || series.home_team_logo_light || '')
+        : (series.away_team_logo_dark || series.away_team_logo_light || '');
+    const isSelected = selectedTeamId === teamId;
+    return `
+        <button type="button" class="${isSelected
+            ? 'scenario-team-option rounded-[1.4rem] border border-emerald-300 bg-emerald-400/15 p-3 text-left shadow-[0_0_0_1px_rgba(110,231,183,0.25)]'
+            : 'scenario-team-option rounded-[1.4rem] border border-white/10 bg-white/5 p-3 text-left transition hover:border-emerald-300/60 hover:bg-white/10'}" data-series-id="${series.id}" data-team-id="${teamId}">
+            <div class="flex items-center gap-3">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl border ${isSelected ? 'border-emerald-300/50 bg-white/95' : 'border-white/10 bg-white/90'} p-2">
+                    <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamName)} logo" class="h-full w-full object-contain">
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm font-black text-white">${escapeHtml(teamName)}</p>
+                    <p class="mt-1 text-[10px] uppercase tracking-[0.18em] ${isSelected ? 'text-emerald-200' : 'text-slate-400'}">${escapeHtml(teamId)}</p>
+                </div>
+            </div>
+        </button>
+    `;
+}
+
+function updateScenarioDraft(seriesId, field, value) {
+    const next = state.playoff.scenarioDraft[seriesId] || {};
+    next[field] = value;
+    state.playoff.scenarioDraft[seriesId] = next;
+    renderScenarioLab();
+}
+
 function buildWinnerOptionMarkup(series, side, selectedTeamId) {
     const isHome = side === 'home';
     const teamId = isHome ? (series.home_team_id || series.home_team_name) : (series.away_team_id || series.away_team_name);
@@ -1258,7 +1484,9 @@ function renderStandings() {
 
     state.playoff.standings.forEach((member, index) => {
         const row = document.createElement('tr');
-        row.className = 'border-b border-white/10 text-sm';
+        row.className = member.id === state.authUser.uid
+            ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm'
+            : 'border-b border-white/10 text-sm';
         row.innerHTML = `
             <td class="px-4 py-3 text-slate-300">${index + 1}</td>
             <td class="px-4 py-3 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
@@ -1410,6 +1638,10 @@ function updatePlayoffDraft(seriesId, field, value) {
 
 function bindPlayoffEvents() {
     byId('playoff-submit-btn').addEventListener('click', submitPlayoffPicks);
+    byId('playoff-whatif-reset-btn').addEventListener('click', () => {
+        state.playoff.scenarioDraft = buildScenarioDraft(state.playoff.series);
+        renderScenarioLab();
+    });
 }
 
 async function submitPlayoffPicks() {
@@ -1507,6 +1739,25 @@ function formatDateTime(value) {
         dateStyle: 'medium',
         timeStyle: 'short'
     }).format(parsed);
+}
+
+function ordinal(value) {
+    const safeValue = Number(value || 0);
+    const remainder100 = safeValue % 100;
+    if (remainder100 >= 11 && remainder100 <= 13) {
+        return `${safeValue}th`;
+    }
+
+    switch (safeValue % 10) {
+    case 1:
+        return `${safeValue}st`;
+    case 2:
+        return `${safeValue}nd`;
+    case 3:
+        return `${safeValue}rd`;
+    default:
+        return `${safeValue}th`;
+    }
 }
 
 function escapeAttribute(value) {
