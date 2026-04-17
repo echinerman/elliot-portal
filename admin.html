@@ -407,31 +407,71 @@
                     <input type="hidden" id="pool-member-id">
                     <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Entrant Editor</p>
                     <h2 class="mt-2 text-2xl font-black text-slate-950">Team, payment, and payout status</h2>
+                    <p class="mt-3 text-sm leading-6 text-slate-500">Edit the entrant's public pool identity, payment tracking, and payout eligibility without having to guess what each field controls.</p>
                     <div class="mt-6 grid gap-4 md:grid-cols-2">
-                        <input id="pool-member-display-name" type="text" placeholder="Display name" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        <input id="pool-member-email" type="email" placeholder="Email" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        <input id="pool-member-team-name" type="text" placeholder="Fixed team name" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        <select id="pool-member-payment-status" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <option value="unpaid">Unpaid</option>
-                            <option value="partial">Partial</option>
-                            <option value="paid">Paid</option>
-                            <option value="waived">Waived</option>
-                        </select>
-                        <input id="pool-member-amount-due" type="number" step="0.01" placeholder="Amount due" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        <input id="pool-member-amount-paid" type="number" step="0.01" placeholder="Amount paid" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        <input id="pool-member-paid-at" type="date" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        <input id="pool-member-payment-method" type="text" placeholder="Payment method" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                            <input id="pool-member-late-payment" type="checkbox" class="h-4 w-4 rounded border-slate-300">
-                            Late payment flag
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Display Name</span>
+                            <input id="pool-member-display-name" type="text" placeholder="Display name" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
                         </label>
-                        <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                            <input id="pool-member-eligible-payout" type="checkbox" class="h-4 w-4 rounded border-slate-300">
-                            Eligible for payout
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Email Address</span>
+                            <input id="pool-member-email" type="email" placeholder="Email" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
                         </label>
-                        <input id="pool-member-payout-place" type="text" placeholder="Payout place (optional)" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        <input id="pool-member-payout-amount" type="number" step="0.01" placeholder="Payout amount" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        <textarea id="pool-member-payment-notes" rows="4" placeholder="Payment / entrant notes" class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900 md:col-span-2"></textarea>
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Team Name</span>
+                            <input id="pool-member-team-name" type="text" placeholder="Fixed team name" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                        </label>
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Payment Status</span>
+                            <select id="pool-member-payment-status" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                                <option value="unpaid">Unpaid</option>
+                                <option value="partial">Partial</option>
+                                <option value="paid">Paid</option>
+                                <option value="waived">Waived</option>
+                            </select>
+                        </label>
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Amount Due</span>
+                            <input id="pool-member-amount-due" type="number" step="0.01" placeholder="Amount due" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                        </label>
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Amount Paid</span>
+                            <input id="pool-member-amount-paid" type="number" step="0.01" placeholder="Amount paid" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                        </label>
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Paid On</span>
+                            <input id="pool-member-paid-at" type="date" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                        </label>
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Payment Method</span>
+                            <input id="pool-member-payment-method" type="text" placeholder="Payment method" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                        </label>
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Late Payment Flag</span>
+                            <span class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                                <input id="pool-member-late-payment" type="checkbox" class="h-4 w-4 rounded border-slate-300">
+                                Mark this entrant as paid late
+                            </span>
+                        </label>
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Payout Eligibility</span>
+                            <span class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                                <input id="pool-member-eligible-payout" type="checkbox" class="h-4 w-4 rounded border-slate-300">
+                                Include in payout eligibility
+                            </span>
+                        </label>
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Payout Place</span>
+                            <input id="pool-member-payout-place" type="text" placeholder="Payout place (optional)" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                        </label>
+                        <label class="space-y-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Payout Amount</span>
+                            <input id="pool-member-payout-amount" type="number" step="0.01" placeholder="Payout amount" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                        </label>
+                        <label class="space-y-2 md:col-span-2">
+                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Entrant Notes</span>
+                            <textarea id="pool-member-payment-notes" rows="4" placeholder="Payment / entrant notes" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900"></textarea>
+                        </label>
                     </div>
                     <div class="mt-6 flex flex-wrap gap-3">
                         <button type="submit" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Entrant</button>
