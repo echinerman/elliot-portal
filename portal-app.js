@@ -16,6 +16,8 @@ import {
     buildPickDistribution,
     buildStandingsTrend,
     computeCollectedPot,
+    defaultPaymentRecord,
+    defaultPlayoffMember,
     isRoundLocked,
     isRoundRevealed,
     mergeFinalizedPayouts,
@@ -142,6 +144,26 @@ function resolveInviteCode(code) {
     return Object.entries(CONFIG.INVITE_CODES).find(([, inviteCode]) => inviteCode.toUpperCase() === normalized)?.[0] || null;
 }
 
+function getSelectedRegistrationAppId() {
+    return byId('register-app-id').value || APP_IDS.PLAYOFF;
+}
+
+function setSelectedRegistrationApp(appId) {
+    const selectedAppId = appId === APP_IDS.STRONG8K ? APP_IDS.STRONG8K : APP_IDS.PLAYOFF;
+    byId('register-app-id').value = selectedAppId;
+    byId('register-playoff-app-btn').className = selectedAppId === APP_IDS.PLAYOFF
+        ? 'rounded-2xl border border-emerald-400 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-600'
+        : 'rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-900';
+    byId('register-strong8k-app-btn').className = selectedAppId === APP_IDS.STRONG8K
+        ? 'rounded-2xl border border-slate-900 bg-slate-100 px-4 py-3 text-left transition hover:border-slate-900'
+        : 'rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-900';
+    const needsInvite = selectedAppId === APP_IDS.STRONG8K;
+    byId('reg-code-wrap').classList.toggle('hidden', !needsInvite);
+    byId('reg-code').required = needsInvite;
+    byId('register-submit-btn').textContent = needsInvite ? 'Create Strong8K Access' : 'Create Playoff Access';
+    updateAuthBlurb();
+}
+
 function resetSessionState() {
     state.sharedUser = null;
     state.memberships = {};
@@ -211,6 +233,11 @@ function getPendingMemberships() {
     );
 }
 
+function canSelfServePlayoff() {
+    const playoffMembership = state.memberships[APP_IDS.PLAYOFF];
+    return !playoffMembership || playoffMembership.status !== 'disabled';
+}
+
 async function routeAuthenticatedUser() {
     const activeMemberships = getActiveMemberships();
     const pendingMemberships = getPendingMemberships();
@@ -223,7 +250,7 @@ async function routeAuthenticatedUser() {
     }
 
     const appIds = Object.keys(activeMemberships);
-    if (wantsAppSwitcher && appIds.length) {
+    if (wantsAppSwitcher && (appIds.length || canSelfServePlayoff())) {
         renderAppSwitcher(activeMemberships);
         setView('app-switcher-view');
         return;
@@ -309,6 +336,7 @@ function bindAuthForms() {
         event.preventDefault();
         byId('login-form').classList.add('hidden');
         byId('register-form').classList.remove('hidden');
+        updateAuthBlurb();
     });
 
     byId('show-login-link').addEventListener('click', event => {
@@ -317,6 +345,8 @@ function bindAuthForms() {
         byId('login-form').classList.remove('hidden');
     });
 
+    byId('register-playoff-app-btn').addEventListener('click', () => setSelectedRegistrationApp(APP_IDS.PLAYOFF));
+    byId('register-strong8k-app-btn').addEventListener('click', () => setSelectedRegistrationApp(APP_IDS.STRONG8K));
     byId('reg-code').addEventListener('input', updateAuthBlurb);
 
     byId('login-form').addEventListener('submit', async event => {
@@ -332,10 +362,11 @@ function bindAuthForms() {
         event.preventDefault();
         const email = byId('reg-email').value.trim();
         const password = byId('reg-pass').value;
+        const selectedAppId = getSelectedRegistrationAppId();
         const inviteCode = byId('reg-code').value.trim();
-        const appId = resolveInviteCode(inviteCode);
+        const resolvedInviteAppId = inviteCode ? resolveInviteCode(inviteCode) : null;
 
-        if (!appId) {
+        if (selectedAppId === APP_IDS.STRONG8K && resolvedInviteAppId !== APP_IDS.STRONG8K) {
             showToast('Invalid invite code', 'error');
             return;
         }
@@ -345,28 +376,37 @@ function bindAuthForms() {
             await claimOrCreateAccount({
                 uid: credential.user.uid,
                 email,
-                appId,
-                inviteCode
+                appId: selectedAppId,
+                inviteCode: selectedAppId === APP_IDS.STRONG8K ? inviteCode : 'self-serve'
             });
-            showToast(`${APP_DEFINITIONS[appId].shortLabel} access created`);
+            showToast(`${APP_DEFINITIONS[selectedAppId].shortLabel} access created`);
         } catch (error) {
             showToast(error.message, 'error');
         }
     });
 
+    setSelectedRegistrationApp(APP_IDS.PLAYOFF);
     updateAuthBlurb();
 }
 
 function updateAuthBlurb() {
-    const code = byId('reg-code').value.trim();
-    const inviteAppId = resolveInviteCode(code);
     const helper = byId('auth-helper-text');
-    if (!inviteAppId) {
-        helper.textContent = 'Your invite code decides whether you join Strong8K or the playoff pool.';
+    if (byId('register-form').classList.contains('hidden')) {
+        helper.textContent = 'Sign in to switch apps, or create a new playoff account in one step.';
         return;
     }
 
-    helper.textContent = `This code will create access for ${APP_DEFINITIONS[inviteAppId].authTitle}.`;
+    const selectedAppId = getSelectedRegistrationAppId();
+    if (selectedAppId === APP_IDS.PLAYOFF) {
+        helper.textContent = 'Playoff Pool is open registration. Create your account and you will be added right away.';
+        return;
+    }
+
+    const code = byId('reg-code').value.trim();
+    const inviteAppId = resolveInviteCode(code);
+    helper.textContent = inviteAppId === APP_IDS.STRONG8K
+        ? `This code will create access for ${APP_DEFINITIONS[inviteAppId].authTitle}.`
+        : 'Strong8K still requires a valid invite code.';
 }
 
 async function claimOrCreateAccount({ uid, email, appId, inviteCode }) {
@@ -400,6 +440,11 @@ async function claimOrCreateAccount({ uid, email, appId, inviteCode }) {
 
     if (appId === APP_IDS.STRONG8K) {
         await setDoc(doc(db, 'strong8k_profiles', uid), normalizeStrong8kProfile({}, {}), { merge: true });
+        return;
+    }
+
+    if (appId === APP_IDS.PLAYOFF) {
+        await ensurePlayoffSelfServeAccess(uid, email);
     }
 }
 
@@ -449,6 +494,10 @@ async function migrateLegacyAccount({ oldUserId, newUserId, email, appId, invite
                 { merge: true }
             );
         }
+    }
+
+    if (appId === APP_IDS.PLAYOFF) {
+        await ensurePlayoffSelfServeAccess(newUserId, email);
     }
 }
 
@@ -506,6 +555,30 @@ function renderAppSwitcher(activeMemberships) {
         });
         container.appendChild(button);
     });
+
+    if (!activeMemberships[APP_IDS.PLAYOFF]) {
+        const joinCard = document.createElement('button');
+        joinCard.className = 'group rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-emerald-600 hover:shadow-xl';
+        joinCard.innerHTML = `
+            <div class="mb-4 flex items-center justify-between">
+                <span class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-700">Open Registration</span>
+                <i class="fa-solid fa-hockey-puck text-emerald-300 transition group-hover:text-emerald-700"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-950">${APP_DEFINITIONS[APP_IDS.PLAYOFF].authTitle}</h3>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Join the playoff pool now and start making picks without waiting for admin approval.</p>
+        `;
+        joinCard.addEventListener('click', async () => {
+            try {
+                await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
+                await hydrateSession(state.authUser);
+                window.location.hash = APP_DEFINITIONS[APP_IDS.PLAYOFF].route;
+                await openApp(APP_IDS.PLAYOFF);
+            } catch (error) {
+                handlePortalLoadError(error);
+            }
+        });
+        container.appendChild(joinCard);
+    }
 }
 
 function renderNoAccess(pendingMemberships) {
@@ -850,6 +923,75 @@ async function loadPlayoffApp() {
     state.playoff.draft = buildDraftFromEntries(currentPick?.entries || []);
     state.playoff.isLocked = isRoundLocked(currentRound);
     renderPlayoffApp();
+}
+
+async function findSelfServePlayoffPool() {
+    const activePoolSnap = await getDocs(query(collection(db, 'playoff_pools'), where('status', '==', 'active')));
+    const pools = activePoolSnap.docs
+        .map(item => normalizePlayoffPool({ id: item.id, ...item.data() }))
+        .sort((left, right) => (left.season_label || left.name || left.id).localeCompare(right.season_label || right.name || right.id));
+
+    return pools[0] || null;
+}
+
+async function ensurePlayoffSelfServeAccess(uid, email) {
+    const pool = await findSelfServePlayoffPool();
+    if (!pool) {
+        throw new Error('No active playoff pool is available for self-registration yet.');
+    }
+
+    const membershipRef = doc(db, 'users', uid, 'memberships', APP_IDS.PLAYOFF);
+    const membershipSnap = await getDoc(membershipRef);
+    const existingMembership = membershipSnap.exists()
+        ? { ...defaultMembership(APP_IDS.PLAYOFF), ...membershipSnap.data() }
+        : defaultMembership(APP_IDS.PLAYOFF, 'self-serve');
+    const nextPoolIds = Array.from(new Set([...(existingMembership.pool_ids || []), pool.id]));
+
+    await setDoc(doc(db, 'users', uid), {
+        email,
+        default_app_id: APP_IDS.PLAYOFF
+    }, { merge: true });
+
+    await setDoc(membershipRef, {
+        ...existingMembership,
+        app_id: APP_IDS.PLAYOFF,
+        role: existingMembership.role || 'member',
+        status: existingMembership.status === 'disabled' ? 'disabled' : 'active',
+        invite_code_used: existingMembership.invite_code_used || 'self-serve',
+        pool_ids: nextPoolIds
+    }, { merge: true });
+
+    if ((existingMembership.status || '') === 'disabled') {
+        throw new Error('This playoff account is disabled. Contact Elliot to restore access.');
+    }
+
+    const sharedUser = state.sharedUser || defaultSharedUser(email);
+    const memberRef = doc(db, 'playoff_pools', pool.id, 'members', uid);
+    const memberSnap = await getDoc(memberRef);
+    const existingMember = memberSnap.exists()
+        ? normalizePlayoffMember({ id: uid, ...memberSnap.data() }, pool)
+        : defaultPlayoffMember({
+            id: uid,
+            full_name: sharedUser.full_name,
+            email
+        }, pool);
+    await setDoc(memberRef, {
+        ...existingMember,
+        uid,
+        display_name: existingMember.display_name || sharedUser.full_name || email.split('@')[0],
+        email
+    }, { merge: true });
+
+    const paymentRef = doc(db, 'playoff_pools', pool.id, 'payments', uid);
+    const paymentSnap = await getDoc(paymentRef);
+    const existingPayment = paymentSnap.exists()
+        ? paymentSnap.data()
+        : defaultPaymentRecord(uid, pool);
+    await setDoc(paymentRef, {
+        ...existingPayment,
+        member_uid: uid,
+        amount_due: Number(existingPayment.amount_due ?? pool.entry_fee_default || 0)
+    }, { merge: true });
 }
 
 function renderPlayoffApp() {

@@ -40,6 +40,11 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/playoff_pools/$(poolId)/members/$(request.auth.uid));
     }
 
+    function isOpenPlayoffPool(poolId) {
+      return exists(/databases/$(database)/documents/playoff_pools/$(poolId))
+        && get(/databases/$(database)/documents/playoff_pools/$(poolId)).data.status == 'active';
+    }
+
     function isRoundRevealed(poolId, roundId) {
       return exists(/databases/$(database)/documents/playoff_pools/$(poolId)/rounds/$(roundId))
         && (
@@ -56,7 +61,10 @@ service cloud.firestore {
         && (request.resource.data.status == 'active' || request.resource.data.status == 'pending')
         && (
           (appId == 'strong8k' && request.resource.data.invite_code_used == 'FAMILY8K') ||
-          (appId == 'playoff-pool' && request.resource.data.invite_code_used == 'PLAYOFF2026')
+          (appId == 'playoff-pool' && (
+            request.resource.data.invite_code_used == 'PLAYOFF2026' ||
+            request.resource.data.invite_code_used == 'self-serve'
+          ))
         );
     }
 
@@ -92,17 +100,19 @@ service cloud.firestore {
     }
 
     match /playoff_pools/{poolId} {
-      allow read: if isPlatformAdmin() || isPoolMember(poolId);
+      allow read: if isPlatformAdmin() || isPoolMember(poolId) || (isSignedIn() && resource.data.status == 'active');
       allow write: if isPlatformAdmin();
 
       match /members/{userId} {
         allow read: if isPlatformAdmin() || isPoolMember(poolId);
-        allow write: if isPlatformAdmin();
+        allow create, update: if isPlatformAdmin() || (isOwner(userId) && currentUserHasApp('playoff-pool') && isOpenPlayoffPool(poolId));
+        allow delete: if isPlatformAdmin();
       }
 
       match /payments/{userId} {
         allow read: if isPlatformAdmin() || (isPoolMember(poolId) && isOwner(userId));
-        allow write: if isPlatformAdmin();
+        allow create, update: if isPlatformAdmin() || (isOwner(userId) && currentUserHasApp('playoff-pool') && isOpenPlayoffPool(poolId));
+        allow delete: if isPlatformAdmin();
       }
 
       match /rounds/{roundId} {
