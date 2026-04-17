@@ -16,8 +16,6 @@ import {
     buildPickDistribution,
     buildStandingsTrend,
     computeCollectedPot,
-    defaultPaymentRecord,
-    defaultPlayoffMember,
     isRoundLocked,
     isRoundRevealed,
     mergeFinalizedPayouts,
@@ -210,9 +208,27 @@ async function handleAuthStateChange(user) {
     try {
         setView('loading-view');
         await hydrateSession(user);
+        await ensureDefaultPlayoffAccess(user);
         await routeAuthenticatedUser();
     } catch (error) {
         handlePortalLoadError(error);
+    }
+}
+
+async function ensureDefaultPlayoffAccess(user) {
+    if (!user || !canSelfServePlayoff()) {
+        return;
+    }
+
+    if (state.accessibleApps[APP_IDS.PLAYOFF]?.status === 'active') {
+        return;
+    }
+
+    try {
+        await ensurePlayoffSelfServeAccess(user.uid, user.email);
+        await hydrateSession(user);
+    } catch (error) {
+        console.warn('Playoff self-serve bootstrap skipped during session hydration.', error);
     }
 }
 
@@ -294,6 +310,15 @@ function handlePortalLoadError(error) {
     if (state.authUser?.email) {
         byId('no-access-email').textContent = state.authUser.email;
     }
+
+    const activeMemberships = getActiveMemberships();
+    if (state.authUser && (Object.keys(activeMemberships).length || canSelfServePlayoff())) {
+        renderAppSwitcher(activeMemberships);
+        setView('app-switcher-view');
+        showToast(error?.message || 'Portal load failed', 'error');
+        return;
+    }
+
     byId('no-access-message').textContent = 'We could not load this portal view. Try signing out and back in, or contact Elliot if it keeps happening.';
     setView('no-access-view');
     showToast(error?.message || 'Portal load failed', 'error');
@@ -430,9 +455,14 @@ function updateAuthBlurb() {
 }
 
 async function claimOrCreateAccount({ uid, email, appId, inviteCode }) {
-    const q = query(collection(db, 'users'), where('email', '==', email));
-    const results = await getDocs(q);
-    const existingDoc = results.docs.find(item => item.id !== uid) || null;
+    let existingDoc = null;
+    try {
+        const q = query(collection(db, 'users'), where('email', '==', email));
+        const results = await getDocs(q);
+        existingDoc = results.docs.find(item => item.id !== uid) || null;
+    } catch (error) {
+        console.warn('Legacy account lookup skipped during registration bootstrap.', error);
+    }
 
     if (existingDoc) {
         await migrateLegacyAccount({
@@ -839,6 +869,11 @@ function openPurchaseModal(name, price) {
 }
 
 async function loadPlayoffApp() {
+    if (canSelfServePlayoff()) {
+        await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
+        await hydrateSession(state.authUser);
+    }
+
     const membership = state.accessibleApps[APP_IDS.PLAYOFF];
     state.playoff.membership = membership;
     const pool = await resolvePlayoffPool(membership);
@@ -1001,30 +1036,17 @@ async function ensurePlayoffSelfServeAccess(uid, email) {
 
     const sharedUser = state.sharedUser || defaultSharedUser(email);
     const memberRef = doc(db, 'playoff_pools', pool.id, 'members', uid);
-    const memberSnap = await getDoc(memberRef);
-    const existingMember = memberSnap.exists()
-        ? normalizePlayoffMember({ id: uid, ...memberSnap.data() }, pool)
-        : defaultPlayoffMember({
-            id: uid,
-            full_name: sharedUser.full_name,
-            email
-        }, pool);
     await setDoc(memberRef, {
-        ...existingMember,
         uid,
-        display_name: existingMember.display_name || sharedUser.full_name || email.split('@')[0],
-        email
+        email,
+        display_name: sharedUser.full_name || email.split('@')[0] || 'Pool Member',
+        amount_due: Number(pool.entry_fee_default ?? 0) || 0
     }, { merge: true });
 
     const paymentRef = doc(db, 'playoff_pools', pool.id, 'payments', uid);
-    const paymentSnap = await getDoc(paymentRef);
-    const existingPayment = paymentSnap.exists()
-        ? paymentSnap.data()
-        : defaultPaymentRecord(uid, pool);
     await setDoc(paymentRef, {
-        ...existingPayment,
         member_uid: uid,
-        amount_due: Number(existingPayment.amount_due ?? pool.entry_fee_default ?? 0)
+        amount_due: Number(pool.entry_fee_default ?? 0) || 0
     }, { merge: true });
 }
 

@@ -112,13 +112,13 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
 
       match /members/{userId} {
-        allow read: if isPlatformAdmin() || isPoolMember(poolId);
+        allow read: if isPlatformAdmin() || isPoolMember(poolId) || (isOwner(userId) && currentUserHasApp('playoff-pool') && isOpenPlayoffPool(poolId));
         allow create, update: if isPlatformAdmin() || (isOwner(userId) && currentUserHasApp('playoff-pool') && isOpenPlayoffPool(poolId));
         allow delete: if isPlatformAdmin();
       }
 
       match /payments/{userId} {
-        allow read: if isPlatformAdmin() || (isPoolMember(poolId) && isOwner(userId));
+        allow read: if isPlatformAdmin() || (isPoolMember(poolId) && isOwner(userId)) || (isOwner(userId) && currentUserHasApp('playoff-pool') && isOpenPlayoffPool(poolId));
         allow create, update: if isPlatformAdmin() || (isOwner(userId) && currentUserHasApp('playoff-pool') && isOpenPlayoffPool(poolId));
         allow delete: if isPlatformAdmin();
       }
