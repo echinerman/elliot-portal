@@ -133,6 +133,10 @@ function currentHashApp() {
     return match ? decodeURIComponent(match[1]) : null;
 }
 
+function isAppsHomeRoute() {
+    return window.location.hash === '#/apps';
+}
+
 function resolveInviteCode(code) {
     const normalized = String(code || '').trim().toUpperCase();
     return Object.entries(CONFIG.INVITE_CODES).find(([, inviteCode]) => inviteCode.toUpperCase() === normalized)?.[0] || null;
@@ -211,6 +215,7 @@ async function routeAuthenticatedUser() {
     const activeMemberships = getActiveMemberships();
     const pendingMemberships = getPendingMemberships();
     const requestedAppId = currentHashApp();
+    const wantsAppSwitcher = isAppsHomeRoute();
 
     if (requestedAppId && activeMemberships[requestedAppId]) {
         await openApp(requestedAppId);
@@ -218,6 +223,12 @@ async function routeAuthenticatedUser() {
     }
 
     const appIds = Object.keys(activeMemberships);
+    if (wantsAppSwitcher && appIds.length) {
+        renderAppSwitcher(activeMemberships);
+        setView('app-switcher-view');
+        return;
+    }
+
     if (appIds.length === 1) {
         const appId = appIds[0];
         window.location.hash = APP_DEFINITIONS[appId].route;
@@ -444,15 +455,23 @@ async function migrateLegacyAccount({ oldUserId, newUserId, email, appId, invite
 function bindSharedActions() {
     byId('switcher-signout-btn').addEventListener('click', () => signOut(auth));
     byId('no-access-signout-btn').addEventListener('click', () => signOut(auth));
-    byId('no-access-home-btn').addEventListener('click', () => {
+    byId('no-access-home-btn').addEventListener('click', async () => {
         window.location.hash = '#/apps';
-        routeAuthenticatedUser();
+        try {
+            await routeAuthenticatedUser();
+        } catch (error) {
+            handlePortalLoadError(error);
+        }
     });
 
     document.querySelectorAll('[data-action="app-home"]').forEach(button => {
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
             window.location.hash = '#/apps';
-            routeAuthenticatedUser();
+            try {
+                await routeAuthenticatedUser();
+            } catch (error) {
+                handlePortalLoadError(error);
+            }
         });
     });
 

@@ -453,6 +453,7 @@ function renderPoolMembers() {
     tbody.querySelectorAll('[data-edit-pool-member]').forEach(button => {
         button.addEventListener('click', () => {
             state.selectedMemberId = button.dataset.editPoolMember;
+            renderPoolMembers();
             renderSelectedPoolMember();
         });
     });
@@ -861,9 +862,17 @@ function bindPlayoffForms() {
     byId('series-form').addEventListener('submit', saveSeries);
     byId('round-number-input').addEventListener('input', syncRoundScoringDefaults);
     byId('pool-member-form').addEventListener('submit', savePoolMember);
-    byId('clear-pool-member-btn').addEventListener('click', clearPoolMemberForm);
+    byId('clear-pool-member-btn').addEventListener('click', () => {
+        state.selectedMemberId = '';
+        clearPoolMemberForm();
+        renderPoolMembers();
+        renderSelectedPoolMember();
+    });
     byId('pick-override-form').addEventListener('submit', savePickOverrides);
-    byId('reload-pick-overrides-btn').addEventListener('click', renderSelectedPoolMember);
+    byId('reload-pick-overrides-btn').addEventListener('click', async () => {
+        await loadSelectedPoolData();
+        renderAdmin();
+    });
     byId('rescore-round-btn').addEventListener('click', rescoreSelectedRound);
 }
 
