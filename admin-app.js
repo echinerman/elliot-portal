@@ -579,7 +579,7 @@ function openUserModal(userId = '') {
     byId('member-playoff-enabled').checked = Boolean(memberships[APP_IDS.PLAYOFF]);
     byId('member-playoff-role').value = memberships[APP_IDS.PLAYOFF]?.role || 'member';
     byId('member-playoff-status').value = memberships[APP_IDS.PLAYOFF]?.status || 'active';
-    byId('member-playoff-pools').value = (memberships[APP_IDS.PLAYOFF]?.pool_ids || []).join(', ');
+    byId('member-playoff-pool-note').textContent = buildPlayoffPoolAssignmentNote();
 
     byId('strong8k-domain').value = profile.domain_8k || '';
     byId('strong8k-backup-domain').value = profile.domain_8k_backup || '';
@@ -743,7 +743,7 @@ async function saveUser(event) {
         created_at: previousMemberships[APP_IDS.STRONG8K]?.created_at || new Date().toISOString()
     });
 
-    const playoffPoolIds = parseDelimitedList(byId('member-playoff-pools').value);
+    const playoffPoolIds = byId('member-playoff-enabled').checked ? resolveSinglePoolIds() : [];
     await syncMembership(userId, APP_IDS.PLAYOFF, byId('member-playoff-enabled').checked, {
         app_id: APP_IDS.PLAYOFF,
         role: byId('member-playoff-role').value,
@@ -1072,6 +1072,28 @@ async function applyOfficialRoundOneSeries(poolId, seasonYear) {
             notes: existingSeries.notes || seededSeries.notes
         }, { merge: true });
     }
+}
+
+function resolveSinglePoolIds() {
+    const preferredPool = state.pools.find(pool => pool.status === 'active')
+        || state.pools.find(pool => pool.id === state.selectedPoolId)
+        || state.pools[0]
+        || null;
+
+    return preferredPool ? [preferredPool.id] : [];
+}
+
+function buildPlayoffPoolAssignmentNote() {
+    const preferredPool = state.pools.find(pool => pool.status === 'active')
+        || state.pools.find(pool => pool.id === state.selectedPoolId)
+        || state.pools[0]
+        || null;
+
+    if (!preferredPool) {
+        return 'No playoff pool exists yet. Seed playoff defaults first, then enabling this membership will attach the user automatically.';
+    }
+
+    return `This user will be attached automatically to "${preferredPool.name || preferredPool.id}" (${preferredPool.season_label || 'current season'}).`;
 }
 
 function loadPoolIntoForm(poolId) {

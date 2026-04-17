@@ -245,6 +245,13 @@ async function routeAuthenticatedUser() {
     const requestedAppId = currentHashApp();
     const wantsAppSwitcher = isAppsHomeRoute();
 
+    if (requestedAppId === APP_IDS.PLAYOFF && !activeMemberships[APP_IDS.PLAYOFF] && canSelfServePlayoff()) {
+        await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
+        await hydrateSession(state.authUser);
+        await openApp(APP_IDS.PLAYOFF);
+        return;
+    }
+
     if (requestedAppId && activeMemberships[requestedAppId]) {
         await openApp(requestedAppId);
         return;
@@ -265,6 +272,12 @@ async function routeAuthenticatedUser() {
     }
 
     if (appIds.length > 1) {
+        renderAppSwitcher(activeMemberships);
+        setView('app-switcher-view');
+        return;
+    }
+
+    if (canSelfServePlayoff()) {
         renderAppSwitcher(activeMemberships);
         setView('app-switcher-view');
         return;
@@ -294,6 +307,10 @@ async function openApp(appId) {
     }
 
     if (appId === APP_IDS.PLAYOFF) {
+        if (!state.accessibleApps[APP_IDS.PLAYOFF] && canSelfServePlayoff()) {
+            await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
+            await hydrateSession(state.authUser);
+        }
         await loadPlayoffApp();
         setView('playoff-view');
     }
@@ -562,11 +579,11 @@ function renderAppSwitcher(activeMemberships) {
         joinCard.className = 'group rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-emerald-600 hover:shadow-xl';
         joinCard.innerHTML = `
             <div class="mb-4 flex items-center justify-between">
-                <span class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-700">Open Registration</span>
+                <span class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-700">Open Pool</span>
                 <i class="fa-solid fa-hockey-puck text-emerald-300 transition group-hover:text-emerald-700"></i>
             </div>
             <h3 class="text-2xl font-bold text-slate-950">${APP_DEFINITIONS[APP_IDS.PLAYOFF].authTitle}</h3>
-            <p class="mt-3 text-sm leading-6 text-slate-600">Join the playoff pool now and start making picks without waiting for admin approval.</p>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Enter the only active playoff pool, get the payment and deadline details, and start making picks right away.</p>
         `;
         joinCard.addEventListener('click', async () => {
             try {
@@ -586,7 +603,7 @@ function renderNoAccess(pendingMemberships) {
     const pendingApps = Object.keys(pendingMemberships);
     byId('no-access-message').textContent = pendingApps.length
         ? `Your ${pendingApps.map(appId => APP_DEFINITIONS[appId].shortLabel).join(' / ')} access is not active yet.`
-        : 'This account does not have an active app membership yet.';
+        : 'This account does not have an active app membership yet. If you want in on the playoff pool, open All Apps and enter the live pool there.';
 }
 
 async function loadStrong8kApp() {
@@ -830,23 +847,14 @@ function openPurchaseModal(name, price) {
 async function loadPlayoffApp() {
     const membership = state.accessibleApps[APP_IDS.PLAYOFF];
     state.playoff.membership = membership;
-    const poolIds = membership?.pool_ids || [];
-
-    if (!poolIds.length) {
+    const pool = await resolvePlayoffPool(membership);
+    if (!pool) {
         state.playoff.pool = null;
         renderPlayoffApp();
         return;
     }
 
-    const poolId = poolIds[0];
-    const poolSnap = await getDoc(doc(db, 'playoff_pools', poolId));
-    if (!poolSnap.exists()) {
-        state.playoff.pool = null;
-        renderPlayoffApp();
-        return;
-    }
-
-    const pool = normalizePlayoffPool({ id: poolId, ...poolSnap.data() });
+    const poolId = pool.id;
     const roundsSnap = await getDocs(query(collection(db, 'playoff_pools', poolId, 'rounds'), orderBy('sort_order')));
     const rounds = roundsSnap.docs.map(item => normalizePlayoffRound({ id: item.id, ...item.data() }));
     const currentRound = pickCurrentRound(rounds);
@@ -856,7 +864,15 @@ async function loadPlayoffApp() {
             .docs
             .map(item => normalizePlayoffSeries({ id: item.id, ...item.data() }))
         : [];
-    const memberSnap = await getDoc(doc(db, 'playoff_pools', poolId, 'members', state.authUser.uid));
+    let memberSnap = await getDoc(doc(db, 'playoff_pools', poolId, 'members', state.authUser.uid));
+    let paymentSnap = await getDoc(doc(db, 'playoff_pools', poolId, 'payments', state.authUser.uid));
+
+    if (!memberSnap.exists() || !paymentSnap.exists()) {
+        await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
+        memberSnap = await getDoc(doc(db, 'playoff_pools', poolId, 'members', state.authUser.uid));
+        paymentSnap = await getDoc(doc(db, 'playoff_pools', poolId, 'payments', state.authUser.uid));
+    }
+
     const rawMember = memberSnap.exists() ? { id: memberSnap.id, ...memberSnap.data() } : null;
     const member = normalizePlayoffMember(rawMember || {
         uid: state.authUser.uid,
@@ -864,7 +880,6 @@ async function loadPlayoffApp() {
         email: state.authUser.email
     }, pool);
 
-    const paymentSnap = await getDoc(doc(db, 'playoff_pools', poolId, 'payments', state.authUser.uid));
     const payment = normalizePaymentRecord(paymentSnap.exists() ? paymentSnap.data() : {}, member, pool);
 
     const currentPickSnap = currentRoundId
@@ -935,6 +950,25 @@ async function findSelfServePlayoffPool() {
     return pools[0] || null;
 }
 
+async function resolvePlayoffPool(membership) {
+    const activePool = await findSelfServePlayoffPool();
+    if (activePool) {
+        return activePool;
+    }
+
+    const legacyPoolId = Array.isArray(membership?.pool_ids) ? membership.pool_ids.find(Boolean) : '';
+    if (!legacyPoolId) {
+        return null;
+    }
+
+    const legacyPoolSnap = await getDoc(doc(db, 'playoff_pools', legacyPoolId));
+    if (!legacyPoolSnap.exists()) {
+        return null;
+    }
+
+    return normalizePlayoffPool({ id: legacyPoolId, ...legacyPoolSnap.data() });
+}
+
 async function ensurePlayoffSelfServeAccess(uid, email) {
     const pool = await findSelfServePlayoffPool();
     if (!pool) {
@@ -1001,8 +1035,13 @@ function renderPlayoffApp() {
     byId('playoff-brand-name').textContent = CONFIG.PLAYOFF_BRAND_NAME;
 
     if (!state.playoff.pool) {
+        const emptyState = byId('playoff-empty-state');
+        const emptyMessage = emptyState.querySelector('p:last-of-type');
         byId('playoff-empty-state').classList.remove('hidden');
         byId('playoff-main-state').classList.add('hidden');
+        if (emptyMessage) {
+            emptyMessage.textContent = 'Once the live pool is seeded and marked active, this page will automatically add you in and open your picks, payment instructions, and standings.';
+        }
         return;
     }
 
@@ -1015,16 +1054,21 @@ function renderPlayoffApp() {
     byId('pool-description').textContent = state.playoff.pool.description || 'Round-by-round NHL playoff picks.';
     byId('current-round-name').textContent = state.playoff.currentRound?.name || 'No round configured';
     byId('current-round-deadline').textContent = state.playoff.currentRound?.lock_at
-        ? `Lock ${formatDate(state.playoff.currentRound.lock_at)}`
+        ? `Lock ${formatDateTime(state.playoff.currentRound.lock_at)}`
         : state.playoff.currentRound?.pick_deadline
-            ? `Deadline ${formatDate(state.playoff.currentRound.pick_deadline)}`
-        : 'Deadline not set';
+            ? `Deadline ${formatDateTime(state.playoff.currentRound.pick_deadline)}`
+            : 'Deadline not set';
     byId('playoff-points-total').textContent = String(state.playoff.member?.points_total || 0);
     byId('playoff-round-points').textContent = String(state.playoff.member?.round_points || 0);
     byId('playoff-team-name').textContent = state.playoff.member?.team_name || 'Not set yet';
     byId('playoff-payment-status').textContent = prettifyStatus(state.playoff.payment?.status || state.playoff.member?.payment_status || 'unpaid');
     byId('playoff-amount-paid').textContent = `${formatCurrency(state.playoff.payment?.amount_paid || state.playoff.member?.amount_paid || 0)} / ${formatCurrency(state.playoff.payment?.amount_due || state.playoff.member?.amount_due || 0)}`;
     byId('playoff-payout-status').textContent = buildPayoutStatusText();
+    byId('playoff-guide-steps').innerHTML = buildPlayoffGuideSteps();
+    byId('playoff-payment-instructions').textContent = buildPaymentInstructions();
+    byId('playoff-payment-link').href = buildPlayoffPaymentLink();
+    byId('playoff-deadline-detail').textContent = buildDeadlineInstructions();
+    byId('playoff-guide-note').textContent = buildPlayoffGuideNote();
 
     renderSeriesCards();
     renderStandings();
@@ -1118,7 +1162,7 @@ function renderSeriesCards() {
     submitButton.disabled = state.playoff.isLocked;
     roundMessage.textContent = state.playoff.isLocked
         ? 'This round is locked. Your latest saved picks are shown below.'
-        : 'Save your picks before the round deadline.';
+        : 'Click a team logo, choose 4 to 7 games, and save before the deadline.';
     roundSummary.innerHTML = `
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -1131,6 +1175,54 @@ function renderSeriesCards() {
             </div>
         </div>
     `;
+}
+
+function buildPlayoffGuideSteps() {
+    const deadlineValue = state.playoff.currentRound?.lock_at || state.playoff.currentRound?.pick_deadline || '';
+    const deadlineLabel = deadlineValue ? formatDateTime(deadlineValue) : 'the posted deadline';
+    return `
+        <div class="space-y-3 text-sm leading-6 text-slate-200">
+            <p><span class="font-bold text-white">1.</span> Click one logo in every series to choose your winner.</p>
+            <p><span class="font-bold text-white">2.</span> Choose the exact series length from 4 to 7 games.</p>
+            <p><span class="font-bold text-white">3.</span> Save everything before ${escapeHtml(deadlineLabel)}.</p>
+        </div>
+    `;
+}
+
+function buildPaymentInstructions() {
+    const dueAmount = state.playoff.payment?.amount_due || state.playoff.member?.amount_due || state.playoff.pool?.entry_fee_default || CONFIG.PLAYOFF_DEFAULT_ENTRY_FEE;
+    const paidAmount = state.playoff.payment?.amount_paid || state.playoff.member?.amount_paid || 0;
+    const remaining = Math.max(0, Number(dueAmount) - Number(paidAmount));
+    const balanceText = remaining > 0 ? `${formatCurrency(remaining)} remaining.` : 'You are fully paid.';
+    return `Send your entry by e-transfer to ${CONFIG.PAYMENT_EMAIL}. Current entry fee: ${formatCurrency(dueAmount)}. ${balanceText}`;
+}
+
+function buildPlayoffPaymentLink() {
+    const dueAmount = state.playoff.payment?.amount_due || state.playoff.member?.amount_due || state.playoff.pool?.entry_fee_default || CONFIG.PLAYOFF_DEFAULT_ENTRY_FEE;
+    const subject = encodeURIComponent(`Playoff Pool Payment (${state.authUser.email})`);
+    const body = encodeURIComponent(`Hi Elliot,\n\nI have sent my playoff pool entry payment of ${formatCurrency(dueAmount)}.\n\nAccount email: ${state.authUser.email}\nTeam name: ${state.playoff.member?.team_name || ''}\n\nThanks!`);
+    return `mailto:${CONFIG.PAYMENT_EMAIL}?subject=${subject}&body=${body}`;
+}
+
+function buildDeadlineInstructions() {
+    const deadlineValue = state.playoff.currentRound?.lock_at || state.playoff.currentRound?.pick_deadline || '';
+    if (!deadlineValue) {
+        return 'The next pick deadline has not been posted yet.';
+    }
+
+    const revealLine = isRoundRevealed(state.playoff.currentRound, state.playoff.pool)
+        ? 'Picks for this round are already revealed.'
+        : 'Everyone’s picks stay hidden until the round locks.';
+    return `Submit your ${state.playoff.currentRound?.name || 'current round'} picks by ${formatDateTime(deadlineValue)}. ${revealLine}`;
+}
+
+function buildPlayoffGuideNote() {
+    const poolDescription = state.playoff.pool?.description?.trim();
+    if (poolDescription) {
+        return poolDescription;
+    }
+
+    return 'You are automatically added to the live pool as soon as you open it. Set your team name, pay in, and keep your picks saved before lock.';
 }
 
 function buildWinnerOptionMarkup(series, side, selectedTeamId) {
@@ -1399,6 +1491,22 @@ function prettifyStatus(value) {
 
 function formatCurrency(value) {
     return `${CONFIG.CURRENCY_SYMBOL}${Number(value || 0).toFixed(2)}`;
+}
+
+function formatDateTime(value) {
+    if (!value) {
+        return 'TBD';
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return formatDate(value);
+    }
+
+    return new Intl.DateTimeFormat('en-CA', {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+    }).format(parsed);
 }
 
 function escapeAttribute(value) {

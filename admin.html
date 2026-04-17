@@ -518,7 +518,7 @@
                         <div class="flex items-center justify-between gap-4">
                             <div>
                                 <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Playoff Membership</p>
-                                <h3 class="mt-2 text-xl font-black text-slate-950">Pool access + assignment</h3>
+                                <h3 class="mt-2 text-xl font-black text-slate-950">Single pool access</h3>
                             </div>
                             <label class="inline-flex items-center gap-3 text-sm font-bold text-slate-700">
                                 <input id="member-playoff-enabled" type="checkbox" class="h-4 w-4 rounded border-slate-300">
@@ -537,8 +537,10 @@
                                     <option value="disabled">Disabled</option>
                                 </select>
                             </div>
-                            <textarea id="member-playoff-pools" rows="6" placeholder="Comma-separated pool IDs. Example: family-2026, office-2026" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900"></textarea>
-                            <p class="text-sm leading-6 text-slate-500">Pool IDs control which playoff pool app(s) this user can read and submit picks into.</p>
+                            <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4">
+                                <p class="text-xs font-bold uppercase tracking-[0.22em] text-slate-400">Pool Assignment</p>
+                                <p id="member-playoff-pool-note" class="mt-2 text-sm leading-6 text-slate-600">This user will be attached to the single active playoff pool automatically.</p>
+                            </div>
                         </div>
                     </article>
                 </section>
@@ -554,6 +556,6 @@
         </div>
     </div>
 
-    <script type="module" src="./admin-app.js?v=20260416-bracket-ui"></script>
+    <script type="module" src="./admin-app.js?v=20260416-single-pool"></script>
 </body>
 </html>
