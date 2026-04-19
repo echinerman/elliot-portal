@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260417-playoff-brand-compact';
+import { CONFIG } from './config.js?v=20260419-sidebar';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260417-playoff-brand-compact';
+} from './app-model.js?v=20260419-sidebar';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -29,7 +29,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260417-playoff-brand-compact';
+} from './playoff-logic.js?v=20260419-sidebar';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -94,9 +94,23 @@ const state = {
         teamNameDraft: '',
         draft: {},
         scenarioDraft: {},
-        isLocked: false
+        isLocked: false,
+        visibleSections: null
     }
 };
+
+const PLAYOFF_SECTIONS = [
+    { key: 'standings',  label: 'Standings',      icon: '🏆', sectionId: 'section-standings'  },
+    { key: 'picksBoard', label: 'Picks Board',     icon: '📋', sectionId: 'picks-board-section' },
+    { key: 'myPicks',    label: 'My Picks',        icon: '🎯', sectionId: 'section-my-picks'   },
+    { key: 'overview',   label: 'Pool Overview',   icon: '📊', sectionId: 'section-overview'   },
+    { key: 'whatif',     label: 'What-If Lab',     icon: '🔬', sectionId: 'section-whatif'     },
+    { key: 'rules',      label: 'Pool Rules',      icon: '📜', sectionId: 'section-rules'      },
+    { key: 'payouts',    label: 'Payout & Status', icon: '💰', sectionId: 'section-payouts'    },
+    { key: 'trends',     label: 'Trends',          icon: '📈', sectionId: 'section-trends'     },
+];
+const SECTIONS_DEFAULT_ON = new Set(['standings', 'picksBoard']);
+const LS_VISIBLE_KEY = 'playoff_visible_sections';
 
 document.addEventListener('DOMContentLoaded', () => {
     bindAuthForms();
@@ -194,7 +208,8 @@ function resetSessionState() {
         teamNameDraft: '',
         draft: {},
         scenarioDraft: {},
-        isLocked: false
+        isLocked: false,
+        visibleSections: null
     };
 }
 
@@ -1106,6 +1121,9 @@ function renderPlayoffApp() {
     renderPreviousPicks();
     renderScenarioLab();
     renderPicksBoard();
+    initSectionVisibility();
+    renderSidebar();
+    applyVisibleSections();
 }
 
 function renderSeriesCards() {
@@ -2275,6 +2293,212 @@ function renderPicksBoard() {
         </div>`;
 }
 
+// ── Sidebar: section visibility ──────────────────────────────────
+
+function initSectionVisibility() {
+    if (state.playoff.visibleSections) return; // already initialised this session
+    try {
+        const saved = JSON.parse(localStorage.getItem(LS_VISIBLE_KEY));
+        if (saved && Array.isArray(saved)) {
+            state.playoff.visibleSections = new Set(saved);
+            return;
+        }
+    } catch {}
+    state.playoff.visibleSections = new Set(SECTIONS_DEFAULT_ON);
+}
+
+function applyVisibleSections() {
+    PLAYOFF_SECTIONS.forEach(({ key, sectionId }) => {
+        byId(sectionId)?.classList.toggle('hidden', !state.playoff.visibleSections.has(key));
+    });
+    // Round recap section is controlled independently via renderRoundRecap
+}
+
+function toggleSection(key) {
+    const vis = state.playoff.visibleSections;
+    if (vis.has(key)) vis.delete(key); else vis.add(key);
+    localStorage.setItem(LS_VISIBLE_KEY, JSON.stringify([...vis]));
+    applyVisibleSections();
+    renderSidebarSections();
+}
+
+function renderSidebar() {
+    const pool = state.playoff.pool;
+    const poolName = pool?.name || CONFIG.PLAYOFF_BRAND_NAME || '';
+    const seasonLabel = pool?.season_label || '';
+    byId('sidebar-pool-name').textContent = poolName;
+    byId('sidebar-season-label').textContent = seasonLabel;
+    byId('sidebar-pool-name-mobile').textContent = poolName;
+    renderSidebarSections();
+    renderSidebarRounds();
+}
+
+function renderSidebarSections() {
+    const vis = state.playoff.visibleSections;
+    byId('playoff-sidebar-sections').innerHTML = PLAYOFF_SECTIONS.map(({ key, label, icon }) => {
+        const on = vis.has(key);
+        return `<button data-toggle-section="${escapeAttribute(key)}"
+            class="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm text-left transition
+                   ${on ? 'bg-white/10 text-white font-semibold' : 'text-slate-400 hover:bg-white/5 hover:text-white'}">
+            <span class="text-base leading-none w-5 shrink-0">${icon}</span>
+            <span class="flex-1 truncate">${escapeHtml(label)}</span>
+            <span class="text-[10px] font-bold tabular-nums shrink-0 ${on ? 'text-emerald-400' : 'text-slate-600'}">${on ? 'ON' : 'OFF'}</span>
+        </button>`;
+    }).join('');
+}
+
+function renderSidebarRounds() {
+    const rounds = state.playoff.rounds || [];
+    const currentRoundId = state.playoff.currentRound?.id;
+    const now = Date.now();
+
+    byId('playoff-sidebar-rounds').innerHTML = rounds.map(round => {
+        const lockMs = round.lock_at?.seconds ? round.lock_at.seconds * 1000 : 0;
+        const isCurrent = round.id === currentRoundId;
+        const isFuture = !isCurrent && lockMs > now;
+        const icon = isFuture ? '🕐' : isCurrent ? '▶' : '✓';
+        const cls = isFuture
+            ? 'text-slate-600 cursor-default opacity-50'
+            : isCurrent
+                ? 'text-fuchsia-300 font-semibold bg-fuchsia-400/10 hover:bg-fuchsia-400/20'
+                : 'text-slate-300 hover:bg-white/5 hover:text-white cursor-pointer';
+
+        return `<button ${isFuture ? 'disabled' : `data-round-recap="${escapeAttribute(round.id)}"`}
+            class="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm transition ${cls}">
+            <span class="text-xs w-4 shrink-0">${icon}</span>
+            <span class="truncate">${escapeHtml(round.name || round.id)}</span>
+        </button>`;
+    }).join('') || '<p class="px-3 text-xs text-slate-600">No rounds yet</p>';
+}
+
+async function renderRoundRecap(roundId) {
+    const round = (state.playoff.rounds || []).find(r => r.id === roundId);
+    if (!round) return;
+
+    const section = byId('section-round-recap');
+    section.classList.remove('hidden');
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const container = byId('round-recap-container');
+    container.innerHTML = `<p class="text-sm text-slate-400 animate-pulse py-4">Loading ${escapeHtml(round.name || round.id)} recap…</p>`;
+
+    const poolId = state.playoff.poolId;
+    const isCurrent = round.id === state.playoff.currentRound?.id;
+
+    const [picksSnap, seriesSnap] = await Promise.all([
+        getDocs(collection(db, 'playoff_pools', poolId, 'rounds', roundId, 'picks')),
+        isCurrent
+            ? Promise.resolve(null)
+            : getDocs(collection(db, 'playoff_pools', poolId, 'rounds', roundId, 'series')),
+    ]);
+
+    const allPickDocs = picksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const series = seriesSnap
+        ? seriesSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        : state.playoff.series;
+
+    container.innerHTML = buildRoundRecapHTML(round, series, allPickDocs);
+}
+
+function buildRoundRecapHTML(round, series, pickDocs) {
+    const standings = state.playoff.standings;
+    if (!series.length || !pickDocs.length) {
+        return `<div>
+            <p class="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">Round Recap</p>
+            <h2 class="mt-2 text-3xl font-black text-white">${escapeHtml(round.name || round.id)}</h2>
+            <p class="mt-4 text-sm text-slate-400">No pick data is available for this round yet.</p>
+        </div>`;
+    }
+
+    const lockDate = round.lock_at?.seconds ? formatDateTime({ seconds: round.lock_at.seconds, nanoseconds: 0 }) : '';
+
+    const picksByUid = {};
+    pickDocs.forEach(doc => {
+        const map = {};
+        (doc.entries || []).forEach(e => { map[e.series_id] = e; });
+        picksByUid[doc.id] = map;
+        picksByUid[doc.id]._roundTotal = doc.round_total || 0;
+    });
+
+    const seriesById = Object.fromEntries(series.map(s => [s.id, s]));
+
+    const headerCells = series.map(s =>
+        `<th class="min-w-[6rem] px-3 py-3 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 leading-tight">${escapeHtml(s.matchup_label || (s.home_team_id + ' vs ' + s.away_team_id))}</p>
+        </th>`
+    ).join('');
+
+    // Build rows from standings order; include any pick doc UIDs not in standings
+    const memberOrder = standings.length ? standings : pickDocs.map(d => ({ id: d.id }));
+    const rows = memberOrder.map((member, index) => {
+        const isCurrentUser = member.id === state.authUser?.uid;
+        const rowClass = isCurrentUser
+            ? 'border-b border-emerald-300/30 bg-emerald-400/10'
+            : 'border-b border-white/10 hover:bg-white/5';
+        const entryMap = picksByUid[member.id] || {};
+        const roundPts = entryMap._roundTotal || 0;
+
+        const cells = series.map(s => {
+            const entry = entryMap[s.id];
+            if (!entry || !entry.winner_team_id)
+                return `<td class="px-3 py-3 text-center"><span class="text-xs text-slate-500">—</span></td>`;
+
+            const teamId = entry.winner_team_id;
+            const isHome = teamId === s.home_team_id;
+            const logoUrl = isHome ? (s.home_team_logo_dark || s.home_team_logo_light || '') : (s.away_team_logo_dark || s.away_team_logo_light || '');
+            const primaryColor = isHome ? (s.home_team_primary_color || '#0F172A') : (s.away_team_primary_color || '#0F172A');
+            const games = entry.games || '?';
+            const resultKnown = Boolean(seriesById[s.id]?.result_winner_team_id);
+            const correct = resultKnown && teamId === seriesById[s.id].result_winner_team_id;
+            const incorrect = resultKnown && !correct;
+            const ringClass = correct ? 'ring-2 ring-emerald-400/60' : incorrect ? 'ring-2 ring-rose-400/40' : '';
+            const bgTint = correct ? 'bg-emerald-400/10' : incorrect ? 'bg-rose-400/10' : '';
+
+            return `<td class="px-3 py-3 text-center">
+                <div class="inline-flex flex-col items-center gap-1 ${bgTint} rounded-[0.75rem] px-2 py-1.5 ${ringClass}">
+                    <div class="h-8 w-8 flex items-center justify-center rounded-lg border border-black/10 p-1" style="background:${escapeAttribute(primaryColor)};">
+                        <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamId)}" class="h-full w-full object-contain" loading="lazy">
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-200">${escapeHtml(String(games))}</span>
+                </div>
+            </td>`;
+        }).join('');
+
+        return `<tr class="${rowClass} text-sm transition">
+            <td class="sticky left-0 bg-slate-950 px-4 py-3 font-semibold text-white z-10 whitespace-nowrap">
+                <span class="mr-2 text-[11px] font-bold text-slate-400">${index + 1}</span>${escapeHtml(member.team_name || member.display_name || member.email || member.id)}
+            </td>
+            <td class="px-3 py-3 text-center text-slate-300 font-semibold">${roundPts}</td>
+            ${cells}
+        </tr>`;
+    }).join('');
+
+    return `<div>
+        <p class="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">Round Recap</p>
+        <div class="mt-2 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+            <h2 class="text-3xl font-black text-white">${escapeHtml(round.name || round.id)}</h2>
+            ${lockDate ? `<p class="text-sm text-slate-400">Locked ${lockDate}</p>` : ''}
+        </div>
+    </div>
+    <div class="mt-6 overflow-x-auto rounded-[1.5rem] border border-white/10">
+        <table class="w-full text-left min-w-max">
+            <thead class="bg-slate-950/70 text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                <tr>
+                    <th class="sticky left-0 bg-slate-950/90 px-4 py-3 z-10">Member</th>
+                    <th class="px-3 py-3 text-center min-w-[3.5rem]">Pts</th>
+                    ${headerCells}
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>
+    <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
+        <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full ring-2 ring-emerald-400/60 bg-emerald-400/10"></span>Correct</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full ring-2 ring-rose-400/40 bg-rose-400/10"></span>Incorrect</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full bg-white/10"></span>Pending</span>
+    </div>`;
+}
+
 function renderPreviousPicks() {
     const container = byId('previous-picks');
     container.innerHTML = '';
@@ -2323,6 +2547,24 @@ function bindPlayoffEvents() {
     byId('playoff-whatif-reset-btn').addEventListener('click', () => {
         state.playoff.scenarioDraft = buildScenarioDraft(state.playoff.series);
         renderScenarioLab();
+    });
+
+    // Mobile sidebar open/close
+    byId('playoff-sidebar-open').addEventListener('click', () => {
+        byId('playoff-sidebar').classList.remove('-translate-x-full');
+        byId('playoff-sidebar-backdrop').classList.remove('hidden');
+    });
+    byId('playoff-sidebar-backdrop').addEventListener('click', () => {
+        byId('playoff-sidebar').classList.add('-translate-x-full');
+        byId('playoff-sidebar-backdrop').classList.add('hidden');
+    });
+
+    // Section toggle + round recap delegation
+    document.addEventListener('click', e => {
+        const toggleKey = e.target.closest('[data-toggle-section]')?.dataset.toggleSection;
+        if (toggleKey) { toggleSection(toggleKey); return; }
+        const recapRoundId = e.target.closest('[data-round-recap]')?.dataset.roundRecap;
+        if (recapRoundId) renderRoundRecap(recapRoundId);
     });
 }
 
