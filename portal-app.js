@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260419-sidebar2';
+import { CONFIG } from './config.js?v=20260419-picks-board2';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260419-sidebar2';
+} from './app-model.js?v=20260419-picks-board2';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -29,7 +29,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260419-sidebar2';
+} from './playoff-logic.js?v=20260419-picks-board2';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -95,7 +95,10 @@ const state = {
         draft: {},
         scenarioDraft: {},
         isLocked: false,
-        visibleSections: null
+        visibleSections: null,
+        picksBoardSort: 'standings',
+        picksBoardFilter: null,
+        picksBoardFlipped: false
     }
 };
 
@@ -209,7 +212,10 @@ function resetSessionState() {
         draft: {},
         scenarioDraft: {},
         isLocked: false,
-        visibleSections: null
+        visibleSections: null,
+        picksBoardSort: 'standings',
+        picksBoardFilter: null,
+        picksBoardFlipped: false
     };
 }
 
@@ -2206,7 +2212,7 @@ function renderPicksBoard() {
 
     const series = state.playoff.series;
     const pickDocs = state.playoff.roundPickDocs;
-    const standings = state.playoff.standings;
+    const baseStandings = state.playoff.standings;
 
     if (!series.length || !pickDocs.length) {
         note.textContent = '';
@@ -2214,83 +2220,170 @@ function renderPicksBoard() {
         return;
     }
 
-    note.textContent = `${standings.length} members · ${series.length} series`;
+    // Sort
+    const sort = state.playoff.picksBoardSort || 'standings';
+    let standings = [...baseStandings];
+    if (sort === 'pts_asc') standings.sort((a, b) => (a.points_total || 0) - (b.points_total || 0));
+    else if (sort === 'name_asc') standings.sort((a, b) => (a.team_name || a.display_name || '').localeCompare(b.team_name || b.display_name || ''));
 
+    // Filter / compare
+    const filter = state.playoff.picksBoardFilter;
+    const filteredStandings = filter?.size ? standings.filter(m => filter.has(m.id)) : standings;
+
+    note.textContent = `${filteredStandings.length}${filter?.size ? ` / ${standings.length}` : ''} members · ${series.length} series`;
+
+    // Picks lookup
     const picksByUid = {};
-    pickDocs.forEach(pickDoc => {
+    pickDocs.forEach(d => {
         const map = {};
-        (pickDoc.entries || []).forEach(e => { map[e.series_id] = e; });
-        picksByUid[pickDoc.id] = map;
+        (d.entries || []).forEach(e => { map[e.series_id] = e; });
+        picksByUid[d.id] = map;
     });
-
     const seriesById = Object.fromEntries(series.map(s => [s.id, s]));
+    const flipped = state.playoff.picksBoardFlipped;
 
-    const headerCells = series.map(s =>
-        `<th class="min-w-[7rem] px-3 py-3 text-center">
-            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 leading-tight">${escapeHtml(s.matchup_label || (s.home_team_id + ' vs ' + s.away_team_id))}</p>
-        </th>`
+    // ── Controls ──────────────────────────────────────────────────────────
+    const sortBtns = [['standings', 'Rank'], ['pts_asc', 'Pts ↑'], ['name_asc', 'Name']].map(([key, label]) =>
+        `<button data-pb-sort="${escapeAttribute(key)}"
+            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition
+                   ${sort === key ? 'bg-fuchsia-500/20 text-fuchsia-300 ring-1 ring-fuchsia-400/30' : 'text-slate-400 hover:text-white hover:bg-white/5'}">
+            ${label}</button>`
     ).join('');
 
-    const rows = standings.map((member, index) => {
-        const isCurrentUser = member.id === state.authUser.uid;
-        const rowClass = isCurrentUser
-            ? 'border-b border-emerald-300/30 bg-emerald-400/10'
-            : 'border-b border-white/10 hover:bg-white/5';
-        const entryMap = picksByUid[member.id] || {};
+    const flipBtn = `<button data-pb-flip
+        class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition
+               ${flipped ? 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-400/30' : 'text-slate-400 hover:text-white hover:bg-white/5'}">
+        ⇄ Flip</button>`;
 
-        const cells = series.map(s => {
-            const entry = entryMap[s.id];
-            if (!entry || !entry.winner_team_id)
-                return `<td class="px-3 py-3 text-center"><span class="text-xs text-slate-500">—</span></td>`;
-
-            const teamId = entry.winner_team_id;
-            const isHome = teamId === s.home_team_id;
-            const logoUrl = isHome ? (s.home_team_logo_dark || s.home_team_logo_light || '') : (s.away_team_logo_dark || s.away_team_logo_light || '');
-            const primaryColor = isHome ? (s.home_team_primary_color || '#0F172A') : (s.away_team_primary_color || '#0F172A');
-            const games = entry.games || '?';
-            const resultKnown = Boolean(seriesById[s.id]?.result_winner_team_id);
-            const correct = resultKnown && teamId === seriesById[s.id].result_winner_team_id;
-            const incorrect = resultKnown && !correct;
-            const ringClass = correct ? 'ring-2 ring-emerald-400/60' : incorrect ? 'ring-2 ring-rose-400/40' : '';
-            const bgTint = correct ? 'bg-emerald-400/10' : incorrect ? 'bg-rose-400/10' : '';
-
-            return `<td class="px-3 py-3 text-center">
-                <div class="inline-flex flex-col items-center gap-1.5 ${bgTint} rounded-[1rem] px-2 py-2 ${ringClass}">
-                    <div class="h-9 w-9 flex items-center justify-center rounded-xl border border-black/10 p-1.5" style="background:${escapeAttribute(primaryColor)};">
-                        <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamId)}" class="h-full w-full object-contain" loading="lazy">
-                    </div>
-                    <span class="text-[11px] font-bold text-slate-200">${games}</span>
-                </div>
-            </td>`;
-        }).join('');
-
-        return `<tr class="${rowClass} text-sm transition">
-            <td class="sticky left-0 bg-slate-950 px-4 py-3 font-semibold text-white z-10 whitespace-nowrap">
-                <span class="mr-2 text-[11px] font-bold text-slate-400">${index + 1}</span>${escapeHtml(member.team_name || member.display_name || member.email || member.id)}
-            </td>
-            <td class="px-3 py-3 text-center text-slate-300">${member.points_total || 0}</td>
-            ${cells}
-        </tr>`;
+    const memberChips = standings.map(m => {
+        const sel = filter?.has(m.id);
+        return `<button data-pb-filter="${escapeAttribute(m.id)}"
+            class="px-2 py-0.5 rounded-md text-[10px] font-medium transition whitespace-nowrap
+                   ${sel ? 'bg-fuchsia-500/20 text-fuchsia-300 ring-1 ring-fuchsia-400/30' : 'text-slate-600 hover:text-slate-300 hover:bg-white/5'}">
+            ${escapeHtml(m.team_name || m.display_name || m.id)}</button>`;
     }).join('');
 
-    container.innerHTML = `
-        <div class="overflow-x-auto rounded-[1.5rem] border border-white/10">
-            <table class="w-full text-left min-w-max">
-                <thead class="bg-slate-950/70 text-[11px] uppercase tracking-[0.22em] text-slate-400">
-                    <tr>
-                        <th class="sticky left-0 bg-slate-950/90 px-4 py-3 z-10">Member</th>
-                        <th class="px-3 py-3 text-center min-w-[4rem]">Pts</th>
-                        ${headerCells}
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
-        </div>
-        <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
-            <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full ring-2 ring-emerald-400/60 bg-emerald-400/10"></span>Correct pick</span>
-            <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full ring-2 ring-rose-400/40 bg-rose-400/10"></span>Incorrect pick</span>
-            <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full bg-white/10"></span>Result pending</span>
+    const clearBtn = filter?.size
+        ? `<button data-pb-filter-clear class="px-2 py-0.5 rounded-md text-[10px] text-slate-500 hover:text-white hover:bg-white/5 transition shrink-0">Clear ×</button>`
+        : '';
+
+    const controls = `
+        <div class="mb-3 flex flex-wrap items-start gap-x-4 gap-y-2">
+            <div class="flex items-center gap-1 shrink-0">
+                <span class="text-[10px] text-slate-500 mr-0.5">Sort</span>
+                ${sortBtns}
+                <span class="mx-1 text-slate-700">|</span>
+                ${flipBtn}
+            </div>
+            <div class="flex flex-wrap items-center gap-1 min-w-0">
+                <span class="text-[10px] text-slate-500 mr-0.5 shrink-0">Compare</span>
+                ${memberChips}
+                ${clearBtn}
+            </div>
         </div>`;
+
+    // ── Cell builder ──────────────────────────────────────────────────────
+    function buildCell(s, member) {
+        const entry = (picksByUid[member.id] || {})[s.id];
+        if (!entry?.winner_team_id)
+            return `<td class="px-1.5 py-1 text-center"><span class="text-slate-600 text-xs">—</span></td>`;
+        const teamId = entry.winner_team_id;
+        const isHome = teamId === s.home_team_id;
+        const logoUrl = isHome ? (s.home_team_logo_dark || s.home_team_logo_light || '') : (s.away_team_logo_dark || s.away_team_logo_light || '');
+        const color = isHome ? (s.home_team_primary_color || '#0F172A') : (s.away_team_primary_color || '#0F172A');
+        const games = entry.games || '?';
+        const resultKnown = Boolean(seriesById[s.id]?.result_winner_team_id);
+        const correct = resultKnown && teamId === seriesById[s.id].result_winner_team_id;
+        const incorrect = resultKnown && !correct;
+        const ring = correct ? 'ring-2 ring-emerald-400/60' : incorrect ? 'ring-2 ring-rose-400/40' : '';
+        const bg = correct ? 'bg-emerald-400/10' : incorrect ? 'bg-rose-400/5' : '';
+        return `<td class="px-1.5 py-1 text-center">
+            <div class="inline-flex flex-col items-center gap-0.5 ${bg} rounded-xl px-1.5 py-1 ${ring}">
+                <div class="h-10 w-10 flex items-center justify-center rounded-lg border border-black/10 p-1" style="background:${escapeAttribute(color)}">
+                    <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamId)}" class="h-full w-full object-contain" loading="lazy">
+                </div>
+                <span class="text-[10px] font-bold text-slate-300 leading-none tabular-nums">${games}</span>
+            </div>
+        </td>`;
+    }
+
+    // ── Table ─────────────────────────────────────────────────────────────
+    let tableHTML;
+    if (!flipped) {
+        // Members × Series
+        const headerCells = series.map(s =>
+            `<th class="min-w-[4.5rem] px-2 py-2 text-center text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 whitespace-nowrap">
+                ${escapeHtml(s.home_team_id)} <span class="text-slate-600">vs</span> ${escapeHtml(s.away_team_id)}
+            </th>`
+        ).join('');
+
+        const rows = filteredStandings.map((member, idx) => {
+            const isCurrentUser = member.id === state.authUser.uid;
+            const rowCls = isCurrentUser ? 'border-b border-emerald-300/20 bg-emerald-400/5' : 'border-b border-white/5 hover:bg-white/5';
+            const rank = sort === 'standings' ? (baseStandings.findIndex(m => m.id === member.id) + 1) : (idx + 1);
+            return `<tr class="${rowCls} transition">
+                <td class="sticky left-0 bg-slate-950 px-3 py-1.5 font-semibold text-sm text-white z-10 whitespace-nowrap">
+                    <span class="mr-1.5 text-[10px] font-bold text-slate-500 tabular-nums w-4 inline-block text-right">${rank}</span>${escapeHtml(member.team_name || member.display_name || member.email || member.id)}
+                </td>
+                <td class="px-2 py-1.5 text-center text-sm font-semibold text-slate-300 tabular-nums">${member.points_total || 0}</td>
+                ${series.map(s => buildCell(s, member)).join('')}
+            </tr>`;
+        }).join('');
+
+        tableHTML = `
+            <div class="overflow-x-auto rounded-[1.5rem] border border-white/10">
+                <table class="w-full text-left min-w-max border-collapse">
+                    <thead class="bg-slate-950/80">
+                        <tr>
+                            <th class="sticky left-0 bg-slate-950/90 px-3 py-2 z-10 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Member</th>
+                            <th class="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 min-w-[2.5rem]">Pts</th>
+                            ${headerCells}
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    } else {
+        // Series × Members (flipped)
+        const memberHeaders = filteredStandings.map(m =>
+            `<th class="min-w-[5rem] max-w-[7rem] px-2 py-2 text-center text-[10px] font-bold text-slate-400 leading-snug">
+                ${escapeHtml(m.team_name || m.display_name || m.id)}
+            </th>`
+        ).join('');
+
+        const rows = series.map(s => {
+            return `<tr class="border-b border-white/5 hover:bg-white/5 transition">
+                <td class="sticky left-0 bg-slate-950 px-3 py-1.5 z-10 whitespace-nowrap">
+                    <span class="text-[11px] font-bold text-white">${escapeHtml(s.home_team_id)}</span>
+                    <span class="text-[10px] text-slate-500 mx-1">vs</span>
+                    <span class="text-[11px] font-bold text-white">${escapeHtml(s.away_team_id)}</span>
+                </td>
+                ${filteredStandings.map(m => buildCell(s, m)).join('')}
+            </tr>`;
+        }).join('');
+
+        tableHTML = `
+            <div class="overflow-x-auto rounded-[1.5rem] border border-white/10">
+                <table class="w-full text-left min-w-max border-collapse">
+                    <thead class="bg-slate-950/80">
+                        <tr>
+                            <th class="sticky left-0 bg-slate-950/90 px-3 py-2 z-10 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Series</th>
+                            ${memberHeaders}
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    }
+
+    const legend = `
+        <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-slate-500">
+            <span class="inline-flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-emerald-400/60 bg-emerald-400/10"></span>Correct</span>
+            <span class="inline-flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-rose-400/40 bg-rose-400/5"></span>Wrong</span>
+            <span class="inline-flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-full bg-white/10"></span>Pending</span>
+        </div>`;
+
+    container.innerHTML = controls + tableHTML + legend;
 }
 
 // ── Sidebar: section visibility ──────────────────────────────────
@@ -2558,12 +2651,28 @@ function bindPlayoffEvents() {
         byId('playoff-sidebar-backdrop').classList.add('hidden');
     });
 
-    // Section toggle + round recap delegation
+    // Section toggle + round recap + picks board controls delegation
     document.addEventListener('click', e => {
         const toggleKey = e.target.closest('[data-toggle-section]')?.dataset.toggleSection;
         if (toggleKey) { toggleSection(toggleKey); return; }
+
         const recapRoundId = e.target.closest('[data-round-recap]')?.dataset.roundRecap;
-        if (recapRoundId) renderRoundRecap(recapRoundId);
+        if (recapRoundId) { renderRoundRecap(recapRoundId); return; }
+
+        const pbSort = e.target.closest('[data-pb-sort]')?.dataset.pbSort;
+        if (pbSort) { state.playoff.picksBoardSort = pbSort; renderPicksBoard(); return; }
+
+        const pbFilter = e.target.closest('[data-pb-filter]')?.dataset.pbFilter;
+        if (pbFilter) {
+            if (!state.playoff.picksBoardFilter) state.playoff.picksBoardFilter = new Set();
+            const f = state.playoff.picksBoardFilter;
+            if (f.has(pbFilter)) f.delete(pbFilter); else f.add(pbFilter);
+            renderPicksBoard();
+            return;
+        }
+
+        if (e.target.closest('[data-pb-filter-clear]')) { state.playoff.picksBoardFilter = null; renderPicksBoard(); return; }
+        if (e.target.closest('[data-pb-flip]')) { state.playoff.picksBoardFlipped = !state.playoff.picksBoardFlipped; renderPicksBoard(); return; }
     });
 }
 
