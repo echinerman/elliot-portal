@@ -1105,6 +1105,7 @@ function renderPlayoffApp() {
     renderPickDistribution();
     renderPreviousPicks();
     renderScenarioLab();
+    renderPicksBoard();
 }
 
 function renderSeriesCards() {
@@ -2172,6 +2173,106 @@ function renderPickDistribution() {
         `;
         container.appendChild(card);
     });
+}
+
+function renderPicksBoard() {
+    const container = byId('picks-board-container');
+    const note = byId('picks-board-note');
+    container.innerHTML = '';
+
+    if (!isRoundRevealed(state.playoff.currentRound, state.playoff.pool)) {
+        note.textContent = 'Picks are hidden until the round locks.';
+        container.innerHTML = '<p class="text-sm text-slate-400">The picks board becomes visible once the current round locks and picks are revealed.</p>';
+        return;
+    }
+
+    const series = state.playoff.series;
+    const pickDocs = state.playoff.roundPickDocs;
+    const standings = state.playoff.standings;
+
+    if (!series.length || !pickDocs.length) {
+        note.textContent = '';
+        container.innerHTML = '<p class="text-sm text-slate-400">No revealed pick data is available for this round yet.</p>';
+        return;
+    }
+
+    note.textContent = `${standings.length} members · ${series.length} series`;
+
+    const picksByUid = {};
+    pickDocs.forEach(pickDoc => {
+        const map = {};
+        (pickDoc.entries || []).forEach(e => { map[e.series_id] = e; });
+        picksByUid[pickDoc.id] = map;
+    });
+
+    const seriesById = Object.fromEntries(series.map(s => [s.id, s]));
+
+    const headerCells = series.map(s =>
+        `<th class="min-w-[7rem] px-3 py-3 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 leading-tight">${escapeHtml(s.matchup_label || (s.home_team_id + ' vs ' + s.away_team_id))}</p>
+        </th>`
+    ).join('');
+
+    const rows = standings.map((member, index) => {
+        const isCurrentUser = member.id === state.authUser.uid;
+        const rowClass = isCurrentUser
+            ? 'border-b border-emerald-300/30 bg-emerald-400/10'
+            : 'border-b border-white/10 hover:bg-white/5';
+        const entryMap = picksByUid[member.id] || {};
+
+        const cells = series.map(s => {
+            const entry = entryMap[s.id];
+            if (!entry || !entry.winner_team_id)
+                return `<td class="px-3 py-3 text-center"><span class="text-xs text-slate-500">—</span></td>`;
+
+            const teamId = entry.winner_team_id;
+            const isHome = teamId === s.home_team_id;
+            const logoUrl = isHome ? (s.home_team_logo_dark || s.home_team_logo_light || '') : (s.away_team_logo_dark || s.away_team_logo_light || '');
+            const primaryColor = isHome ? (s.home_team_primary_color || '#0F172A') : (s.away_team_primary_color || '#0F172A');
+            const games = entry.games || '?';
+            const resultKnown = Boolean(seriesById[s.id]?.result_winner_team_id);
+            const correct = resultKnown && teamId === seriesById[s.id].result_winner_team_id;
+            const incorrect = resultKnown && !correct;
+            const ringClass = correct ? 'ring-2 ring-emerald-400/60' : incorrect ? 'ring-2 ring-rose-400/40' : '';
+            const bgTint = correct ? 'bg-emerald-400/10' : incorrect ? 'bg-rose-400/10' : '';
+
+            return `<td class="px-3 py-3 text-center">
+                <div class="inline-flex flex-col items-center gap-1.5 ${bgTint} rounded-[1rem] px-2 py-2 ${ringClass}">
+                    <div class="h-9 w-9 flex items-center justify-center rounded-xl border border-black/10 p-1.5" style="background:${escapeAttribute(primaryColor)};">
+                        <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamId)}" class="h-full w-full object-contain" loading="lazy">
+                    </div>
+                    <span class="text-[11px] font-bold text-slate-200">${games}</span>
+                </div>
+            </td>`;
+        }).join('');
+
+        return `<tr class="${rowClass} text-sm transition">
+            <td class="sticky left-0 bg-slate-950 px-4 py-3 font-semibold text-white z-10 whitespace-nowrap">
+                <span class="mr-2 text-[11px] font-bold text-slate-400">${index + 1}</span>${escapeHtml(member.team_name || member.display_name || member.email || member.id)}
+            </td>
+            <td class="px-3 py-3 text-center text-slate-300">${member.points_total || 0}</td>
+            ${cells}
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="overflow-x-auto rounded-[1.5rem] border border-white/10">
+            <table class="w-full text-left min-w-max">
+                <thead class="bg-slate-950/70 text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                    <tr>
+                        <th class="sticky left-0 bg-slate-950/90 px-4 py-3 z-10">Member</th>
+                        <th class="px-3 py-3 text-center min-w-[4rem]">Pts</th>
+                        ${headerCells}
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
+            <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full ring-2 ring-emerald-400/60 bg-emerald-400/10"></span>Correct pick</span>
+            <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full ring-2 ring-rose-400/40 bg-rose-400/10"></span>Incorrect pick</span>
+            <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full bg-white/10"></span>Result pending</span>
+        </div>`;
 }
 
 function renderPreviousPicks() {

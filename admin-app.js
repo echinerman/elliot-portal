@@ -1004,6 +1004,8 @@ function bindPlayoffForms() {
         renderAdmin();
     });
     byId('rescore-round-btn').addEventListener('click', rescoreSelectedRound);
+    byId('pool-prize-money-save').addEventListener('click', savePoolPrizeMoney);
+    byId('pool-prize-money-clear').addEventListener('click', clearPoolPrizeMoney);
 }
 
 async function seedPlayoffDefaults() {
@@ -1156,6 +1158,63 @@ function loadPoolIntoForm(poolId) {
     byId('pool-lock-policy-input').value = pool.lock_policy || 'deadline';
     byId('pool-description-input').value = pool.description || '';
     byId('pool-payout-template-input').value = formatPayoutTemplate(pool.payout_template || defaultPayoutTemplate());
+    renderPoolPrizeMoney();
+}
+
+function renderPoolPrizeMoney() {
+    const section = byId('pool-prize-money-section');
+    const container = byId('pool-prize-money-inputs');
+    const pool = getSelectedPool();
+    if (!pool || !pool.payout_template?.length) {
+        section.classList.add('hidden');
+        return;
+    }
+    section.classList.remove('hidden');
+    const merged = getPoolPayoutSummary(pool);
+    container.innerHTML = merged.map(item => {
+        const overrideVal = item.manual_override && item.final_amount ? item.final_amount : '';
+        return `
+            <div class="grid items-center gap-3" style="grid-template-columns:1fr auto auto">
+                <span class="text-sm font-semibold text-slate-700">${escapeHtml(item.label || item.place_key)}</span>
+                <span class="text-sm text-slate-400 whitespace-nowrap">Suggested: ${CONFIG.CURRENCY_SYMBOL}${Number(item.suggested_amount || 0).toFixed(2)}</span>
+                <input type="number" step="0.01" min="0"
+                    data-place-key="${escapeAttribute(item.place_key)}"
+                    data-label="${escapeAttribute(item.label || item.place_key)}"
+                    data-share="${item.share || 0}"
+                    data-suggested="${item.suggested_amount || 0}"
+                    value="${overrideVal}"
+                    placeholder="${Number(item.suggested_amount || 0).toFixed(2)}"
+                    class="w-32 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none transition focus:border-slate-900">
+            </div>`;
+    }).join('');
+}
+
+async function savePoolPrizeMoney() {
+    const pool = getSelectedPool();
+    if (!pool) return;
+    const inputs = byId('pool-prize-money-inputs').querySelectorAll('input[data-place-key]');
+    const finalized_payouts = Array.from(inputs).map(input => ({
+        place_key: input.dataset.placeKey,
+        label: input.dataset.label,
+        share: Number(input.dataset.share || 0),
+        suggested_amount: Number(input.dataset.suggested || 0),
+        final_amount: Number(input.value || 0),
+        manual_override: input.value.trim() !== ''
+    }));
+    await setDoc(doc(db, 'playoff_pools', pool.id), { finalized_payouts }, { merge: true });
+    pool.finalized_payouts = finalized_payouts;
+    showToast('Prize money saved.');
+    renderPlayoffReportSummary();
+}
+
+async function clearPoolPrizeMoney() {
+    const pool = getSelectedPool();
+    if (!pool) return;
+    await setDoc(doc(db, 'playoff_pools', pool.id), { finalized_payouts: [] }, { merge: true });
+    pool.finalized_payouts = [];
+    renderPoolPrizeMoney();
+    renderPlayoffReportSummary();
+    showToast('Prize money overrides cleared.');
 }
 
 function clearPoolForm() {
