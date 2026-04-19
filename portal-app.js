@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260419-sidebar';
+import { CONFIG } from './config.js?v=20260419-sidebar2';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260419-sidebar';
+} from './app-model.js?v=20260419-sidebar2';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -29,7 +29,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260419-sidebar';
+} from './playoff-logic.js?v=20260419-sidebar2';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -2350,12 +2350,11 @@ function renderSidebarSections() {
 function renderSidebarRounds() {
     const rounds = state.playoff.rounds || [];
     const currentRoundId = state.playoff.currentRound?.id;
-    const now = Date.now();
+    const currentRoundIdx = rounds.findIndex(r => r.id === currentRoundId);
 
-    byId('playoff-sidebar-rounds').innerHTML = rounds.map(round => {
-        const lockMs = round.lock_at?.seconds ? round.lock_at.seconds * 1000 : 0;
+    byId('playoff-sidebar-rounds').innerHTML = rounds.map((round, idx) => {
         const isCurrent = round.id === currentRoundId;
-        const isFuture = !isCurrent && lockMs > now;
+        const isFuture = !isCurrent && currentRoundIdx !== -1 && idx > currentRoundIdx;
         const icon = isFuture ? '🕐' : isCurrent ? '▶' : '✓';
         const cls = isFuture
             ? 'text-slate-600 cursor-default opacity-50'
