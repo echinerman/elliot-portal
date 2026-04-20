@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260419-picks-board2';
+import { CONFIG } from './config.js?v=20260419-standings-history';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260419-picks-board2';
+} from './app-model.js?v=20260419-standings-history';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -29,7 +29,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260419-picks-board2';
+} from './playoff-logic.js?v=20260419-standings-history';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -98,7 +98,10 @@ const state = {
         visibleSections: null,
         picksBoardSort: 'standings',
         picksBoardFilter: null,
-        picksBoardFlipped: false
+        picksBoardFlipped: false,
+        eventHistory: [],
+        timelineIndex: 0,
+        chartType: 'rank'
     }
 };
 
@@ -215,7 +218,10 @@ function resetSessionState() {
         visibleSections: null,
         picksBoardSort: 'standings',
         picksBoardFilter: null,
-        picksBoardFlipped: false
+        picksBoardFlipped: false,
+        eventHistory: [],
+        timelineIndex: 0,
+        chartType: 'rank'
     };
 }
 
@@ -995,6 +1001,8 @@ async function loadPlayoffApp() {
     state.playoff.payoutSummary = payoutSummary;
     state.playoff.pickDistribution = buildPickDistribution(series, roundPickDocs);
     state.playoff.standingsTrend = buildStandingsTrend(rounds, standings);
+    state.playoff.eventHistory = buildEventSnapshots(series, roundPickDocs, currentRound, standings);
+    state.playoff.timelineIndex = Math.max(0, state.playoff.eventHistory.length - 1);
     state.playoff.teamNameDraft = preservedTeamNameDraft || member.team_name || '';
     state.playoff.draft = buildDraftFromEntries(currentPick?.entries || []);
     state.playoff.scenarioDraft = buildScenarioDraft(series, preservedScenarioDraft);
@@ -1121,6 +1129,7 @@ function renderPlayoffApp() {
     renderTeamNameEditor();
     renderSeriesCards();
     renderStandings();
+    renderStandingsHistory();
     renderPayoutSummary();
     renderStandingsTrend();
     renderPickDistribution();
@@ -2079,23 +2088,314 @@ function updateScenarioDraft(seriesId, field, value) {
 }
 
 
+function buildEventSnapshots(series = [], pickDocs = [], currentRound = null, members = []) {
+    if (!series.length || !pickDocs.length || !currentRound) return [];
+
+    const confirmedSeries = series
+        .filter(s => s.result_winner_team_id)
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+    if (!confirmedSeries.length) return [];
+
+    const pickById = Object.fromEntries(pickDocs.map(p => [p.id, p]));
+
+    // Previous-rounds baseline per member (all rounds except current)
+    const prevPoints = Object.fromEntries(members.map(m => [
+        m.id,
+        (m.round_history || [])
+            .filter(h => h.round_id !== currentRound.id)
+            .reduce((sum, h) => sum + Number(h.points || 0), 0)
+    ]));
+
+    function computeSnapshot(confirmedIds) {
+        const masked = series.map(s =>
+            confirmedIds.has(s.id) ? s : { ...s, result_winner_team_id: '', result_games: 0 }
+        );
+        return members.map(m => {
+            const pd = pickById[m.id];
+            const rPts = pd ? scorePickDocument(pd, masked, currentRound).round_total : 0;
+            return {
+                id: m.id,
+                display_name: m.team_name || m.display_name || m.id,
+                points_total: (prevPoints[m.id] || 0) + rPts,
+                round_points: rPts
+            };
+        }).sort((a, b) => b.points_total - a.points_total);
+    }
+
+    return confirmedSeries.map((s, i) => {
+        const confirmedIds = new Set(confirmedSeries.slice(0, i + 1).map(x => x.id));
+        return {
+            seriesId: s.id,
+            homeId: s.home_team_id,
+            awayId: s.away_team_id,
+            winnerId: s.result_winner_team_id,
+            games: s.result_games || 0,
+            label: `${s.home_team_id} vs ${s.away_team_id}`,
+            standings: computeSnapshot(confirmedIds)
+        };
+    });
+}
+
 function renderStandings() {
     const tbody = byId('standings-body');
     tbody.innerHTML = '';
 
+    const history = state.playoff.eventHistory || [];
+    // Position delta: compare current to the snapshot just before the latest event
+    const prevSnap = history.length >= 2 ? history[history.length - 2].standings : null;
+    const prevRankById = prevSnap
+        ? Object.fromEntries(prevSnap.map((m, i) => [m.id, i + 1]))
+        : null;
+
     state.playoff.standings.forEach((member, index) => {
+        const curRank = index + 1;
+        let deltaCell = `<td class="px-3 py-3 text-right w-10 text-slate-700 text-[11px]">—</td>`;
+        if (prevRankById) {
+            const prev = prevRankById[member.id];
+            const delta = prev !== undefined ? prev - curRank : 0;
+            if (delta > 0) {
+                deltaCell = `<td class="px-3 py-3 text-right w-10"><span class="text-[11px] font-black text-emerald-400 tabular-nums">▲${delta}</span></td>`;
+            } else if (delta < 0) {
+                deltaCell = `<td class="px-3 py-3 text-right w-10"><span class="text-[11px] font-black text-rose-400 tabular-nums">▼${Math.abs(delta)}</span></td>`;
+            } else {
+                deltaCell = `<td class="px-3 py-3 text-right w-10 text-slate-600 text-[11px]">—</td>`;
+            }
+        }
+
         const row = document.createElement('tr');
         row.className = member.id === state.authUser.uid
-            ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm'
-            : 'border-b border-white/10 text-sm';
+            ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm hover:bg-emerald-400/10 transition'
+            : 'border-b border-white/10 text-sm hover:bg-white/5 transition';
         row.innerHTML = `
-            <td class="px-4 py-3 text-slate-300">${index + 1}</td>
+            <td class="px-4 py-3 font-bold text-slate-400 tabular-nums">${curRank}</td>
             <td class="px-4 py-3 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
-            <td class="px-4 py-3 text-slate-200">${member.points_total || 0}</td>
-            <td class="px-4 py-3 text-slate-400">${member.round_points || 0}</td>
+            <td class="px-4 py-3 font-semibold text-slate-200 tabular-nums">${member.points_total || 0}</td>
+            <td class="px-4 py-3 text-slate-400 tabular-nums">${member.round_points || 0}</td>
+            ${deltaCell}
         `;
         tbody.appendChild(row);
     });
+}
+
+function renderStandingsHistory() {
+    const container = byId('standings-history');
+    if (!container) return;
+    const history = state.playoff.eventHistory || [];
+    if (!history.length) { container.innerHTML = ''; return; }
+
+    const K = history.length;
+    const idx = Math.max(0, Math.min(state.playoff.timelineIndex, K - 1));
+    const event = history[idx];
+    const prevSnap = idx > 0 ? history[idx - 1].standings : null;
+    const prevRankById = prevSnap ? Object.fromEntries(prevSnap.map((m, i) => [m.id, i + 1])) : {};
+
+    // Snapshot rows
+    const snapRows = event.standings.map((m, i) => {
+        const rank = i + 1;
+        const prev = prevRankById[m.id];
+        const delta = prev !== undefined ? prev - rank : null;
+        const deltaHTML = delta === null ? '' : delta > 0
+            ? `<span class="text-emerald-400 text-[10px] font-black">▲${delta}</span>`
+            : delta < 0
+                ? `<span class="text-rose-400 text-[10px] font-black">▼${Math.abs(delta)}</span>`
+                : `<span class="text-slate-600 text-[10px]">—</span>`;
+        const isMe = m.id === state.authUser?.uid;
+        return `<tr class="${isMe ? 'bg-emerald-400/5' : ''} border-b border-white/5 hover:bg-white/5 transition">
+            <td class="px-3 py-1.5 text-[11px] font-bold text-slate-500 tabular-nums w-7">${rank}</td>
+            <td class="px-3 py-1.5 text-sm font-semibold text-white">${escapeHtml(m.display_name)}</td>
+            <td class="px-3 py-1.5 text-sm tabular-nums font-semibold text-slate-200">${m.points_total}</td>
+            <td class="px-3 py-1.5 text-right">${deltaHTML}</td>
+        </tr>`;
+    }).join('');
+
+    // Event chips
+    const chips = history.map((ev, i) => `
+        <button data-timeline-jump="${i}"
+            class="px-2 py-0.5 rounded-md text-[10px] font-semibold transition whitespace-nowrap
+                   ${i === idx ? 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-400/30' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}">
+            ${escapeHtml(ev.label)}
+        </button>`).join('');
+
+    // Winner info
+    const seriesObj = (state.playoff.series || []).find(s => s.id === event.seriesId);
+    const isWinnerHome = event.winnerId === event.homeId;
+    const wLogo = seriesObj
+        ? (isWinnerHome ? (seriesObj.home_team_logo_dark || seriesObj.home_team_logo_light || '') : (seriesObj.away_team_logo_dark || seriesObj.away_team_logo_light || ''))
+        : '';
+    const wColor = seriesObj
+        ? (isWinnerHome ? (seriesObj.home_team_primary_color || '#0F172A') : (seriesObj.away_team_primary_color || '#0F172A'))
+        : '#0F172A';
+
+    // SVG rank chart
+    const chartSVG = buildStandingsChartSVG(history, idx);
+
+    container.innerHTML = `
+        <div class="rounded-[2rem] border border-white/10 bg-white/5 p-5">
+            <div class="flex flex-col gap-5 lg:flex-row lg:gap-6">
+
+                <!-- Left: event nav + snapshot table -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                            <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-sky-300">Scoreboard History</p>
+                            <p class="text-xs text-slate-400 mt-0.5">${K} scoring event${K !== 1 ? 's' : ''} this round</p>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button ${idx === 0 ? 'disabled' : 'data-timeline-nav="-1"'}
+                                class="w-7 h-7 flex items-center justify-center rounded-lg text-xs transition
+                                       ${idx === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-white/10'}">◀</button>
+                            <div class="flex flex-col items-center px-3 py-1.5 rounded-xl bg-white/5 min-w-[9rem] text-center">
+                                ${wLogo ? `<div class="h-6 w-6 rounded-md mb-1 flex items-center justify-center border border-black/10 p-0.5" style="background:${escapeAttribute(wColor)}"><img src="${escapeAttribute(wLogo)}" class="h-full w-full object-contain" loading="lazy"></div>` : ''}
+                                <p class="text-[11px] font-bold text-white leading-tight">${escapeHtml(event.label)}</p>
+                                <p class="text-[10px] text-slate-400"><span class="text-white font-semibold">${escapeHtml(event.winnerId)}</span> wins${event.games ? ` in ${event.games}` : ''}</p>
+                            </div>
+                            <button ${idx === K - 1 ? 'disabled' : 'data-timeline-nav="1"'}
+                                class="w-7 h-7 flex items-center justify-center rounded-lg text-xs transition
+                                       ${idx === K - 1 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-white/10'}">▶</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-1 mb-3">${chips}</div>
+                    <div class="overflow-hidden rounded-2xl border border-white/10">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-950/70">
+                                <tr>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 w-7">#</th>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Member</th>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Pts</th>
+                                    <th class="px-3 py-1.5"></th>
+                                </tr>
+                            </thead>
+                            <tbody>${snapRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right: chart -->
+                <div class="w-full lg:w-72 shrink-0">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">Rank Evolution</p>
+                        <div class="flex gap-1">
+                            <button data-chart-type="rank"
+                                class="px-2 py-0.5 rounded text-[10px] font-semibold transition
+                                       ${(state.playoff.chartType || 'rank') === 'rank' ? 'bg-sky-500/20 text-sky-300' : 'text-slate-500 hover:text-slate-300'}">Rank</button>
+                            <button data-chart-type="pts"
+                                class="px-2 py-0.5 rounded text-[10px] font-semibold transition
+                                       ${(state.playoff.chartType || 'rank') === 'pts' ? 'bg-sky-500/20 text-sky-300' : 'text-slate-500 hover:text-slate-300'}">Pts</button>
+                        </div>
+                    </div>
+                    <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-2 overflow-hidden">
+                        ${chartSVG}
+                    </div>
+                    <p class="mt-2 text-[10px] text-slate-600">
+                        <span class="text-violet-400">━</span> You &nbsp;
+                        <span class="text-sky-400">━</span> Top 3 &nbsp;
+                        <span class="text-slate-600">━</span> Others
+                    </p>
+                </div>
+
+            </div>
+        </div>`;
+}
+
+function buildStandingsChartSVG(history, selectedIdx) {
+    if (!history.length) return '<p class="text-xs text-slate-600 py-8 text-center">No data yet</p>';
+
+    const members = state.playoff.standings;
+    const N = members.length;
+    const K = history.length;
+    const myId = state.authUser?.uid;
+    const chartType = state.playoff.chartType || 'rank';
+
+    // Identify top 3 by latest standings
+    const top3Ids = new Set(history[history.length - 1].standings.slice(0, 3).map(m => m.id));
+
+    // For each member, build array of values across events
+    function getRank(snap, memberId) {
+        const i = snap.standings.findIndex(m => m.id === memberId);
+        return i === -1 ? N : i + 1;
+    }
+    function getPoints(snap, memberId) {
+        return snap.standings.find(m => m.id === memberId)?.points_total || 0;
+    }
+
+    const maxPts = chartType === 'pts'
+        ? Math.max(...history[history.length - 1].standings.map(m => m.points_total), 1)
+        : null;
+
+    const W = 280, H = 180;
+    const pL = 22, pR = 8, pT = 8, pB = 20;
+    const cW = W - pL - pR, cH = H - pT - pB;
+
+    const xOf = i => pL + (K === 1 ? cW / 2 : (i / (K - 1)) * cW);
+    const yOfRank = r => pT + ((r - 1) / Math.max(N - 1, 1)) * cH;
+    const yOfPts = p => pT + (1 - p / maxPts) * cH;
+    const yOf = chartType === 'rank' ? yOfRank : yOfPts;
+    const valOf = chartType === 'rank'
+        ? (snap, id) => getRank(snap, id)
+        : (snap, id) => getPoints(snap, id);
+
+    // Selected event guide line
+    const gx = xOf(selectedIdx).toFixed(1);
+    const guide = `<line x1="${gx}" y1="${pT}" x2="${gx}" y2="${H - pB}" stroke="rgba(148,163,184,0.15)" stroke-width="1" stroke-dasharray="3,2"/>`;
+
+    // Lines (grey first, then highlights on top)
+    const greyLines = members
+        .filter(m => m.id !== myId && !top3Ids.has(m.id))
+        .map(m => {
+            const pts = history.map((snap, i) => `${xOf(i).toFixed(1)},${yOf(valOf(snap, m.id)).toFixed(1)}`).join(' ');
+            return `<polyline points="${pts}" fill="none" stroke="rgba(51,65,85,0.8)" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>`;
+        }).join('');
+
+    const top3Lines = members
+        .filter(m => top3Ids.has(m.id) && m.id !== myId)
+        .map(m => {
+            const pts = history.map((snap, i) => `${xOf(i).toFixed(1)},${yOf(valOf(snap, m.id)).toFixed(1)}`).join(' ');
+            return `<polyline points="${pts}" fill="none" stroke="rgba(56,189,248,0.7)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+        }).join('');
+
+    const myLine = myId ? (() => {
+        const m = members.find(m => m.id === myId);
+        if (!m) return '';
+        const pts = history.map((snap, i) => `${xOf(i).toFixed(1)},${yOf(valOf(snap, m.id)).toFixed(1)}`).join(' ');
+        return `<polyline points="${pts}" fill="none" stroke="rgba(167,139,250,1)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    })() : '';
+
+    // Endpoint dots for notable members at selected event
+    const snap = history[selectedIdx];
+    const notableDots = members
+        .filter(m => m.id === myId || top3Ids.has(m.id))
+        .map(m => {
+            const x = gx;
+            const y = yOf(valOf(snap, m.id)).toFixed(1);
+            const isMe = m.id === myId;
+            const col = isMe ? '#a78bfa' : '#38bdf8';
+            return `<circle cx="${x}" cy="${y}" r="${isMe ? 3.5 : 2.5}" fill="${col}" stroke="rgb(2,6,23)" stroke-width="1.5"/>`;
+        }).join('');
+
+    // X labels (series home team ID, abbreviated)
+    const xLabels = history.map((ev, i) => {
+        const x = xOf(i).toFixed(1);
+        return `<text x="${x}" y="${H - 4}" text-anchor="middle" font-size="7" fill="rgba(100,116,139,0.7)">${escapeHtml(ev.homeId || '')}</text>`;
+    }).join('');
+
+    // Y axis
+    const yAxisItems = chartType === 'rank'
+        ? [[1, '1'], [Math.ceil(N / 2), String(Math.ceil(N / 2))], [N, String(N)]]
+        : [[maxPts, String(maxPts)], [Math.round(maxPts / 2), String(Math.round(maxPts / 2))], [0, '0']];
+    const yLabels = yAxisItems.map(([v, label]) => {
+        const y = (chartType === 'rank' ? yOfRank(v) : yOfPts(v)).toFixed(1);
+        return `<text x="${pL - 3}" y="${(Number(y) + 3).toFixed(1)}" text-anchor="end" font-size="7" fill="rgba(100,116,139,0.6)">${label}</text>`;
+    }).join('');
+
+    return `<svg viewBox="0 0 ${W} ${H}" class="w-full" style="height:${H}px">
+        ${guide}
+        ${greyLines}
+        ${top3Lines}
+        ${myLine}
+        ${notableDots}
+        ${xLabels}
+        ${yLabels}
+    </svg>`;
 }
 
 function renderPayoutSummary() {
@@ -2673,6 +2973,22 @@ function bindPlayoffEvents() {
 
         if (e.target.closest('[data-pb-filter-clear]')) { state.playoff.picksBoardFilter = null; renderPicksBoard(); return; }
         if (e.target.closest('[data-pb-flip]')) { state.playoff.picksBoardFlipped = !state.playoff.picksBoardFlipped; renderPicksBoard(); return; }
+
+        const timelineNav = e.target.closest('[data-timeline-nav]')?.dataset.timelineNav;
+        if (timelineNav) {
+            const K = (state.playoff.eventHistory || []).length;
+            state.playoff.timelineIndex = Math.max(0, Math.min(K - 1, state.playoff.timelineIndex + Number(timelineNav)));
+            renderStandingsHistory();
+            return;
+        }
+        const timelineJump = e.target.closest('[data-timeline-jump]')?.dataset.timelineJump;
+        if (timelineJump !== undefined) {
+            state.playoff.timelineIndex = Number(timelineJump);
+            renderStandingsHistory();
+            return;
+        }
+        const chartType = e.target.closest('[data-chart-type]')?.dataset.chartType;
+        if (chartType) { state.playoff.chartType = chartType; renderStandingsHistory(); return; }
     });
 }
 

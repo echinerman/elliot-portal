@@ -275,7 +275,7 @@
                         <div class="flex-1 min-w-0 space-y-5">
 
                             <!-- Standings (default ON) -->
-                            <section id="section-standings">
+                            <section id="section-standings" class="space-y-4">
                                 <section class="rounded-[2rem] border border-white/10 bg-white/5 p-6">
                                     <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                                         <div>
@@ -291,12 +291,14 @@
                                                     <th class="px-4 py-3">Member</th>
                                                     <th class="px-4 py-3">Pts</th>
                                                     <th class="px-4 py-3">Round</th>
+                                                    <th class="px-3 py-3 text-right">∆</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="standings-body"></tbody>
                                         </table>
                                     </div>
                                 </section>
+                                <div id="standings-history"></div>
                             </section>
 
                             <!-- Picks Board (default ON) -->
@@ -510,6 +512,6 @@
         </div>
     </div>
 
-    <script type="module" src="./portal-app.js?v=20260419-picks-board2"></script>
+    <script type="module" src="./portal-app.js?v=20260419-standings-history"></script>
 </body>
 </html>
