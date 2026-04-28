@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260417-playoff-brand-compact';
+import { CONFIG } from './config.js?v=20260419-standings-history';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,12 +9,11 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260417-playoff-brand-compact';
+} from './app-model.js?v=20260419-standings-history';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
     buildPickDistribution,
-    buildScoreboardHistory,
     buildStandingsTrend,
     computeCollectedPot,
     isRoundLocked,
@@ -30,7 +29,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260417-playoff-brand-compact';
+} from './playoff-logic.js?v=20260419-standings-history';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -92,17 +91,35 @@ const state = {
         payoutSummary: [],
         pickDistribution: [],
         standingsTrend: [],
-        scoreboardHistory: [],
         teamNameDraft: '',
         draft: {},
         scenarioDraft: {},
-        isLocked: false
+        isLocked: false,
+        visibleSections: null,
+        picksBoardSort: 'standings',
+        picksBoardFilter: null,
+        picksBoardFlipped: false,
+        eventHistory: [],
+        timelineIndex: 0,
+        chartType: 'rank'
     }
 };
 
+const PLAYOFF_SECTIONS = [
+    { key: 'standings',  label: 'Standings',      icon: '🏆', sectionId: 'section-standings'  },
+    { key: 'picksBoard', label: 'Picks Board',     icon: '📋', sectionId: 'picks-board-section' },
+    { key: 'myPicks',    label: 'My Picks',        icon: '🎯', sectionId: 'section-my-picks'   },
+    { key: 'overview',   label: 'Pool Overview',   icon: '📊', sectionId: 'section-overview'   },
+    { key: 'whatif',     label: 'What-If Lab',     icon: '🔬', sectionId: 'section-whatif'     },
+    { key: 'rules',      label: 'Pool Rules',      icon: '📜', sectionId: 'section-rules'      },
+    { key: 'payouts',    label: 'Payout & Status', icon: '💰', sectionId: 'section-payouts'    },
+    { key: 'trends',     label: 'Trends',          icon: '📈', sectionId: 'section-trends'     },
+];
+const SECTIONS_DEFAULT_ON = new Set(['standings', 'picksBoard']);
+const LS_VISIBLE_KEY = 'playoff_visible_sections';
+
 document.addEventListener('DOMContentLoaded', () => {
     bindAuthForms();
-    bindNoAccessEvents();
     bindStrong8kEvents();
     bindPlayoffEvents();
     bindSharedActions();
@@ -148,6 +165,25 @@ function resolveInviteCode(code) {
     return Object.entries(CONFIG.INVITE_CODES).find(([, inviteCode]) => inviteCode.toUpperCase() === normalized)?.[0] || null;
 }
 
+function getSelectedRegistrationAppId() {
+    return byId('register-app-id').value || APP_IDS.PLAYOFF;
+}
+
+function setSelectedRegistrationApp(appId) {
+    const selectedAppId = appId === APP_IDS.STRONG8K ? APP_IDS.STRONG8K : APP_IDS.PLAYOFF;
+    byId('register-app-id').value = selectedAppId;
+    byId('register-playoff-app-btn').className = selectedAppId === APP_IDS.PLAYOFF
+        ? 'rounded-2xl border border-emerald-400 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-600'
+        : 'rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-900';
+    byId('register-strong8k-app-btn').className = selectedAppId === APP_IDS.STRONG8K
+        ? 'rounded-2xl border border-slate-900 bg-slate-100 px-4 py-3 text-left transition hover:border-slate-900'
+        : 'rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-900';
+    const needsInvite = selectedAppId === APP_IDS.STRONG8K;
+    byId('reg-code-wrap').classList.toggle('hidden', !needsInvite);
+    byId('reg-code').required = needsInvite;
+    byId('register-submit-btn').textContent = needsInvite ? 'Create Strong8K Access' : 'Create Playoff Access';
+    updateAuthBlurb();
+}
 
 function resetSessionState() {
     state.sharedUser = null;
@@ -175,11 +211,17 @@ function resetSessionState() {
         payoutSummary: [],
         pickDistribution: [],
         standingsTrend: [],
-        scoreboardHistory: [],
         teamNameDraft: '',
         draft: {},
         scenarioDraft: {},
-        isLocked: false
+        isLocked: false,
+        visibleSections: null,
+        picksBoardSort: 'standings',
+        picksBoardFilter: null,
+        picksBoardFlipped: false,
+        eventHistory: [],
+        timelineIndex: 0,
+        chartType: 'rank'
     };
 }
 
@@ -195,9 +237,27 @@ async function handleAuthStateChange(user) {
     try {
         setView('loading-view');
         await hydrateSession(user);
+        await ensureDefaultPlayoffAccess(user);
         await routeAuthenticatedUser();
     } catch (error) {
         handlePortalLoadError(error);
+    }
+}
+
+async function ensureDefaultPlayoffAccess(user) {
+    if (!user || !canSelfServePlayoff()) {
+        return;
+    }
+
+    if (state.accessibleApps[APP_IDS.PLAYOFF]?.status === 'active') {
+        return;
+    }
+
+    try {
+        await ensurePlayoffSelfServeAccess(user.uid, user.email);
+        await hydrateSession(user);
+    } catch (error) {
+        console.warn('Playoff self-serve bootstrap skipped during session hydration.', error);
     }
 }
 
@@ -221,10 +281,23 @@ function getPendingMemberships() {
     );
 }
 
+function canSelfServePlayoff() {
+    const playoffMembership = state.memberships[APP_IDS.PLAYOFF];
+    return !playoffMembership || playoffMembership.status !== 'disabled';
+}
+
 async function routeAuthenticatedUser() {
     const activeMemberships = getActiveMemberships();
+    const pendingMemberships = getPendingMemberships();
     const requestedAppId = currentHashApp();
     const wantsAppSwitcher = isAppsHomeRoute();
+
+    if (requestedAppId === APP_IDS.PLAYOFF && !activeMemberships[APP_IDS.PLAYOFF] && canSelfServePlayoff()) {
+        await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
+        await hydrateSession(state.authUser);
+        await openApp(APP_IDS.PLAYOFF);
+        return;
+    }
 
     if (requestedAppId && activeMemberships[requestedAppId]) {
         await openApp(requestedAppId);
@@ -232,7 +305,7 @@ async function routeAuthenticatedUser() {
     }
 
     const appIds = Object.keys(activeMemberships);
-    if (wantsAppSwitcher && appIds.length) {
+    if (wantsAppSwitcher && (appIds.length || canSelfServePlayoff())) {
         renderAppSwitcher(activeMemberships);
         setView('app-switcher-view');
         return;
@@ -251,7 +324,13 @@ async function routeAuthenticatedUser() {
         return;
     }
 
-    renderInviteCodePrompt();
+    if (canSelfServePlayoff()) {
+        renderAppSwitcher(activeMemberships);
+        setView('app-switcher-view');
+        return;
+    }
+
+    renderNoAccess(pendingMemberships);
     setView('no-access-view');
 }
 
@@ -262,14 +341,14 @@ function handlePortalLoadError(error) {
     }
 
     const activeMemberships = getActiveMemberships();
-    if (state.authUser && Object.keys(activeMemberships).length) {
+    if (state.authUser && (Object.keys(activeMemberships).length || canSelfServePlayoff())) {
         renderAppSwitcher(activeMemberships);
         setView('app-switcher-view');
         showToast(error?.message || 'Portal load failed', 'error');
         return;
     }
 
-    renderInviteCodePrompt();
+    byId('no-access-message').textContent = 'We could not load this portal view. Try signing out and back in, or contact Elliot if it keeps happening.';
     setView('no-access-view');
     showToast(error?.message || 'Portal load failed', 'error');
 }
@@ -284,6 +363,10 @@ async function openApp(appId) {
     }
 
     if (appId === APP_IDS.PLAYOFF) {
+        if (!state.accessibleApps[APP_IDS.PLAYOFF] && canSelfServePlayoff()) {
+            await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
+            await hydrateSession(state.authUser);
+        }
         await loadPlayoffApp();
         setView('playoff-view');
     }
@@ -327,6 +410,7 @@ function bindAuthForms() {
         event.preventDefault();
         byId('login-form').classList.add('hidden');
         byId('register-form').classList.remove('hidden');
+        updateAuthBlurb();
     });
 
     byId('show-login-link').addEventListener('click', event => {
@@ -334,6 +418,10 @@ function bindAuthForms() {
         byId('register-form').classList.add('hidden');
         byId('login-form').classList.remove('hidden');
     });
+
+    byId('register-playoff-app-btn').addEventListener('click', () => setSelectedRegistrationApp(APP_IDS.PLAYOFF));
+    byId('register-strong8k-app-btn').addEventListener('click', () => setSelectedRegistrationApp(APP_IDS.STRONG8K));
+    byId('reg-code').addEventListener('input', updateAuthBlurb);
 
     byId('login-form').addEventListener('submit', async event => {
         event.preventDefault();
@@ -348,12 +436,51 @@ function bindAuthForms() {
         event.preventDefault();
         const email = byId('reg-email').value.trim();
         const password = byId('reg-pass').value;
+        const selectedAppId = getSelectedRegistrationAppId();
+        const inviteCode = byId('reg-code').value.trim();
+        const resolvedInviteAppId = inviteCode ? resolveInviteCode(inviteCode) : null;
+
+        if (selectedAppId === APP_IDS.STRONG8K && resolvedInviteAppId !== APP_IDS.STRONG8K) {
+            showToast('Invalid invite code', 'error');
+            return;
+        }
+
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
+            const credential = await createUserWithEmailAndPassword(auth, email, password);
+            await claimOrCreateAccount({
+                uid: credential.user.uid,
+                email,
+                appId: selectedAppId,
+                inviteCode: selectedAppId === APP_IDS.STRONG8K ? inviteCode : 'self-serve'
+            });
+            showToast(`${APP_DEFINITIONS[selectedAppId].shortLabel} access created`);
         } catch (error) {
             showToast(error.message, 'error');
         }
     });
+
+    setSelectedRegistrationApp(APP_IDS.PLAYOFF);
+    updateAuthBlurb();
+}
+
+function updateAuthBlurb() {
+    const helper = byId('auth-helper-text');
+    if (byId('register-form').classList.contains('hidden')) {
+        helper.textContent = 'Sign in to switch apps, or create a new playoff account in one step.';
+        return;
+    }
+
+    const selectedAppId = getSelectedRegistrationAppId();
+    if (selectedAppId === APP_IDS.PLAYOFF) {
+        helper.textContent = 'Playoff Pool is open registration. Create your account and you will be added right away.';
+        return;
+    }
+
+    const code = byId('reg-code').value.trim();
+    const inviteAppId = resolveInviteCode(code);
+    helper.textContent = inviteAppId === APP_IDS.STRONG8K
+        ? `This code will create access for ${APP_DEFINITIONS[inviteAppId].authTitle}.`
+        : 'Strong8K still requires a valid invite code.';
 }
 
 async function claimOrCreateAccount({ uid, email, appId, inviteCode }) {
@@ -456,6 +583,14 @@ async function migrateLegacyAccount({ oldUserId, newUserId, email, appId, invite
 function bindSharedActions() {
     byId('switcher-signout-btn').addEventListener('click', () => signOut(auth));
     byId('no-access-signout-btn').addEventListener('click', () => signOut(auth));
+    byId('no-access-home-btn').addEventListener('click', async () => {
+        window.location.hash = '#/apps';
+        try {
+            await routeAuthenticatedUser();
+        } catch (error) {
+            handlePortalLoadError(error);
+        }
+    });
 
     document.querySelectorAll('[data-action="app-home"]').forEach(button => {
         button.addEventListener('click', async () => {
@@ -500,45 +635,36 @@ function renderAppSwitcher(activeMemberships) {
         container.appendChild(button);
     });
 
-}
-
-function renderInviteCodePrompt() {
-    byId('activate-code').value = '';
-}
-
-async function selfActivateApp(appId, inviteCode) {
-    const uid = state.authUser.uid;
-    const membershipRef = doc(db, 'users', uid, 'memberships', appId);
-    await setDoc(membershipRef, {
-        ...defaultMembership(appId, inviteCode),
-        app_id: appId
-    }, { merge: true });
-    if (appId === APP_IDS.STRONG8K) {
-        await setDoc(doc(db, 'strong8k_profiles', uid), normalizeStrong8kProfile({}, {}), { merge: true });
+    if (!activeMemberships[APP_IDS.PLAYOFF]) {
+        const joinCard = document.createElement('button');
+        joinCard.className = 'group rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-emerald-600 hover:shadow-xl';
+        joinCard.innerHTML = `
+            <div class="mb-4 flex items-center justify-between">
+                <span class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-700">Open Pool</span>
+                <i class="fa-solid fa-hockey-puck text-emerald-300 transition group-hover:text-emerald-700"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-950">${APP_DEFINITIONS[APP_IDS.PLAYOFF].authTitle}</h3>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Enter the only active playoff pool, get the payment and deadline details, and start making picks right away.</p>
+        `;
+        joinCard.addEventListener('click', async () => {
+            try {
+                await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
+                await hydrateSession(state.authUser);
+                window.location.hash = APP_DEFINITIONS[APP_IDS.PLAYOFF].route;
+                await openApp(APP_IDS.PLAYOFF);
+            } catch (error) {
+                handlePortalLoadError(error);
+            }
+        });
+        container.appendChild(joinCard);
     }
 }
 
-function bindNoAccessEvents() {
-    byId('activate-form').addEventListener('submit', async event => {
-        event.preventDefault();
-        const code = byId('activate-code').value.trim();
-        const appId = resolveInviteCode(code);
-        if (!appId) {
-            showToast('Invalid invite code', 'error');
-            return;
-        }
-        try {
-            byId('activate-submit-btn').disabled = true;
-            await selfActivateApp(appId, code.toUpperCase());
-            await hydrateSession(state.authUser);
-            await routeAuthenticatedUser();
-            showToast(`${APP_DEFINITIONS[appId].shortLabel} access activated!`);
-        } catch (error) {
-            showToast(error.message, 'error');
-        } finally {
-            byId('activate-submit-btn').disabled = false;
-        }
-    });
+function renderNoAccess(pendingMemberships) {
+    const pendingApps = Object.keys(pendingMemberships);
+    byId('no-access-message').textContent = pendingApps.length
+        ? `Your ${pendingApps.map(appId => APP_DEFINITIONS[appId].shortLabel).join(' / ')} access is not active yet.`
+        : 'This account does not have an active app membership yet. If you want in on the playoff pool, open All Apps and enter the live pool there.';
 }
 
 async function loadStrong8kApp() {
@@ -772,6 +898,11 @@ function openPurchaseModal(name, price) {
 }
 
 async function loadPlayoffApp() {
+    if (canSelfServePlayoff()) {
+        await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
+        await hydrateSession(state.authUser);
+    }
+
     const membership = state.accessibleApps[APP_IDS.PLAYOFF];
     state.playoff.membership = membership;
     const pool = await resolvePlayoffPool(membership);
@@ -870,13 +1001,8 @@ async function loadPlayoffApp() {
     state.playoff.payoutSummary = payoutSummary;
     state.playoff.pickDistribution = buildPickDistribution(series, roundPickDocs);
     state.playoff.standingsTrend = buildStandingsTrend(rounds, standings);
-    state.playoff.scoreboardHistory = buildScoreboardHistory({
-        rounds,
-        members: standings,
-        currentRound,
-        currentRoundSeries: series,
-        currentRoundPickDocs: roundPickDocs
-    });
+    state.playoff.eventHistory = buildEventSnapshots(series, roundPickDocs, currentRound, standings);
+    state.playoff.timelineIndex = Math.max(0, state.playoff.eventHistory.length - 1);
     state.playoff.teamNameDraft = preservedTeamNameDraft || member.team_name || '';
     state.playoff.draft = buildDraftFromEntries(currentPick?.entries || []);
     state.playoff.scenarioDraft = buildScenarioDraft(series, preservedScenarioDraft);
@@ -959,69 +1085,7 @@ async function ensurePlayoffSelfServeAccess(uid, email) {
     }, { merge: true });
 }
 
-function renderIPTVUpsellBanner() {
-    const banner = byId('iptv-upsell-banner');
-    if (state.accessibleApps[APP_IDS.STRONG8K]) {
-        banner.classList.add('hidden');
-        return;
-    }
-
-    banner.classList.remove('hidden');
-    banner.innerHTML = `
-        <div class="rounded-[1.5rem] border border-amber-400/30 bg-gradient-to-r from-amber-950/60 to-slate-900/80 px-5 py-4">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div class="min-w-0">
-                    <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-amber-300">Strong8K IPTV</p>
-                    <p class="mt-1 text-sm font-semibold text-white">Want to watch the games live? Get Elliot's IPTV service — 3 months for $25.</p>
-                </div>
-                <button id="iptv-activate-btn" class="shrink-0 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300">
-                    Activate IPTV Access
-                </button>
-            </div>
-            <div id="iptv-code-wrap" class="hidden mt-4 flex gap-2">
-                <input type="text" id="iptv-code-input" placeholder="Invite Code" class="flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold uppercase tracking-widest text-white placeholder-white/40 outline-none transition focus:border-amber-400">
-                <button id="iptv-code-submit" class="rounded-2xl bg-amber-400 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300">Go</button>
-                <button id="iptv-code-cancel" class="rounded-2xl border border-white/20 px-4 py-2.5 text-sm font-bold text-white/60 transition hover:text-white">Cancel</button>
-            </div>
-        </div>
-    `;
-
-    byId('iptv-activate-btn').addEventListener('click', () => {
-        byId('iptv-activate-btn').classList.add('hidden');
-        byId('iptv-code-wrap').classList.remove('hidden');
-        byId('iptv-code-input').focus();
-    });
-
-    byId('iptv-code-cancel').addEventListener('click', () => {
-        byId('iptv-code-wrap').classList.add('hidden');
-        byId('iptv-activate-btn').classList.remove('hidden');
-        byId('iptv-code-input').value = '';
-    });
-
-    byId('iptv-code-submit').addEventListener('click', async () => {
-        const code = byId('iptv-code-input').value.trim();
-        const appId = resolveInviteCode(code);
-        if (appId !== APP_IDS.STRONG8K) {
-            showToast('Invalid invite code', 'error');
-            return;
-        }
-        try {
-            byId('iptv-code-submit').disabled = true;
-            await selfActivateApp(APP_IDS.STRONG8K, code.toUpperCase());
-            await hydrateSession(state.authUser);
-            showToast('Strong8K IPTV access activated!');
-            renderIPTVUpsellBanner();
-            window.location.hash = APP_DEFINITIONS[APP_IDS.STRONG8K].route;
-            await openApp(APP_IDS.STRONG8K);
-        } catch (error) {
-            showToast(error.message, 'error');
-            byId('iptv-code-submit').disabled = false;
-        }
-    });
-}
-
 function renderPlayoffApp() {
-    renderIPTVUpsellBanner();
     byId('playoff-user-name').textContent = state.sharedUser.full_name || 'Pool Member';
     byId('playoff-user-email').textContent = state.authUser.email;
     byId('playoff-brand-name').textContent = CONFIG.PLAYOFF_BRAND_NAME;
@@ -1057,17 +1121,24 @@ function renderPlayoffApp() {
     byId('playoff-amount-paid').textContent = `${formatCurrency(state.playoff.payment?.amount_paid || state.playoff.member?.amount_paid || 0)} / ${formatCurrency(state.playoff.payment?.amount_due || state.playoff.member?.amount_due || 0)}`;
     byId('playoff-payout-status').textContent = buildPayoutStatusText();
     byId('playoff-rank-summary').textContent = buildCurrentRankSummary();
+    byId('playoff-live-scoreboard-note').textContent = buildLiveScoreboardNote();
     byId('playoff-rules-content').innerHTML = buildPoolRulesMarkup();
     byId('playoff-payment-instructions').textContent = buildPaymentInstructions();
     byId('playoff-payment-link').href = buildPlayoffPaymentLink();
 
     renderTeamNameEditor();
     renderSeriesCards();
-    renderScoreboardHistory();
+    renderStandings();
+    renderStandingsHistory();
     renderPayoutSummary();
+    renderStandingsTrend();
     renderPickDistribution();
     renderPreviousPicks();
     renderScenarioLab();
+    renderPicksBoard();
+    initSectionVisibility();
+    renderSidebar();
+    applyVisibleSections();
 }
 
 function renderSeriesCards() {
@@ -1827,6 +1898,16 @@ function buildCurrentRankSummary() {
     return `Currently ${ordinal(currentRank + 1)} of ${state.playoff.standings.length}`;
 }
 
+function buildLiveScoreboardNote() {
+    if (!state.playoff.currentRound) {
+        return 'No round is active yet.';
+    }
+
+    return isRoundRevealed(state.playoff.currentRound, state.playoff.pool)
+        ? 'This board reflects the saved pool totals and updates when results are rescored.'
+        : 'This board shows official saved totals. Use the what-if lab below for your own projections before picks unlock.';
+}
+
 function buildScenarioDraft(seriesList = [], existingDraft = {}) {
     return Object.fromEntries(seriesList.map(series => [
         series.id,
@@ -2007,91 +2088,314 @@ function updateScenarioDraft(seriesId, field, value) {
 }
 
 
-function buildRankSparkline(rankTrend = []) {
-    const filtered = rankTrend.filter(r => r != null && r > 0);
-    if (filtered.length < 2) {
-        return '<span class="text-slate-500 text-xs">—</span>';
-    }
-    const width = 60;
-    const height = 22;
-    const minRank = Math.min(...filtered);
-    const maxRank = Math.max(...filtered);
-    const span = Math.max(1, maxRank - minRank);
-    const points = rankTrend.map((rank, idx) => {
-        if (rank == null || rank <= 0) return null;
-        const x = rankTrend.length === 1 ? width / 2 : (idx / (rankTrend.length - 1)) * width;
-        // Lower rank number = better = higher on chart (smaller y).
-        const y = ((rank - minRank) / span) * (height - 4) + 2;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).filter(Boolean).join(' ');
-    const lastIdx = rankTrend.length - 1;
-    const lastRank = rankTrend[lastIdx];
-    const lastX = rankTrend.length === 1 ? width / 2 : width;
-    const lastY = lastRank != null ? (((lastRank - minRank) / span) * (height - 4) + 2) : height / 2;
-    return `
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="inline-block">
-            <polyline fill="none" stroke="rgb(125 211 252)" stroke-width="1.5" points="${points}" />
-            <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2" fill="rgb(125 211 252)" />
-        </svg>
-    `;
-}
+function buildEventSnapshots(series = [], pickDocs = [], currentRound = null, members = []) {
+    if (!series.length || !pickDocs.length || !currentRound) return [];
 
-function buildRankMovementLabel(movement) {
-    if (movement > 0) return `<span class="text-emerald-300">▲ ${movement}</span>`;
-    if (movement < 0) return `<span class="text-rose-300">▼ ${Math.abs(movement)}</span>`;
-    return '<span class="text-slate-500">—</span>';
-}
+    const confirmedSeries = series
+        .filter(s => s.result_winner_team_id)
+        .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+    if (!confirmedSeries.length) return [];
 
-function renderScoreboardHistory() {
-    const container = byId('playoff-scoreboard-history');
-    container.innerHTML = '';
+    const pickById = Object.fromEntries(pickDocs.map(p => [p.id, p]));
 
-    const rows = state.playoff.scoreboardHistory || [];
-    if (!rows.length) {
-        container.innerHTML = '<p class="text-sm text-slate-400">Scoreboard data will appear once members and rounds are seeded.</p>';
-        return;
+    // Previous-rounds baseline per member (all rounds except current)
+    const prevPoints = Object.fromEntries(members.map(m => [
+        m.id,
+        (m.round_history || [])
+            .filter(h => h.round_id !== currentRound.id)
+            .reduce((sum, h) => sum + Number(h.points || 0), 0)
+    ]));
+
+    function computeSnapshot(confirmedIds) {
+        const masked = series.map(s =>
+            confirmedIds.has(s.id) ? s : { ...s, result_winner_team_id: '', result_games: 0 }
+        );
+        return members.map(m => {
+            const pd = pickById[m.id];
+            const rPts = pd ? scorePickDocument(pd, masked, currentRound).round_total : 0;
+            return {
+                id: m.id,
+                display_name: m.team_name || m.display_name || m.id,
+                points_total: (prevPoints[m.id] || 0) + rPts,
+                round_points: rPts
+            };
+        }).sort((a, b) => b.points_total - a.points_total);
     }
 
-    const header = `
-        <thead class="bg-slate-950/70 text-[11px] uppercase tracking-[0.22em] text-slate-400">
-            <tr>
-                <th class="px-3 py-3">#</th>
-                <th class="px-3 py-3">Member</th>
-                <th class="px-3 py-3 text-right">Total</th>
-                <th class="px-3 py-3 text-right">This Round</th>
-                <th class="px-3 py-3 text-right">Rank Movement</th>
-                <th class="px-3 py-3 text-center">Trend</th>
-                <th class="px-3 py-3 text-right">Potential</th>
-            </tr>
-        </thead>
-    `;
+    return confirmedSeries.map((s, i) => {
+        const confirmedIds = new Set(confirmedSeries.slice(0, i + 1).map(x => x.id));
+        return {
+            seriesId: s.id,
+            homeId: s.home_team_id,
+            awayId: s.away_team_id,
+            winnerId: s.result_winner_team_id,
+            games: s.result_games || 0,
+            label: `${s.home_team_id} vs ${s.away_team_id}`,
+            standings: computeSnapshot(confirmedIds)
+        };
+    });
+}
 
-    const body = rows.map(row => {
-        const isMe = row.member_id === state.authUser.uid;
-        const rowClass = isMe
-            ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm'
-            : 'border-b border-white/10 text-sm';
-        return `
-            <tr class="${rowClass}">
-                <td class="px-3 py-3 text-slate-300">${row.current_rank || '—'}</td>
-                <td class="px-3 py-3 font-semibold text-white">${escapeHtml(row.display_name)}</td>
-                <td class="px-3 py-3 text-right text-slate-200">${row.total_points}</td>
-                <td class="px-3 py-3 text-right text-slate-400">${row.points_earned_this_round}</td>
-                <td class="px-3 py-3 text-right">${buildRankMovementLabel(row.rank_movement)}</td>
-                <td class="px-3 py-3 text-center">${buildRankSparkline(row.rank_trend)}</td>
-                <td class="px-3 py-3 text-right text-amber-200">+${row.potential_points}</td>
-            </tr>
+function renderStandings() {
+    const tbody = byId('standings-body');
+    tbody.innerHTML = '';
+
+    const history = state.playoff.eventHistory || [];
+    // Position delta: compare current to the snapshot just before the latest event
+    const prevSnap = history.length >= 2 ? history[history.length - 2].standings : null;
+    const prevRankById = prevSnap
+        ? Object.fromEntries(prevSnap.map((m, i) => [m.id, i + 1]))
+        : null;
+
+    state.playoff.standings.forEach((member, index) => {
+        const curRank = index + 1;
+        let deltaCell = `<td class="px-3 py-3 text-right w-10 text-slate-700 text-[11px]">—</td>`;
+        if (prevRankById) {
+            const prev = prevRankById[member.id];
+            const delta = prev !== undefined ? prev - curRank : 0;
+            if (delta > 0) {
+                deltaCell = `<td class="px-3 py-3 text-right w-10"><span class="text-[11px] font-black text-emerald-400 tabular-nums">▲${delta}</span></td>`;
+            } else if (delta < 0) {
+                deltaCell = `<td class="px-3 py-3 text-right w-10"><span class="text-[11px] font-black text-rose-400 tabular-nums">▼${Math.abs(delta)}</span></td>`;
+            } else {
+                deltaCell = `<td class="px-3 py-3 text-right w-10 text-slate-600 text-[11px]">—</td>`;
+            }
+        }
+
+        const row = document.createElement('tr');
+        row.className = member.id === state.authUser.uid
+            ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm hover:bg-emerald-400/10 transition'
+            : 'border-b border-white/10 text-sm hover:bg-white/5 transition';
+        row.innerHTML = `
+            <td class="px-4 py-3 font-bold text-slate-400 tabular-nums">${curRank}</td>
+            <td class="px-4 py-3 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
+            <td class="px-4 py-3 font-semibold text-slate-200 tabular-nums">${member.points_total || 0}</td>
+            <td class="px-4 py-3 text-slate-400 tabular-nums">${member.round_points || 0}</td>
+            ${deltaCell}
         `;
+        tbody.appendChild(row);
+    });
+}
+
+function renderStandingsHistory() {
+    const container = byId('standings-history');
+    if (!container) return;
+    const history = state.playoff.eventHistory || [];
+    if (!history.length) { container.innerHTML = ''; return; }
+
+    const K = history.length;
+    const idx = Math.max(0, Math.min(state.playoff.timelineIndex, K - 1));
+    const event = history[idx];
+    const prevSnap = idx > 0 ? history[idx - 1].standings : null;
+    const prevRankById = prevSnap ? Object.fromEntries(prevSnap.map((m, i) => [m.id, i + 1])) : {};
+
+    // Snapshot rows
+    const snapRows = event.standings.map((m, i) => {
+        const rank = i + 1;
+        const prev = prevRankById[m.id];
+        const delta = prev !== undefined ? prev - rank : null;
+        const deltaHTML = delta === null ? '' : delta > 0
+            ? `<span class="text-emerald-400 text-[10px] font-black">▲${delta}</span>`
+            : delta < 0
+                ? `<span class="text-rose-400 text-[10px] font-black">▼${Math.abs(delta)}</span>`
+                : `<span class="text-slate-600 text-[10px]">—</span>`;
+        const isMe = m.id === state.authUser?.uid;
+        return `<tr class="${isMe ? 'bg-emerald-400/5' : ''} border-b border-white/5 hover:bg-white/5 transition">
+            <td class="px-3 py-1.5 text-[11px] font-bold text-slate-500 tabular-nums w-7">${rank}</td>
+            <td class="px-3 py-1.5 text-sm font-semibold text-white">${escapeHtml(m.display_name)}</td>
+            <td class="px-3 py-1.5 text-sm tabular-nums font-semibold text-slate-200">${m.points_total}</td>
+            <td class="px-3 py-1.5 text-right">${deltaHTML}</td>
+        </tr>`;
     }).join('');
 
+    // Event chips
+    const chips = history.map((ev, i) => `
+        <button data-timeline-jump="${i}"
+            class="px-2 py-0.5 rounded-md text-[10px] font-semibold transition whitespace-nowrap
+                   ${i === idx ? 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-400/30' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}">
+            ${escapeHtml(ev.label)}
+        </button>`).join('');
+
+    // Winner info
+    const seriesObj = (state.playoff.series || []).find(s => s.id === event.seriesId);
+    const isWinnerHome = event.winnerId === event.homeId;
+    const wLogo = seriesObj
+        ? (isWinnerHome ? (seriesObj.home_team_logo_dark || seriesObj.home_team_logo_light || '') : (seriesObj.away_team_logo_dark || seriesObj.away_team_logo_light || ''))
+        : '';
+    const wColor = seriesObj
+        ? (isWinnerHome ? (seriesObj.home_team_primary_color || '#0F172A') : (seriesObj.away_team_primary_color || '#0F172A'))
+        : '#0F172A';
+
+    // SVG rank chart
+    const chartSVG = buildStandingsChartSVG(history, idx);
+
     container.innerHTML = `
-        <div class="overflow-hidden rounded-3xl border border-white/10">
-            <table class="w-full text-left">
-                ${header}
-                <tbody>${body}</tbody>
-            </table>
-        </div>
-    `;
+        <div class="rounded-[2rem] border border-white/10 bg-white/5 p-5">
+            <div class="flex flex-col gap-5 lg:flex-row lg:gap-6">
+
+                <!-- Left: event nav + snapshot table -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                            <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-sky-300">Scoreboard History</p>
+                            <p class="text-xs text-slate-400 mt-0.5">${K} scoring event${K !== 1 ? 's' : ''} this round</p>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button ${idx === 0 ? 'disabled' : 'data-timeline-nav="-1"'}
+                                class="w-7 h-7 flex items-center justify-center rounded-lg text-xs transition
+                                       ${idx === 0 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-white/10'}">◀</button>
+                            <div class="flex flex-col items-center px-3 py-1.5 rounded-xl bg-white/5 min-w-[9rem] text-center">
+                                ${wLogo ? `<div class="h-6 w-6 rounded-md mb-1 flex items-center justify-center border border-black/10 p-0.5" style="background:${escapeAttribute(wColor)}"><img src="${escapeAttribute(wLogo)}" class="h-full w-full object-contain" loading="lazy"></div>` : ''}
+                                <p class="text-[11px] font-bold text-white leading-tight">${escapeHtml(event.label)}</p>
+                                <p class="text-[10px] text-slate-400"><span class="text-white font-semibold">${escapeHtml(event.winnerId)}</span> wins${event.games ? ` in ${event.games}` : ''}</p>
+                            </div>
+                            <button ${idx === K - 1 ? 'disabled' : 'data-timeline-nav="1"'}
+                                class="w-7 h-7 flex items-center justify-center rounded-lg text-xs transition
+                                       ${idx === K - 1 ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-white/10'}">▶</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-1 mb-3">${chips}</div>
+                    <div class="overflow-hidden rounded-2xl border border-white/10">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-950/70">
+                                <tr>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 w-7">#</th>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Member</th>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Pts</th>
+                                    <th class="px-3 py-1.5"></th>
+                                </tr>
+                            </thead>
+                            <tbody>${snapRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right: chart -->
+                <div class="w-full lg:w-72 shrink-0">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">Rank Evolution</p>
+                        <div class="flex gap-1">
+                            <button data-chart-type="rank"
+                                class="px-2 py-0.5 rounded text-[10px] font-semibold transition
+                                       ${(state.playoff.chartType || 'rank') === 'rank' ? 'bg-sky-500/20 text-sky-300' : 'text-slate-500 hover:text-slate-300'}">Rank</button>
+                            <button data-chart-type="pts"
+                                class="px-2 py-0.5 rounded text-[10px] font-semibold transition
+                                       ${(state.playoff.chartType || 'rank') === 'pts' ? 'bg-sky-500/20 text-sky-300' : 'text-slate-500 hover:text-slate-300'}">Pts</button>
+                        </div>
+                    </div>
+                    <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-2 overflow-hidden">
+                        ${chartSVG}
+                    </div>
+                    <p class="mt-2 text-[10px] text-slate-600">
+                        <span class="text-violet-400">━</span> You &nbsp;
+                        <span class="text-sky-400">━</span> Top 3 &nbsp;
+                        <span class="text-slate-600">━</span> Others
+                    </p>
+                </div>
+
+            </div>
+        </div>`;
+}
+
+function buildStandingsChartSVG(history, selectedIdx) {
+    if (!history.length) return '<p class="text-xs text-slate-600 py-8 text-center">No data yet</p>';
+
+    const members = state.playoff.standings;
+    const N = members.length;
+    const K = history.length;
+    const myId = state.authUser?.uid;
+    const chartType = state.playoff.chartType || 'rank';
+
+    // Identify top 3 by latest standings
+    const top3Ids = new Set(history[history.length - 1].standings.slice(0, 3).map(m => m.id));
+
+    // For each member, build array of values across events
+    function getRank(snap, memberId) {
+        const i = snap.standings.findIndex(m => m.id === memberId);
+        return i === -1 ? N : i + 1;
+    }
+    function getPoints(snap, memberId) {
+        return snap.standings.find(m => m.id === memberId)?.points_total || 0;
+    }
+
+    const maxPts = chartType === 'pts'
+        ? Math.max(...history[history.length - 1].standings.map(m => m.points_total), 1)
+        : null;
+
+    const W = 280, H = 180;
+    const pL = 22, pR = 8, pT = 8, pB = 20;
+    const cW = W - pL - pR, cH = H - pT - pB;
+
+    const xOf = i => pL + (K === 1 ? cW / 2 : (i / (K - 1)) * cW);
+    const yOfRank = r => pT + ((r - 1) / Math.max(N - 1, 1)) * cH;
+    const yOfPts = p => pT + (1 - p / maxPts) * cH;
+    const yOf = chartType === 'rank' ? yOfRank : yOfPts;
+    const valOf = chartType === 'rank'
+        ? (snap, id) => getRank(snap, id)
+        : (snap, id) => getPoints(snap, id);
+
+    // Selected event guide line
+    const gx = xOf(selectedIdx).toFixed(1);
+    const guide = `<line x1="${gx}" y1="${pT}" x2="${gx}" y2="${H - pB}" stroke="rgba(148,163,184,0.15)" stroke-width="1" stroke-dasharray="3,2"/>`;
+
+    // Lines (grey first, then highlights on top)
+    const greyLines = members
+        .filter(m => m.id !== myId && !top3Ids.has(m.id))
+        .map(m => {
+            const pts = history.map((snap, i) => `${xOf(i).toFixed(1)},${yOf(valOf(snap, m.id)).toFixed(1)}`).join(' ');
+            return `<polyline points="${pts}" fill="none" stroke="rgba(51,65,85,0.8)" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>`;
+        }).join('');
+
+    const top3Lines = members
+        .filter(m => top3Ids.has(m.id) && m.id !== myId)
+        .map(m => {
+            const pts = history.map((snap, i) => `${xOf(i).toFixed(1)},${yOf(valOf(snap, m.id)).toFixed(1)}`).join(' ');
+            return `<polyline points="${pts}" fill="none" stroke="rgba(56,189,248,0.7)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+        }).join('');
+
+    const myLine = myId ? (() => {
+        const m = members.find(m => m.id === myId);
+        if (!m) return '';
+        const pts = history.map((snap, i) => `${xOf(i).toFixed(1)},${yOf(valOf(snap, m.id)).toFixed(1)}`).join(' ');
+        return `<polyline points="${pts}" fill="none" stroke="rgba(167,139,250,1)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    })() : '';
+
+    // Endpoint dots for notable members at selected event
+    const snap = history[selectedIdx];
+    const notableDots = members
+        .filter(m => m.id === myId || top3Ids.has(m.id))
+        .map(m => {
+            const x = gx;
+            const y = yOf(valOf(snap, m.id)).toFixed(1);
+            const isMe = m.id === myId;
+            const col = isMe ? '#a78bfa' : '#38bdf8';
+            return `<circle cx="${x}" cy="${y}" r="${isMe ? 3.5 : 2.5}" fill="${col}" stroke="rgb(2,6,23)" stroke-width="1.5"/>`;
+        }).join('');
+
+    // X labels (series home team ID, abbreviated)
+    const xLabels = history.map((ev, i) => {
+        const x = xOf(i).toFixed(1);
+        return `<text x="${x}" y="${H - 4}" text-anchor="middle" font-size="7" fill="rgba(100,116,139,0.7)">${escapeHtml(ev.homeId || '')}</text>`;
+    }).join('');
+
+    // Y axis
+    const yAxisItems = chartType === 'rank'
+        ? [[1, '1'], [Math.ceil(N / 2), String(Math.ceil(N / 2))], [N, String(N)]]
+        : [[maxPts, String(maxPts)], [Math.round(maxPts / 2), String(Math.round(maxPts / 2))], [0, '0']];
+    const yLabels = yAxisItems.map(([v, label]) => {
+        const y = (chartType === 'rank' ? yOfRank(v) : yOfPts(v)).toFixed(1);
+        return `<text x="${pL - 3}" y="${(Number(y) + 3).toFixed(1)}" text-anchor="end" font-size="7" fill="rgba(100,116,139,0.6)">${label}</text>`;
+    }).join('');
+
+    return `<svg viewBox="0 0 ${W} ${H}" class="w-full" style="height:${H}px">
+        ${guide}
+        ${greyLines}
+        ${top3Lines}
+        ${myLine}
+        ${notableDots}
+        ${xLabels}
+        ${yLabels}
+    </svg>`;
 }
 
 function renderPayoutSummary() {
@@ -2118,6 +2422,38 @@ function renderPayoutSummary() {
         `;
         container.appendChild(card);
     });
+}
+
+function renderStandingsTrend() {
+    const container = byId('playoff-standings-trend');
+    container.innerHTML = '';
+
+    if (!state.playoff.standingsTrend.length || !state.playoff.rounds.length) {
+        container.innerHTML = '<p class="text-sm text-slate-400">Trend data will appear once rounds have been scored.</p>';
+        return;
+    }
+
+    const roundLabels = state.playoff.rounds.map(round => escapeHtml(round.name || `Round ${round.sort_order}`));
+    container.innerHTML = `
+        <div class="grid gap-3">
+            ${state.playoff.standingsTrend.slice(0, 6).map(line => `
+                <div class="rounded-3xl bg-slate-950/40 p-4">
+                    <div class="mb-3 flex items-center justify-between gap-4">
+                        <p class="text-sm font-bold text-white">${escapeHtml(line.display_name)}</p>
+                        <p class="text-xs uppercase tracking-[0.2em] text-slate-400">${line.points.reduce((sum, value) => sum + Number(value || 0), 0)} total</p>
+                    </div>
+                    <div class="grid gap-2 ${roundLabels.length > 1 ? 'md:grid-cols-4' : ''}">
+                        ${line.points.map((value, index) => `
+                            <div class="rounded-2xl bg-white/5 px-3 py-2">
+                                <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400">${roundLabels[index]}</p>
+                                <p class="mt-1 text-lg font-black text-white">${value}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
 function renderPickDistribution() {
@@ -2161,6 +2497,398 @@ function renderPickDistribution() {
         `;
         container.appendChild(card);
     });
+}
+
+function renderPicksBoard() {
+    const container = byId('picks-board-container');
+    const note = byId('picks-board-note');
+    container.innerHTML = '';
+
+    if (!isRoundRevealed(state.playoff.currentRound, state.playoff.pool)) {
+        note.textContent = 'Picks are hidden until the round locks.';
+        container.innerHTML = '<p class="text-sm text-slate-400">The picks board becomes visible once the current round locks and picks are revealed.</p>';
+        return;
+    }
+
+    const series = state.playoff.series;
+    const pickDocs = state.playoff.roundPickDocs;
+    const baseStandings = state.playoff.standings;
+
+    if (!series.length || !pickDocs.length) {
+        note.textContent = '';
+        container.innerHTML = '<p class="text-sm text-slate-400">No revealed pick data is available for this round yet.</p>';
+        return;
+    }
+
+    // Sort
+    const sort = state.playoff.picksBoardSort || 'standings';
+    let standings = [...baseStandings];
+    if (sort === 'pts_asc') standings.sort((a, b) => (a.points_total || 0) - (b.points_total || 0));
+    else if (sort === 'name_asc') standings.sort((a, b) => (a.team_name || a.display_name || '').localeCompare(b.team_name || b.display_name || ''));
+
+    // Filter / compare
+    const filter = state.playoff.picksBoardFilter;
+    const filteredStandings = filter?.size ? standings.filter(m => filter.has(m.id)) : standings;
+
+    note.textContent = `${filteredStandings.length}${filter?.size ? ` / ${standings.length}` : ''} members · ${series.length} series`;
+
+    // Picks lookup
+    const picksByUid = {};
+    pickDocs.forEach(d => {
+        const map = {};
+        (d.entries || []).forEach(e => { map[e.series_id] = e; });
+        picksByUid[d.id] = map;
+    });
+    const seriesById = Object.fromEntries(series.map(s => [s.id, s]));
+    const flipped = state.playoff.picksBoardFlipped;
+
+    // ── Controls ──────────────────────────────────────────────────────────
+    const sortBtns = [['standings', 'Rank'], ['pts_asc', 'Pts ↑'], ['name_asc', 'Name']].map(([key, label]) =>
+        `<button data-pb-sort="${escapeAttribute(key)}"
+            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition
+                   ${sort === key ? 'bg-fuchsia-500/20 text-fuchsia-300 ring-1 ring-fuchsia-400/30' : 'text-slate-400 hover:text-white hover:bg-white/5'}">
+            ${label}</button>`
+    ).join('');
+
+    const flipBtn = `<button data-pb-flip
+        class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition
+               ${flipped ? 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-400/30' : 'text-slate-400 hover:text-white hover:bg-white/5'}">
+        ⇄ Flip</button>`;
+
+    const memberChips = standings.map(m => {
+        const sel = filter?.has(m.id);
+        return `<button data-pb-filter="${escapeAttribute(m.id)}"
+            class="px-2 py-0.5 rounded-md text-[10px] font-medium transition whitespace-nowrap
+                   ${sel ? 'bg-fuchsia-500/20 text-fuchsia-300 ring-1 ring-fuchsia-400/30' : 'text-slate-600 hover:text-slate-300 hover:bg-white/5'}">
+            ${escapeHtml(m.team_name || m.display_name || m.id)}</button>`;
+    }).join('');
+
+    const clearBtn = filter?.size
+        ? `<button data-pb-filter-clear class="px-2 py-0.5 rounded-md text-[10px] text-slate-500 hover:text-white hover:bg-white/5 transition shrink-0">Clear ×</button>`
+        : '';
+
+    const controls = `
+        <div class="mb-3 flex flex-wrap items-start gap-x-4 gap-y-2">
+            <div class="flex items-center gap-1 shrink-0">
+                <span class="text-[10px] text-slate-500 mr-0.5">Sort</span>
+                ${sortBtns}
+                <span class="mx-1 text-slate-700">|</span>
+                ${flipBtn}
+            </div>
+            <div class="flex flex-wrap items-center gap-1 min-w-0">
+                <span class="text-[10px] text-slate-500 mr-0.5 shrink-0">Compare</span>
+                ${memberChips}
+                ${clearBtn}
+            </div>
+        </div>`;
+
+    // ── Cell builder ──────────────────────────────────────────────────────
+    function buildCell(s, member) {
+        const entry = (picksByUid[member.id] || {})[s.id];
+        if (!entry?.winner_team_id)
+            return `<td class="px-1.5 py-1 text-center"><span class="text-slate-600 text-xs">—</span></td>`;
+        const teamId = entry.winner_team_id;
+        const isHome = teamId === s.home_team_id;
+        const logoUrl = isHome ? (s.home_team_logo_dark || s.home_team_logo_light || '') : (s.away_team_logo_dark || s.away_team_logo_light || '');
+        const color = isHome ? (s.home_team_primary_color || '#0F172A') : (s.away_team_primary_color || '#0F172A');
+        const games = entry.games || '?';
+        const resultKnown = Boolean(seriesById[s.id]?.result_winner_team_id);
+        const correct = resultKnown && teamId === seriesById[s.id].result_winner_team_id;
+        const incorrect = resultKnown && !correct;
+        const ring = correct ? 'ring-2 ring-emerald-400/60' : incorrect ? 'ring-2 ring-rose-400/40' : '';
+        const bg = correct ? 'bg-emerald-400/10' : incorrect ? 'bg-rose-400/5' : '';
+        return `<td class="px-1.5 py-1 text-center">
+            <div class="inline-flex flex-col items-center gap-0.5 ${bg} rounded-xl px-1.5 py-1 ${ring}">
+                <div class="h-10 w-10 flex items-center justify-center rounded-lg border border-black/10 p-1" style="background:${escapeAttribute(color)}">
+                    <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamId)}" class="h-full w-full object-contain" loading="lazy">
+                </div>
+                <span class="text-[10px] font-bold text-slate-300 leading-none tabular-nums">${games}</span>
+            </div>
+        </td>`;
+    }
+
+    // ── Table ─────────────────────────────────────────────────────────────
+    let tableHTML;
+    if (!flipped) {
+        // Members × Series
+        const headerCells = series.map(s =>
+            `<th class="min-w-[4.5rem] px-2 py-2 text-center text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 whitespace-nowrap">
+                ${escapeHtml(s.home_team_id)} <span class="text-slate-600">vs</span> ${escapeHtml(s.away_team_id)}
+            </th>`
+        ).join('');
+
+        const rows = filteredStandings.map((member, idx) => {
+            const isCurrentUser = member.id === state.authUser.uid;
+            const rowCls = isCurrentUser ? 'border-b border-emerald-300/20 bg-emerald-400/5' : 'border-b border-white/5 hover:bg-white/5';
+            const rank = sort === 'standings' ? (baseStandings.findIndex(m => m.id === member.id) + 1) : (idx + 1);
+            return `<tr class="${rowCls} transition">
+                <td class="sticky left-0 bg-slate-950 px-3 py-1.5 font-semibold text-sm text-white z-10 whitespace-nowrap">
+                    <span class="mr-1.5 text-[10px] font-bold text-slate-500 tabular-nums w-4 inline-block text-right">${rank}</span>${escapeHtml(member.team_name || member.display_name || member.email || member.id)}
+                </td>
+                <td class="px-2 py-1.5 text-center text-sm font-semibold text-slate-300 tabular-nums">${member.points_total || 0}</td>
+                ${series.map(s => buildCell(s, member)).join('')}
+            </tr>`;
+        }).join('');
+
+        tableHTML = `
+            <div class="overflow-x-auto rounded-[1.5rem] border border-white/10">
+                <table class="w-full text-left min-w-max border-collapse">
+                    <thead class="bg-slate-950/80">
+                        <tr>
+                            <th class="sticky left-0 bg-slate-950/90 px-3 py-2 z-10 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Member</th>
+                            <th class="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 min-w-[2.5rem]">Pts</th>
+                            ${headerCells}
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    } else {
+        // Series × Members (flipped)
+        const memberHeaders = filteredStandings.map(m =>
+            `<th class="min-w-[5rem] max-w-[7rem] px-2 py-2 text-center text-[10px] font-bold text-slate-400 leading-snug">
+                ${escapeHtml(m.team_name || m.display_name || m.id)}
+            </th>`
+        ).join('');
+
+        const rows = series.map(s => {
+            return `<tr class="border-b border-white/5 hover:bg-white/5 transition">
+                <td class="sticky left-0 bg-slate-950 px-3 py-1.5 z-10 whitespace-nowrap">
+                    <span class="text-[11px] font-bold text-white">${escapeHtml(s.home_team_id)}</span>
+                    <span class="text-[10px] text-slate-500 mx-1">vs</span>
+                    <span class="text-[11px] font-bold text-white">${escapeHtml(s.away_team_id)}</span>
+                </td>
+                ${filteredStandings.map(m => buildCell(s, m)).join('')}
+            </tr>`;
+        }).join('');
+
+        tableHTML = `
+            <div class="overflow-x-auto rounded-[1.5rem] border border-white/10">
+                <table class="w-full text-left min-w-max border-collapse">
+                    <thead class="bg-slate-950/80">
+                        <tr>
+                            <th class="sticky left-0 bg-slate-950/90 px-3 py-2 z-10 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Series</th>
+                            ${memberHeaders}
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    }
+
+    const legend = `
+        <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-slate-500">
+            <span class="inline-flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-emerald-400/60 bg-emerald-400/10"></span>Correct</span>
+            <span class="inline-flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-rose-400/40 bg-rose-400/5"></span>Wrong</span>
+            <span class="inline-flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-full bg-white/10"></span>Pending</span>
+        </div>`;
+
+    container.innerHTML = controls + tableHTML + legend;
+}
+
+// ── Sidebar: section visibility ──────────────────────────────────
+
+function initSectionVisibility() {
+    if (state.playoff.visibleSections) return; // already initialised this session
+    try {
+        const saved = JSON.parse(localStorage.getItem(LS_VISIBLE_KEY));
+        if (saved && Array.isArray(saved)) {
+            state.playoff.visibleSections = new Set(saved);
+            return;
+        }
+    } catch {}
+    state.playoff.visibleSections = new Set(SECTIONS_DEFAULT_ON);
+}
+
+function applyVisibleSections() {
+    PLAYOFF_SECTIONS.forEach(({ key, sectionId }) => {
+        byId(sectionId)?.classList.toggle('hidden', !state.playoff.visibleSections.has(key));
+    });
+    // Round recap section is controlled independently via renderRoundRecap
+}
+
+function toggleSection(key) {
+    const vis = state.playoff.visibleSections;
+    if (vis.has(key)) vis.delete(key); else vis.add(key);
+    localStorage.setItem(LS_VISIBLE_KEY, JSON.stringify([...vis]));
+    applyVisibleSections();
+    renderSidebarSections();
+}
+
+function renderSidebar() {
+    const pool = state.playoff.pool;
+    const poolName = pool?.name || CONFIG.PLAYOFF_BRAND_NAME || '';
+    const seasonLabel = pool?.season_label || '';
+    byId('sidebar-pool-name').textContent = poolName;
+    byId('sidebar-season-label').textContent = seasonLabel;
+    byId('sidebar-pool-name-mobile').textContent = poolName;
+    renderSidebarSections();
+    renderSidebarRounds();
+}
+
+function renderSidebarSections() {
+    const vis = state.playoff.visibleSections;
+    byId('playoff-sidebar-sections').innerHTML = PLAYOFF_SECTIONS.map(({ key, label, icon }) => {
+        const on = vis.has(key);
+        return `<button data-toggle-section="${escapeAttribute(key)}"
+            class="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm text-left transition
+                   ${on ? 'bg-white/10 text-white font-semibold' : 'text-slate-400 hover:bg-white/5 hover:text-white'}">
+            <span class="text-base leading-none w-5 shrink-0">${icon}</span>
+            <span class="flex-1 truncate">${escapeHtml(label)}</span>
+            <span class="text-[10px] font-bold tabular-nums shrink-0 ${on ? 'text-emerald-400' : 'text-slate-600'}">${on ? 'ON' : 'OFF'}</span>
+        </button>`;
+    }).join('');
+}
+
+function renderSidebarRounds() {
+    const rounds = state.playoff.rounds || [];
+    const currentRoundId = state.playoff.currentRound?.id;
+    const currentRoundIdx = rounds.findIndex(r => r.id === currentRoundId);
+
+    byId('playoff-sidebar-rounds').innerHTML = rounds.map((round, idx) => {
+        const isCurrent = round.id === currentRoundId;
+        const isFuture = !isCurrent && currentRoundIdx !== -1 && idx > currentRoundIdx;
+        const icon = isFuture ? '🕐' : isCurrent ? '▶' : '✓';
+        const cls = isFuture
+            ? 'text-slate-600 cursor-default opacity-50'
+            : isCurrent
+                ? 'text-fuchsia-300 font-semibold bg-fuchsia-400/10 hover:bg-fuchsia-400/20'
+                : 'text-slate-300 hover:bg-white/5 hover:text-white cursor-pointer';
+
+        return `<button ${isFuture ? 'disabled' : `data-round-recap="${escapeAttribute(round.id)}"`}
+            class="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm transition ${cls}">
+            <span class="text-xs w-4 shrink-0">${icon}</span>
+            <span class="truncate">${escapeHtml(round.name || round.id)}</span>
+        </button>`;
+    }).join('') || '<p class="px-3 text-xs text-slate-600">No rounds yet</p>';
+}
+
+async function renderRoundRecap(roundId) {
+    const round = (state.playoff.rounds || []).find(r => r.id === roundId);
+    if (!round) return;
+
+    const section = byId('section-round-recap');
+    section.classList.remove('hidden');
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const container = byId('round-recap-container');
+    container.innerHTML = `<p class="text-sm text-slate-400 animate-pulse py-4">Loading ${escapeHtml(round.name || round.id)} recap…</p>`;
+
+    const poolId = state.playoff.poolId;
+    const isCurrent = round.id === state.playoff.currentRound?.id;
+
+    const [picksSnap, seriesSnap] = await Promise.all([
+        getDocs(collection(db, 'playoff_pools', poolId, 'rounds', roundId, 'picks')),
+        isCurrent
+            ? Promise.resolve(null)
+            : getDocs(collection(db, 'playoff_pools', poolId, 'rounds', roundId, 'series')),
+    ]);
+
+    const allPickDocs = picksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const series = seriesSnap
+        ? seriesSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        : state.playoff.series;
+
+    container.innerHTML = buildRoundRecapHTML(round, series, allPickDocs);
+}
+
+function buildRoundRecapHTML(round, series, pickDocs) {
+    const standings = state.playoff.standings;
+    if (!series.length || !pickDocs.length) {
+        return `<div>
+            <p class="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">Round Recap</p>
+            <h2 class="mt-2 text-3xl font-black text-white">${escapeHtml(round.name || round.id)}</h2>
+            <p class="mt-4 text-sm text-slate-400">No pick data is available for this round yet.</p>
+        </div>`;
+    }
+
+    const lockDate = round.lock_at?.seconds ? formatDateTime({ seconds: round.lock_at.seconds, nanoseconds: 0 }) : '';
+
+    const picksByUid = {};
+    pickDocs.forEach(doc => {
+        const map = {};
+        (doc.entries || []).forEach(e => { map[e.series_id] = e; });
+        picksByUid[doc.id] = map;
+        picksByUid[doc.id]._roundTotal = doc.round_total || 0;
+    });
+
+    const seriesById = Object.fromEntries(series.map(s => [s.id, s]));
+
+    const headerCells = series.map(s =>
+        `<th class="min-w-[6rem] px-3 py-3 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 leading-tight">${escapeHtml(s.matchup_label || (s.home_team_id + ' vs ' + s.away_team_id))}</p>
+        </th>`
+    ).join('');
+
+    // Build rows from standings order; include any pick doc UIDs not in standings
+    const memberOrder = standings.length ? standings : pickDocs.map(d => ({ id: d.id }));
+    const rows = memberOrder.map((member, index) => {
+        const isCurrentUser = member.id === state.authUser?.uid;
+        const rowClass = isCurrentUser
+            ? 'border-b border-emerald-300/30 bg-emerald-400/10'
+            : 'border-b border-white/10 hover:bg-white/5';
+        const entryMap = picksByUid[member.id] || {};
+        const roundPts = entryMap._roundTotal || 0;
+
+        const cells = series.map(s => {
+            const entry = entryMap[s.id];
+            if (!entry || !entry.winner_team_id)
+                return `<td class="px-3 py-3 text-center"><span class="text-xs text-slate-500">—</span></td>`;
+
+            const teamId = entry.winner_team_id;
+            const isHome = teamId === s.home_team_id;
+            const logoUrl = isHome ? (s.home_team_logo_dark || s.home_team_logo_light || '') : (s.away_team_logo_dark || s.away_team_logo_light || '');
+            const primaryColor = isHome ? (s.home_team_primary_color || '#0F172A') : (s.away_team_primary_color || '#0F172A');
+            const games = entry.games || '?';
+            const resultKnown = Boolean(seriesById[s.id]?.result_winner_team_id);
+            const correct = resultKnown && teamId === seriesById[s.id].result_winner_team_id;
+            const incorrect = resultKnown && !correct;
+            const ringClass = correct ? 'ring-2 ring-emerald-400/60' : incorrect ? 'ring-2 ring-rose-400/40' : '';
+            const bgTint = correct ? 'bg-emerald-400/10' : incorrect ? 'bg-rose-400/10' : '';
+
+            return `<td class="px-3 py-3 text-center">
+                <div class="inline-flex flex-col items-center gap-1 ${bgTint} rounded-[0.75rem] px-2 py-1.5 ${ringClass}">
+                    <div class="h-8 w-8 flex items-center justify-center rounded-lg border border-black/10 p-1" style="background:${escapeAttribute(primaryColor)};">
+                        <img src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(teamId)}" class="h-full w-full object-contain" loading="lazy">
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-200">${escapeHtml(String(games))}</span>
+                </div>
+            </td>`;
+        }).join('');
+
+        return `<tr class="${rowClass} text-sm transition">
+            <td class="sticky left-0 bg-slate-950 px-4 py-3 font-semibold text-white z-10 whitespace-nowrap">
+                <span class="mr-2 text-[11px] font-bold text-slate-400">${index + 1}</span>${escapeHtml(member.team_name || member.display_name || member.email || member.id)}
+            </td>
+            <td class="px-3 py-3 text-center text-slate-300 font-semibold">${roundPts}</td>
+            ${cells}
+        </tr>`;
+    }).join('');
+
+    return `<div>
+        <p class="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">Round Recap</p>
+        <div class="mt-2 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+            <h2 class="text-3xl font-black text-white">${escapeHtml(round.name || round.id)}</h2>
+            ${lockDate ? `<p class="text-sm text-slate-400">Locked ${lockDate}</p>` : ''}
+        </div>
+    </div>
+    <div class="mt-6 overflow-x-auto rounded-[1.5rem] border border-white/10">
+        <table class="w-full text-left min-w-max">
+            <thead class="bg-slate-950/70 text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                <tr>
+                    <th class="sticky left-0 bg-slate-950/90 px-4 py-3 z-10">Member</th>
+                    <th class="px-3 py-3 text-center min-w-[3.5rem]">Pts</th>
+                    ${headerCells}
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>
+    <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
+        <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full ring-2 ring-emerald-400/60 bg-emerald-400/10"></span>Correct</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full ring-2 ring-rose-400/40 bg-rose-400/10"></span>Incorrect</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block h-3 w-3 rounded-full bg-white/10"></span>Pending</span>
+    </div>`;
 }
 
 function renderPreviousPicks() {
@@ -2211,6 +2939,56 @@ function bindPlayoffEvents() {
     byId('playoff-whatif-reset-btn').addEventListener('click', () => {
         state.playoff.scenarioDraft = buildScenarioDraft(state.playoff.series);
         renderScenarioLab();
+    });
+
+    // Mobile sidebar open/close
+    byId('playoff-sidebar-open').addEventListener('click', () => {
+        byId('playoff-sidebar').classList.remove('-translate-x-full');
+        byId('playoff-sidebar-backdrop').classList.remove('hidden');
+    });
+    byId('playoff-sidebar-backdrop').addEventListener('click', () => {
+        byId('playoff-sidebar').classList.add('-translate-x-full');
+        byId('playoff-sidebar-backdrop').classList.add('hidden');
+    });
+
+    // Section toggle + round recap + picks board controls delegation
+    document.addEventListener('click', e => {
+        const toggleKey = e.target.closest('[data-toggle-section]')?.dataset.toggleSection;
+        if (toggleKey) { toggleSection(toggleKey); return; }
+
+        const recapRoundId = e.target.closest('[data-round-recap]')?.dataset.roundRecap;
+        if (recapRoundId) { renderRoundRecap(recapRoundId); return; }
+
+        const pbSort = e.target.closest('[data-pb-sort]')?.dataset.pbSort;
+        if (pbSort) { state.playoff.picksBoardSort = pbSort; renderPicksBoard(); return; }
+
+        const pbFilter = e.target.closest('[data-pb-filter]')?.dataset.pbFilter;
+        if (pbFilter) {
+            if (!state.playoff.picksBoardFilter) state.playoff.picksBoardFilter = new Set();
+            const f = state.playoff.picksBoardFilter;
+            if (f.has(pbFilter)) f.delete(pbFilter); else f.add(pbFilter);
+            renderPicksBoard();
+            return;
+        }
+
+        if (e.target.closest('[data-pb-filter-clear]')) { state.playoff.picksBoardFilter = null; renderPicksBoard(); return; }
+        if (e.target.closest('[data-pb-flip]')) { state.playoff.picksBoardFlipped = !state.playoff.picksBoardFlipped; renderPicksBoard(); return; }
+
+        const timelineNav = e.target.closest('[data-timeline-nav]')?.dataset.timelineNav;
+        if (timelineNav) {
+            const K = (state.playoff.eventHistory || []).length;
+            state.playoff.timelineIndex = Math.max(0, Math.min(K - 1, state.playoff.timelineIndex + Number(timelineNav)));
+            renderStandingsHistory();
+            return;
+        }
+        const timelineJump = e.target.closest('[data-timeline-jump]')?.dataset.timelineJump;
+        if (timelineJump !== undefined) {
+            state.playoff.timelineIndex = Number(timelineJump);
+            renderStandingsHistory();
+            return;
+        }
+        const chartType = e.target.closest('[data-chart-type]')?.dataset.chartType;
+        if (chartType) { state.playoff.chartType = chartType; renderStandingsHistory(); return; }
     });
 }
 

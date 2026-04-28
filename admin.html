@@ -33,7 +33,7 @@
         <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-400">Platform Admin</p>
-                <h1 class="mt-2 text-3xl font-black text-slate-950">Strong8K + Playoff Pool Control Room</h1>
+                <h1 class="mt-2 text-3xl font-black text-slate-950">Admin Portal</h1>
                 <p class="mt-2 text-sm text-slate-500">Signed in as <span id="admin-email"></span></p>
             </div>
             <div class="flex flex-wrap gap-3">
@@ -69,7 +69,7 @@
                 <p id="stat-playoff" class="mt-4 text-4xl font-black text-slate-950">0</p>
             </article>
             <article class="rounded-[1.75rem] bg-white p-6 shadow-sm">
-                <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Pools</p>
+                <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Pool Members</p>
                 <p id="stat-pools" class="mt-4 text-4xl font-black text-slate-950">0</p>
             </article>
         </section>
@@ -270,11 +270,22 @@
                         </label>
                         <label class="block md:col-span-2">
                             <span class="mb-2 block text-xs font-bold uppercase tracking-[0.22em] text-slate-400">Payout Template</span>
-                            <textarea id="pool-payout-template-input" rows="5" placeholder="1st: 0.6364&#10;2nd: 0.2273&#10;3rd: 0.0909&#10;pity: 0.0454" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono outline-none transition focus:border-slate-900"></textarea>
+                            <textarea id="pool-payout-template-input" rows="5" placeholder="1st: 0.6364&#10;2nd: 0.2273&#10;3rd: 0.0909&#10;pity: 0.0454&#10;&#10;Shares must total 1.0" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono outline-none transition focus:border-slate-900"></textarea>
+                            <p class="mt-2 text-xs text-slate-400">Format: <code class="font-mono">place_key: decimal_share</code> — one per line. Shares should total 1.0. Example: <code class="font-mono">1st: 0.6364</code></p>
                         </label>
                     </div>
                     <button type="submit" class="mt-6 rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Pool</button>
                 </form>
+
+                <div id="pool-prize-money-section" class="hidden mt-6 rounded-[1.75rem] bg-white p-6 shadow-sm">
+                    <h3 class="text-base font-black text-slate-950">Prize Money</h3>
+                    <p class="mt-1 text-xs text-slate-400">Enter actual payout amounts. Leave blank to use auto-calculated suggestions.</p>
+                    <div id="pool-prize-money-inputs" class="mt-4 space-y-3"></div>
+                    <div class="mt-4 flex gap-3">
+                        <button id="pool-prize-money-save" type="button" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Prize Money</button>
+                        <button id="pool-prize-money-clear" type="button" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Clear Overrides</button>
+                    </div>
+                </div>
             </div>
 
             <div data-playoff-panel-view="schedule" class="hidden grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -317,7 +328,7 @@
                                 <input id="round-number-input" type="number" placeholder="1" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
                             </label>
                             <label class="space-y-2">
-                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Sort Order</span>
+                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Display Order</span>
                                 <input id="round-order-input" type="number" placeholder="1" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
                             </label>
                             <label class="space-y-2">
@@ -334,10 +345,21 @@
                                 <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Pick Deadline</span>
                                 <input id="round-deadline-input" type="datetime-local" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
                             </label>
-                            <label class="space-y-2">
-                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Lock At</span>
-                                <input id="round-lock-at-input" type="datetime-local" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            </label>
+                            <details class="group">
+                                <summary class="cursor-pointer list-none text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 hover:text-slate-700">
+                                    <span class="inline-flex items-center gap-2">
+                                        <i class="fa-solid fa-chevron-right text-[9px] transition-transform group-open:rotate-90"></i>
+                                        Advanced — Lock At Override
+                                    </span>
+                                </summary>
+                                <div class="mt-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                                    <label class="block space-y-2">
+                                        <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Lock At (overrides deadline)</span>
+                                        <input id="round-lock-at-input" type="datetime-local" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                                    </label>
+                                    <p class="mt-2 text-xs text-slate-400">Only set this if the lock time differs from the pick deadline. Leave blank to use the deadline.</p>
+                                </div>
+                            </details>
                             <label class="space-y-2">
                                 <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Winner Points</span>
                                 <input id="round-winner-points-input" type="number" placeholder="2" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
@@ -421,18 +443,17 @@
                                 <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Result Games</span>
                                 <input id="series-result-games-input" type="number" placeholder="6" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
                             </label>
-                            <label class="space-y-2">
-                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Live Home Wins</span>
-                                <input id="series-live-home-wins-input" type="number" min="0" max="4" placeholder="0" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            </label>
-                            <label class="space-y-2">
-                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Live Away Wins</span>
-                                <input id="series-live-away-wins-input" type="number" min="0" max="4" placeholder="0" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            </label>
-                            <label class="space-y-2 md:col-span-2">
-                                <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Notes or Matchup Context</span>
-                                <textarea id="series-notes-input" rows="4" placeholder="Home ice, seeding context, injury notes, or commissioner notes" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900"></textarea>
-                            </label>
+                            <details class="group md:col-span-2">
+                                <summary class="cursor-pointer list-none text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 hover:text-slate-700">
+                                    <span class="inline-flex items-center gap-2">
+                                        <i class="fa-solid fa-chevron-right text-[9px] transition-transform group-open:rotate-90"></i>
+                                        Commissioner Notes (optional)
+                                    </span>
+                                </summary>
+                                <div class="mt-3">
+                                    <textarea id="series-notes-input" rows="4" placeholder="Home ice, seeding context, injury notes, or commissioner notes" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900"></textarea>
+                                </div>
+                            </details>
                         </div>
                         <button type="submit" class="mt-6 rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Series</button>
                     </form>
@@ -502,21 +523,31 @@
                             <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Amount Paid</span>
                             <input id="pool-member-amount-paid" type="number" step="0.01" placeholder="Amount paid" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
                         </label>
-                        <label class="space-y-2">
-                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Paid On</span>
-                            <input id="pool-member-paid-at" type="date" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        </label>
-                        <label class="space-y-2">
-                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Payment Method</span>
-                            <input id="pool-member-payment-method" type="text" placeholder="Payment method" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        </label>
-                        <label class="space-y-2">
-                            <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Late Payment Flag</span>
-                            <span class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                                <input id="pool-member-late-payment" type="checkbox" class="h-4 w-4 rounded border-slate-300">
-                                Mark this entrant as paid late
-                            </span>
-                        </label>
+                        <details class="group md:col-span-2">
+                            <summary class="cursor-pointer list-none text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 hover:text-slate-700">
+                                <span class="inline-flex items-center gap-2">
+                                    <i class="fa-solid fa-chevron-right text-[9px] transition-transform group-open:rotate-90"></i>
+                                    Payment Details
+                                </span>
+                            </summary>
+                            <div class="mt-3 grid gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-2">
+                                <label class="space-y-2">
+                                    <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Paid On</span>
+                                    <input id="pool-member-paid-at" type="date" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                                </label>
+                                <label class="space-y-2">
+                                    <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Payment Method</span>
+                                    <input id="pool-member-payment-method" type="text" placeholder="Payment method" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                                </label>
+                                <label class="space-y-2 md:col-span-2">
+                                    <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Late Payment Flag</span>
+                                    <span class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
+                                        <input id="pool-member-late-payment" type="checkbox" class="h-4 w-4 rounded border-slate-300">
+                                        Mark this entrant as paid late
+                                    </span>
+                                </label>
+                            </div>
+                        </details>
                         <label class="space-y-2">
                             <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Payout Eligibility</span>
                             <span class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
@@ -665,8 +696,18 @@
                                     <input id="license-date-paid" type="date" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
                                     <input id="license-m3u" type="text" placeholder="M3U URL" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900 md:col-span-2">
                                     <input id="license-epg" type="text" placeholder="EPG URL" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <input id="license-epgenius-key" type="text" placeholder="EPGenius key" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <input id="license-epgenius-url" type="text" placeholder="EPGenius URL" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900 md:col-span-2">
+                                    <details class="group md:col-span-3">
+                                        <summary class="cursor-pointer list-none text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 hover:text-slate-700">
+                                            <span class="inline-flex items-center gap-2">
+                                                <i class="fa-solid fa-chevron-right text-[9px] transition-transform group-open:rotate-90"></i>
+                                                Advanced — EPGenius Integration
+                                            </span>
+                                        </summary>
+                                        <div class="mt-3 grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-3">
+                                            <input id="license-epgenius-key" type="text" placeholder="EPGenius key" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                                            <input id="license-epgenius-url" type="text" placeholder="EPGenius URL" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900 md:col-span-2">
+                                        </div>
+                                    </details>
                                 </div>
                                 <div class="mt-4 flex gap-3">
                                     <button type="button" id="license-form-save" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save License</button>
@@ -718,6 +759,6 @@
         </div>
     </div>
 
-    <script type="module" src="./admin-app.js?v=20260417-playoff-brand-compact"></script>
+    <script type="module" src="./admin-app.js?v=20260418-picks-board-prize-money"></script>
 </body>
 </html>
