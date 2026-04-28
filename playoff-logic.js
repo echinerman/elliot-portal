@@ -189,7 +189,9 @@ export function normalizePlayoffSeries(series = {}) {
         away_team_logo_dark: series.away_team_logo_dark || getTeamLogoUrl(awayTeamId, 'dark'),
         away_team_logo_light: series.away_team_logo_light || getTeamLogoUrl(awayTeamId, 'light'),
         home_team_primary_color: series.home_team_primary_color || getTeamPrimaryColor(homeTeamId),
-        away_team_primary_color: series.away_team_primary_color || getTeamPrimaryColor(awayTeamId)
+        away_team_primary_color: series.away_team_primary_color || getTeamPrimaryColor(awayTeamId),
+        live_home_wins: Number(series.live_home_wins || 0),
+        live_away_wins: Number(series.live_away_wins || 0)
     };
 }
 
@@ -548,6 +550,153 @@ export function buildStandingsTrend(rounds = [], members = []) {
             return Number(historyEntry?.points || 0);
         })
     }));
+}
+
+// Returns true if a pick (winner, games) could still be correct given live series state.
+// games may be null/undefined when checking only winner-correctness.
+export function isPickStillPossible({ pickedWinnerTeamId, pickedGames, series } = {}) {
+    if (!series || !pickedWinnerTeamId) return { winnerPossible: false, gamesPossible: false };
+
+    // Series resolved: lock to actual result.
+    if (series.result_winner_team_id) {
+        const winnerPossible = pickedWinnerTeamId === series.result_winner_team_id;
+        const gamesPossible = winnerPossible && pickedGames && Number(pickedGames) === Number(series.result_games);
+        return { winnerPossible, gamesPossible };
+    }
+
+    const homeWins = Number(series.live_home_wins || 0);
+    const awayWins = Number(series.live_away_wins || 0);
+    const isHomePick = pickedWinnerTeamId === series.home_team_id;
+    const isAwayPick = pickedWinnerTeamId === series.away_team_id;
+    if (!isHomePick && !isAwayPick) return { winnerPossible: false, gamesPossible: false };
+
+    // Winner still possible if neither side has hit 4 wins, OR the picked side already has.
+    const winnerPossible = (
+        (isHomePick && awayWins < 4) || (isAwayPick && homeWins < 4)
+    );
+    if (!winnerPossible) return { winnerPossible: false, gamesPossible: false };
+
+    if (!pickedGames) return { winnerPossible, gamesPossible: false };
+    // For winner to take the series in `pickedGames` total games:
+    //   winner needs 4 wins, loser needs (pickedGames - 4) wins.
+    //   So current winner-side wins must be ≤ 4 AND current loser-side wins must be ≤ pickedGames - 4.
+    const winnerCurrent = isHomePick ? homeWins : awayWins;
+    const loserCurrent = isHomePick ? awayWins : homeWins;
+    const games = Number(pickedGames);
+    const gamesPossible = winnerCurrent <= 4 && loserCurrent <= (games - 4) && games >= 4 && games <= 7;
+    return { winnerPossible, gamesPossible };
+}
+
+// Compute potential points still on the table for one member, given their picks for unresolved series.
+// pickEntries: [{ series_id, winner_team_id, games }]
+// seriesById: map of series id -> series object (must include live_home_wins / live_away_wins / result_*)
+// round: round object with winner_points & games_points
+export function computeMemberPotentialPoints(pickEntries = [], seriesById = {}, round = {}) {
+    const winnerPts = Number(round.winner_points || 0);
+    const gamesPts = Number(round.games_points || 0);
+    let total = 0;
+    pickEntries.forEach(entry => {
+        const series = seriesById[entry.series_id];
+        if (!series) return;
+        // Already-resolved series: don't count as "potential" (those points are already in points_total).
+        if (series.result_winner_team_id) return;
+        const { winnerPossible, gamesPossible } = isPickStillPossible({
+            pickedWinnerTeamId: entry.winner_team_id,
+            pickedGames: entry.games,
+            series
+        });
+        if (winnerPossible) total += winnerPts;
+        if (gamesPossible) total += gamesPts;
+    });
+    return total;
+}
+
+// Build a richer scoreboard history with rank movement + per-round rank trend + potential points.
+// rounds: ordered round list with scoring config
+// members: standings array (with points_total, round_history)
+// currentRound: the active round (may be {} or null)
+// currentRoundSeries: series array for the current round (with live_*/result_* fields)
+// currentRoundPickDocs: pick docs for the current round, [{ user_uid, entries: [...] }]
+export function buildScoreboardHistory({
+    rounds = [],
+    members = [],
+    currentRound = null,
+    currentRoundSeries = [],
+    currentRoundPickDocs = []
+} = {}) {
+    const orderedRounds = [...rounds].sort((left, right) => Number(left.sort_order || 0) - Number(right.sort_order || 0));
+    const seriesById = Object.fromEntries(currentRoundSeries.map(item => [item.id, item]));
+    const picksByMember = Object.fromEntries(currentRoundPickDocs.map(doc => [doc.id || doc.user_uid || doc.member_uid || doc.uid, doc]));
+
+    // Compute cumulative points after each round for every member, and derive ranks per round.
+    const memberIds = members.map(m => m.id || m.uid);
+    const cumulativeByMember = {};
+    memberIds.forEach(id => { cumulativeByMember[id] = []; });
+
+    orderedRounds.forEach((round, roundIndex) => {
+        members.forEach(member => {
+            const id = member.id || member.uid;
+            const historyEntry = (member.round_history || []).find(item => item.round_id === round.id);
+            const earned = Number(historyEntry?.points || 0);
+            const previous = roundIndex === 0 ? 0 : cumulativeByMember[id][roundIndex - 1];
+            cumulativeByMember[id].push(previous + earned);
+        });
+    });
+
+    // Rank (1-based) per round = position when sorted by cumulative points descending.
+    const ranksByRound = orderedRounds.map((_, roundIndex) => {
+        const sorted = [...members].sort((left, right) => {
+            const leftId = left.id || left.uid;
+            const rightId = right.id || right.uid;
+            const diff = (cumulativeByMember[rightId][roundIndex] || 0) - (cumulativeByMember[leftId][roundIndex] || 0);
+            if (diff !== 0) return diff;
+            return String(left.team_name || left.display_name || '').localeCompare(String(right.team_name || right.display_name || ''));
+        });
+        const rankMap = {};
+        sorted.forEach((member, position) => {
+            rankMap[member.id || member.uid] = position + 1;
+        });
+        return rankMap;
+    });
+
+    return members.map(member => {
+        const id = member.id || member.uid;
+        const rankTrend = orderedRounds.map((_, idx) => ranksByRound[idx][id] || null);
+        const currentRank = rankTrend.length ? rankTrend[rankTrend.length - 1] : null;
+        const previousRank = rankTrend.length > 1 ? rankTrend[rankTrend.length - 2] : null;
+        const rankMovement = (currentRank && previousRank) ? (previousRank - currentRank) : 0;
+
+        // Points earned this round = pulled from round_history if scored, else fall back to round_points field.
+        let pointsEarnedThisRound = 0;
+        if (currentRound?.id) {
+            const historyEntry = (member.round_history || []).find(item => item.round_id === currentRound.id);
+            pointsEarnedThisRound = Number(historyEntry?.points ?? member.round_points ?? 0);
+        } else {
+            pointsEarnedThisRound = Number(member.round_points || 0);
+        }
+
+        // Potential points = points still up for grabs in the current round's unresolved series.
+        const memberPick = picksByMember[id];
+        const potentialPoints = memberPick && currentRound
+            ? computeMemberPotentialPoints(memberPick.entries || [], seriesById, currentRound)
+            : 0;
+
+        return {
+            member_id: id,
+            display_name: member.team_name || member.display_name || member.email || id || 'Member',
+            current_rank: currentRank || 0,
+            total_points: Number(member.points_total || 0),
+            points_earned_this_round: pointsEarnedThisRound,
+            rank_movement: rankMovement,
+            rank_trend: rankTrend,
+            potential_points: potentialPoints
+        };
+    }).sort((left, right) => {
+        if ((left.current_rank || 999) !== (right.current_rank || 999)) {
+            return (left.current_rank || 999) - (right.current_rank || 999);
+        }
+        return right.total_points - left.total_points;
+    });
 }
 
 export function suggestPayouts({ collectedPot = 0, participantCount = 0, template = [] } = {}) {
