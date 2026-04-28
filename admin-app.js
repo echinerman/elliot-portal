@@ -1326,6 +1326,8 @@ function loadSeriesIntoForm(seriesId) {
     byId('series-status-input').value = series.status || 'open';
     byId('series-result-winner-input').value = series.result_winner_team_id || '';
     byId('series-result-games-input').value = series.result_games || '';
+    byId('series-live-home-wins-input').value = series.live_home_wins ?? '';
+    byId('series-live-away-wins-input').value = series.live_away_wins ?? '';
     byId('series-notes-input').value = series.notes || '';
 }
 
@@ -1341,6 +1343,8 @@ function clearSeriesForm() {
     byId('series-status-input').value = 'open';
     byId('series-result-winner-input').value = '';
     byId('series-result-games-input').value = '';
+    byId('series-live-home-wins-input').value = '';
+    byId('series-live-away-wins-input').value = '';
     byId('series-notes-input').value = '';
 }
 
@@ -1362,6 +1366,8 @@ async function saveSeries(event) {
         status: byId('series-status-input').value,
         result_winner_team_id: byId('series-result-winner-input').value,
         result_games: Number(byId('series-result-games-input').value || 0),
+        live_home_wins: Number(byId('series-live-home-wins-input').value || 0),
+        live_away_wins: Number(byId('series-live-away-wins-input').value || 0),
         notes: byId('series-notes-input').value
     });
     await setDoc(doc(db, 'playoff_pools', state.selectedPoolId, 'rounds', state.selectedRoundId, 'series', seriesId), nextSeries, { merge: true });

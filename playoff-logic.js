@@ -189,8 +189,53 @@ export function normalizePlayoffSeries(series = {}) {
         away_team_logo_dark: series.away_team_logo_dark || getTeamLogoUrl(awayTeamId, 'dark'),
         away_team_logo_light: series.away_team_logo_light || getTeamLogoUrl(awayTeamId, 'light'),
         home_team_primary_color: series.home_team_primary_color || getTeamPrimaryColor(homeTeamId),
-        away_team_primary_color: series.away_team_primary_color || getTeamPrimaryColor(awayTeamId)
+        away_team_primary_color: series.away_team_primary_color || getTeamPrimaryColor(awayTeamId),
+        live_home_wins: Number(series.live_home_wins || 0),
+        live_away_wins: Number(series.live_away_wins || 0)
     };
+}
+
+// Returns true if a pick (winner, games) could still be correct given live series state.
+export function isPickStillPossible({ pickedWinnerTeamId, pickedGames, series } = {}) {
+    if (!series || !pickedWinnerTeamId) return { winnerPossible: false, gamesPossible: false };
+    if (series.result_winner_team_id) {
+        const winnerPossible = pickedWinnerTeamId === series.result_winner_team_id;
+        const gamesPossible = winnerPossible && pickedGames && Number(pickedGames) === Number(series.result_games);
+        return { winnerPossible, gamesPossible };
+    }
+    const homeWins = Number(series.live_home_wins || 0);
+    const awayWins = Number(series.live_away_wins || 0);
+    const isHomePick = pickedWinnerTeamId === series.home_team_id;
+    const isAwayPick = pickedWinnerTeamId === series.away_team_id;
+    if (!isHomePick && !isAwayPick) return { winnerPossible: false, gamesPossible: false };
+    const winnerPossible = (isHomePick && awayWins < 4) || (isAwayPick && homeWins < 4);
+    if (!winnerPossible) return { winnerPossible: false, gamesPossible: false };
+    if (!pickedGames) return { winnerPossible, gamesPossible: false };
+    const winnerCurrent = isHomePick ? homeWins : awayWins;
+    const loserCurrent = isHomePick ? awayWins : homeWins;
+    const games = Number(pickedGames);
+    const gamesPossible = winnerCurrent <= 4 && loserCurrent <= (games - 4) && games >= 4 && games <= 7;
+    return { winnerPossible, gamesPossible };
+}
+
+// Sum of points still on the table for a member's picks across unresolved series in the round.
+export function computeMemberPotentialPoints(pickEntries = [], seriesById = {}, round = {}) {
+    const winnerPts = Number(round.winner_points || 0);
+    const gamesPts = Number(round.games_points || 0);
+    let total = 0;
+    pickEntries.forEach(entry => {
+        const series = seriesById[entry.series_id];
+        if (!series) return;
+        if (series.result_winner_team_id) return;
+        const { winnerPossible, gamesPossible } = isPickStillPossible({
+            pickedWinnerTeamId: entry.winner_team_id,
+            pickedGames: entry.games,
+            series
+        });
+        if (winnerPossible) total += winnerPts;
+        if (gamesPossible) total += gamesPts;
+    });
+    return total;
 }
 
 export function buildOfficialRoundOneSeries(seasonYear) {

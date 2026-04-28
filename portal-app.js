@@ -16,6 +16,7 @@ import {
     buildPickDistribution,
     buildStandingsTrend,
     computeCollectedPot,
+    computeMemberPotentialPoints,
     isRoundLocked,
     isRoundRevealed,
     mergeFinalizedPayouts,
@@ -120,6 +121,7 @@ const LS_VISIBLE_KEY = 'playoff_visible_sections';
 
 document.addEventListener('DOMContentLoaded', () => {
     bindAuthForms();
+    bindNoAccessEvents();
     bindStrong8kEvents();
     bindPlayoffEvents();
     bindSharedActions();
@@ -165,25 +167,6 @@ function resolveInviteCode(code) {
     return Object.entries(CONFIG.INVITE_CODES).find(([, inviteCode]) => inviteCode.toUpperCase() === normalized)?.[0] || null;
 }
 
-function getSelectedRegistrationAppId() {
-    return byId('register-app-id').value || APP_IDS.PLAYOFF;
-}
-
-function setSelectedRegistrationApp(appId) {
-    const selectedAppId = appId === APP_IDS.STRONG8K ? APP_IDS.STRONG8K : APP_IDS.PLAYOFF;
-    byId('register-app-id').value = selectedAppId;
-    byId('register-playoff-app-btn').className = selectedAppId === APP_IDS.PLAYOFF
-        ? 'rounded-2xl border border-emerald-400 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-600'
-        : 'rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-900';
-    byId('register-strong8k-app-btn').className = selectedAppId === APP_IDS.STRONG8K
-        ? 'rounded-2xl border border-slate-900 bg-slate-100 px-4 py-3 text-left transition hover:border-slate-900'
-        : 'rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-900';
-    const needsInvite = selectedAppId === APP_IDS.STRONG8K;
-    byId('reg-code-wrap').classList.toggle('hidden', !needsInvite);
-    byId('reg-code').required = needsInvite;
-    byId('register-submit-btn').textContent = needsInvite ? 'Create Strong8K Access' : 'Create Playoff Access';
-    updateAuthBlurb();
-}
 
 function resetSessionState() {
     state.sharedUser = null;
@@ -237,27 +220,9 @@ async function handleAuthStateChange(user) {
     try {
         setView('loading-view');
         await hydrateSession(user);
-        await ensureDefaultPlayoffAccess(user);
         await routeAuthenticatedUser();
     } catch (error) {
         handlePortalLoadError(error);
-    }
-}
-
-async function ensureDefaultPlayoffAccess(user) {
-    if (!user || !canSelfServePlayoff()) {
-        return;
-    }
-
-    if (state.accessibleApps[APP_IDS.PLAYOFF]?.status === 'active') {
-        return;
-    }
-
-    try {
-        await ensurePlayoffSelfServeAccess(user.uid, user.email);
-        await hydrateSession(user);
-    } catch (error) {
-        console.warn('Playoff self-serve bootstrap skipped during session hydration.', error);
     }
 }
 
@@ -281,23 +246,10 @@ function getPendingMemberships() {
     );
 }
 
-function canSelfServePlayoff() {
-    const playoffMembership = state.memberships[APP_IDS.PLAYOFF];
-    return !playoffMembership || playoffMembership.status !== 'disabled';
-}
-
 async function routeAuthenticatedUser() {
     const activeMemberships = getActiveMemberships();
-    const pendingMemberships = getPendingMemberships();
     const requestedAppId = currentHashApp();
     const wantsAppSwitcher = isAppsHomeRoute();
-
-    if (requestedAppId === APP_IDS.PLAYOFF && !activeMemberships[APP_IDS.PLAYOFF] && canSelfServePlayoff()) {
-        await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
-        await hydrateSession(state.authUser);
-        await openApp(APP_IDS.PLAYOFF);
-        return;
-    }
 
     if (requestedAppId && activeMemberships[requestedAppId]) {
         await openApp(requestedAppId);
@@ -305,7 +257,7 @@ async function routeAuthenticatedUser() {
     }
 
     const appIds = Object.keys(activeMemberships);
-    if (wantsAppSwitcher && (appIds.length || canSelfServePlayoff())) {
+    if (wantsAppSwitcher && appIds.length) {
         renderAppSwitcher(activeMemberships);
         setView('app-switcher-view');
         return;
@@ -324,13 +276,7 @@ async function routeAuthenticatedUser() {
         return;
     }
 
-    if (canSelfServePlayoff()) {
-        renderAppSwitcher(activeMemberships);
-        setView('app-switcher-view');
-        return;
-    }
-
-    renderNoAccess(pendingMemberships);
+    renderInviteCodePrompt();
     setView('no-access-view');
 }
 
@@ -341,14 +287,14 @@ function handlePortalLoadError(error) {
     }
 
     const activeMemberships = getActiveMemberships();
-    if (state.authUser && (Object.keys(activeMemberships).length || canSelfServePlayoff())) {
+    if (state.authUser && Object.keys(activeMemberships).length) {
         renderAppSwitcher(activeMemberships);
         setView('app-switcher-view');
         showToast(error?.message || 'Portal load failed', 'error');
         return;
     }
 
-    byId('no-access-message').textContent = 'We could not load this portal view. Try signing out and back in, or contact Elliot if it keeps happening.';
+    renderInviteCodePrompt();
     setView('no-access-view');
     showToast(error?.message || 'Portal load failed', 'error');
 }
@@ -363,10 +309,6 @@ async function openApp(appId) {
     }
 
     if (appId === APP_IDS.PLAYOFF) {
-        if (!state.accessibleApps[APP_IDS.PLAYOFF] && canSelfServePlayoff()) {
-            await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
-            await hydrateSession(state.authUser);
-        }
         await loadPlayoffApp();
         setView('playoff-view');
     }
@@ -410,7 +352,6 @@ function bindAuthForms() {
         event.preventDefault();
         byId('login-form').classList.add('hidden');
         byId('register-form').classList.remove('hidden');
-        updateAuthBlurb();
     });
 
     byId('show-login-link').addEventListener('click', event => {
@@ -418,10 +359,6 @@ function bindAuthForms() {
         byId('register-form').classList.add('hidden');
         byId('login-form').classList.remove('hidden');
     });
-
-    byId('register-playoff-app-btn').addEventListener('click', () => setSelectedRegistrationApp(APP_IDS.PLAYOFF));
-    byId('register-strong8k-app-btn').addEventListener('click', () => setSelectedRegistrationApp(APP_IDS.STRONG8K));
-    byId('reg-code').addEventListener('input', updateAuthBlurb);
 
     byId('login-form').addEventListener('submit', async event => {
         event.preventDefault();
@@ -436,51 +373,55 @@ function bindAuthForms() {
         event.preventDefault();
         const email = byId('reg-email').value.trim();
         const password = byId('reg-pass').value;
-        const selectedAppId = getSelectedRegistrationAppId();
-        const inviteCode = byId('reg-code').value.trim();
-        const resolvedInviteAppId = inviteCode ? resolveInviteCode(inviteCode) : null;
-
-        if (selectedAppId === APP_IDS.STRONG8K && resolvedInviteAppId !== APP_IDS.STRONG8K) {
-            showToast('Invalid invite code', 'error');
-            return;
-        }
-
         try {
-            const credential = await createUserWithEmailAndPassword(auth, email, password);
-            await claimOrCreateAccount({
-                uid: credential.user.uid,
-                email,
-                appId: selectedAppId,
-                inviteCode: selectedAppId === APP_IDS.STRONG8K ? inviteCode : 'self-serve'
-            });
-            showToast(`${APP_DEFINITIONS[selectedAppId].shortLabel} access created`);
+            await createUserWithEmailAndPassword(auth, email, password);
         } catch (error) {
             showToast(error.message, 'error');
         }
     });
-
-    setSelectedRegistrationApp(APP_IDS.PLAYOFF);
-    updateAuthBlurb();
 }
 
-function updateAuthBlurb() {
-    const helper = byId('auth-helper-text');
-    if (byId('register-form').classList.contains('hidden')) {
-        helper.textContent = 'Sign in to switch apps, or create a new playoff account in one step.';
-        return;
-    }
+function renderInviteCodePrompt() {
+    const codeInput = byId('activate-code');
+    if (codeInput) codeInput.value = '';
+}
 
-    const selectedAppId = getSelectedRegistrationAppId();
-    if (selectedAppId === APP_IDS.PLAYOFF) {
-        helper.textContent = 'Playoff Pool is open registration. Create your account and you will be added right away.';
-        return;
+async function selfActivateApp(appId, inviteCode) {
+    const uid = state.authUser.uid;
+    const membershipRef = doc(db, 'users', uid, 'memberships', appId);
+    await setDoc(membershipRef, {
+        ...defaultMembership(appId, inviteCode),
+        app_id: appId
+    }, { merge: true });
+    if (appId === APP_IDS.STRONG8K) {
+        await setDoc(doc(db, 'strong8k_profiles', uid), normalizeStrong8kProfile({}, {}), { merge: true });
     }
+}
 
-    const code = byId('reg-code').value.trim();
-    const inviteAppId = resolveInviteCode(code);
-    helper.textContent = inviteAppId === APP_IDS.STRONG8K
-        ? `This code will create access for ${APP_DEFINITIONS[inviteAppId].authTitle}.`
-        : 'Strong8K still requires a valid invite code.';
+function bindNoAccessEvents() {
+    const form = byId('activate-form');
+    if (!form) return;
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const code = byId('activate-code').value.trim();
+        const appId = resolveInviteCode(code);
+        if (!appId) {
+            showToast('Invalid invite code', 'error');
+            return;
+        }
+        const submitBtn = byId('activate-submit-btn');
+        try {
+            submitBtn.disabled = true;
+            await selfActivateApp(appId, code.toUpperCase());
+            await hydrateSession(state.authUser);
+            await routeAuthenticatedUser();
+            showToast(`${APP_DEFINITIONS[appId].shortLabel} access activated!`);
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
 }
 
 async function claimOrCreateAccount({ uid, email, appId, inviteCode }) {
@@ -583,14 +524,6 @@ async function migrateLegacyAccount({ oldUserId, newUserId, email, appId, invite
 function bindSharedActions() {
     byId('switcher-signout-btn').addEventListener('click', () => signOut(auth));
     byId('no-access-signout-btn').addEventListener('click', () => signOut(auth));
-    byId('no-access-home-btn').addEventListener('click', async () => {
-        window.location.hash = '#/apps';
-        try {
-            await routeAuthenticatedUser();
-        } catch (error) {
-            handlePortalLoadError(error);
-        }
-    });
 
     document.querySelectorAll('[data-action="app-home"]').forEach(button => {
         button.addEventListener('click', async () => {
@@ -635,36 +568,6 @@ function renderAppSwitcher(activeMemberships) {
         container.appendChild(button);
     });
 
-    if (!activeMemberships[APP_IDS.PLAYOFF]) {
-        const joinCard = document.createElement('button');
-        joinCard.className = 'group rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-emerald-600 hover:shadow-xl';
-        joinCard.innerHTML = `
-            <div class="mb-4 flex items-center justify-between">
-                <span class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-700">Open Pool</span>
-                <i class="fa-solid fa-hockey-puck text-emerald-300 transition group-hover:text-emerald-700"></i>
-            </div>
-            <h3 class="text-2xl font-bold text-slate-950">${APP_DEFINITIONS[APP_IDS.PLAYOFF].authTitle}</h3>
-            <p class="mt-3 text-sm leading-6 text-slate-600">Enter the only active playoff pool, get the payment and deadline details, and start making picks right away.</p>
-        `;
-        joinCard.addEventListener('click', async () => {
-            try {
-                await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
-                await hydrateSession(state.authUser);
-                window.location.hash = APP_DEFINITIONS[APP_IDS.PLAYOFF].route;
-                await openApp(APP_IDS.PLAYOFF);
-            } catch (error) {
-                handlePortalLoadError(error);
-            }
-        });
-        container.appendChild(joinCard);
-    }
-}
-
-function renderNoAccess(pendingMemberships) {
-    const pendingApps = Object.keys(pendingMemberships);
-    byId('no-access-message').textContent = pendingApps.length
-        ? `Your ${pendingApps.map(appId => APP_DEFINITIONS[appId].shortLabel).join(' / ')} access is not active yet.`
-        : 'This account does not have an active app membership yet. If you want in on the playoff pool, open All Apps and enter the live pool there.';
 }
 
 async function loadStrong8kApp() {
@@ -898,11 +801,6 @@ function openPurchaseModal(name, price) {
 }
 
 async function loadPlayoffApp() {
-    if (canSelfServePlayoff()) {
-        await ensurePlayoffSelfServeAccess(state.authUser.uid, state.authUser.email);
-        await hydrateSession(state.authUser);
-    }
-
     const membership = state.accessibleApps[APP_IDS.PLAYOFF];
     state.playoff.membership = membership;
     const pool = await resolvePlayoffPool(membership);
@@ -1121,14 +1019,13 @@ function renderPlayoffApp() {
     byId('playoff-amount-paid').textContent = `${formatCurrency(state.playoff.payment?.amount_paid || state.playoff.member?.amount_paid || 0)} / ${formatCurrency(state.playoff.payment?.amount_due || state.playoff.member?.amount_due || 0)}`;
     byId('playoff-payout-status').textContent = buildPayoutStatusText();
     byId('playoff-rank-summary').textContent = buildCurrentRankSummary();
-    byId('playoff-live-scoreboard-note').textContent = buildLiveScoreboardNote();
     byId('playoff-rules-content').innerHTML = buildPoolRulesMarkup();
     byId('playoff-payment-instructions').textContent = buildPaymentInstructions();
     byId('playoff-payment-link').href = buildPlayoffPaymentLink();
 
+    renderIPTVUpsellBanner();
     renderTeamNameEditor();
     renderSeriesCards();
-    renderStandings();
     renderStandingsHistory();
     renderPayoutSummary();
     renderStandingsTrend();
@@ -1898,14 +1795,64 @@ function buildCurrentRankSummary() {
     return `Currently ${ordinal(currentRank + 1)} of ${state.playoff.standings.length}`;
 }
 
-function buildLiveScoreboardNote() {
-    if (!state.playoff.currentRound) {
-        return 'No round is active yet.';
+function renderIPTVUpsellBanner() {
+    const banner = byId('iptv-upsell-banner');
+    if (!banner) return;
+    if (state.accessibleApps[APP_IDS.STRONG8K]) {
+        banner.classList.add('hidden');
+        return;
     }
+    banner.classList.remove('hidden');
+    banner.innerHTML = `
+        <div class="rounded-[1.5rem] border border-amber-400/30 bg-gradient-to-r from-amber-950/60 to-slate-900/80 px-5 py-4">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="min-w-0">
+                    <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-amber-300">Strong8K IPTV</p>
+                    <p class="mt-1 text-sm font-semibold text-white">Want to watch the games live? Get Elliot's IPTV service — 3 months for $25.</p>
+                </div>
+                <button id="iptv-activate-btn" class="shrink-0 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300">
+                    Activate IPTV Access
+                </button>
+            </div>
+            <div id="iptv-code-wrap" class="hidden mt-4 flex gap-2">
+                <input type="text" id="iptv-code-input" placeholder="Invite Code" class="flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold uppercase tracking-widest text-white placeholder-white/40 outline-none transition focus:border-amber-400">
+                <button id="iptv-code-submit" class="rounded-2xl bg-amber-400 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300">Go</button>
+                <button id="iptv-code-cancel" class="rounded-2xl border border-white/20 px-4 py-2.5 text-sm font-bold text-white/60 transition hover:text-white">Cancel</button>
+            </div>
+        </div>
+    `;
 
-    return isRoundRevealed(state.playoff.currentRound, state.playoff.pool)
-        ? 'This board reflects the saved pool totals and updates when results are rescored.'
-        : 'This board shows official saved totals. Use the what-if lab below for your own projections before picks unlock.';
+    byId('iptv-activate-btn').addEventListener('click', () => {
+        byId('iptv-activate-btn').classList.add('hidden');
+        byId('iptv-code-wrap').classList.remove('hidden');
+        byId('iptv-code-input').focus();
+    });
+
+    byId('iptv-code-cancel').addEventListener('click', () => {
+        byId('iptv-code-wrap').classList.add('hidden');
+        byId('iptv-activate-btn').classList.remove('hidden');
+        byId('iptv-code-input').value = '';
+    });
+
+    byId('iptv-code-submit').addEventListener('click', async () => {
+        const code = byId('iptv-code-input').value.trim();
+        const appId = resolveInviteCode(code);
+        if (appId !== APP_IDS.STRONG8K) {
+            showToast('Invalid invite code', 'error');
+            return;
+        }
+        try {
+            byId('iptv-code-submit').disabled = true;
+            await selfActivateApp(APP_IDS.STRONG8K, code.toUpperCase());
+            await hydrateSession(state.authUser);
+            showToast('Strong8K IPTV access activated!');
+            window.location.hash = APP_DEFINITIONS[APP_IDS.STRONG8K].route;
+            await openApp(APP_IDS.STRONG8K);
+        } catch (error) {
+            showToast(error.message, 'error');
+            byId('iptv-code-submit').disabled = false;
+        }
+    });
 }
 
 function buildScenarioDraft(seriesList = [], existingDraft = {}) {
@@ -2136,45 +2083,31 @@ function buildEventSnapshots(series = [], pickDocs = [], currentRound = null, me
     });
 }
 
-function renderStandings() {
-    const tbody = byId('standings-body');
-    tbody.innerHTML = '';
-
-    const history = state.playoff.eventHistory || [];
-    // Position delta: compare current to the snapshot just before the latest event
-    const prevSnap = history.length >= 2 ? history[history.length - 2].standings : null;
-    const prevRankById = prevSnap
-        ? Object.fromEntries(prevSnap.map((m, i) => [m.id, i + 1]))
-        : null;
-
-    state.playoff.standings.forEach((member, index) => {
-        const curRank = index + 1;
-        let deltaCell = `<td class="px-3 py-3 text-right w-10 text-slate-700 text-[11px]">—</td>`;
-        if (prevRankById) {
-            const prev = prevRankById[member.id];
-            const delta = prev !== undefined ? prev - curRank : 0;
-            if (delta > 0) {
-                deltaCell = `<td class="px-3 py-3 text-right w-10"><span class="text-[11px] font-black text-emerald-400 tabular-nums">▲${delta}</span></td>`;
-            } else if (delta < 0) {
-                deltaCell = `<td class="px-3 py-3 text-right w-10"><span class="text-[11px] font-black text-rose-400 tabular-nums">▼${Math.abs(delta)}</span></td>`;
-            } else {
-                deltaCell = `<td class="px-3 py-3 text-right w-10 text-slate-600 text-[11px]">—</td>`;
-            }
-        }
-
-        const row = document.createElement('tr');
-        row.className = member.id === state.authUser.uid
-            ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm hover:bg-emerald-400/10 transition'
-            : 'border-b border-white/10 text-sm hover:bg-white/5 transition';
-        row.innerHTML = `
-            <td class="px-4 py-3 font-bold text-slate-400 tabular-nums">${curRank}</td>
-            <td class="px-4 py-3 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
-            <td class="px-4 py-3 font-semibold text-slate-200 tabular-nums">${member.points_total || 0}</td>
-            <td class="px-4 py-3 text-slate-400 tabular-nums">${member.round_points || 0}</td>
-            ${deltaCell}
-        `;
-        tbody.appendChild(row);
-    });
+function buildRankSparkline(rankTrend = [], highlightIdx = -1) {
+    const filtered = rankTrend.filter(r => r != null && r > 0);
+    if (filtered.length < 2) return '<span class="text-slate-700 text-[10px]">—</span>';
+    const width = 56;
+    const height = 18;
+    const minRank = Math.min(...filtered);
+    const maxRank = Math.max(...filtered);
+    const span = Math.max(1, maxRank - minRank);
+    const points = rankTrend.map((rank, idx) => {
+        if (rank == null || rank <= 0) return null;
+        const x = rankTrend.length === 1 ? width / 2 : (idx / (rankTrend.length - 1)) * width;
+        // Lower rank number (better) = higher on chart (smaller y).
+        const y = ((rank - minRank) / span) * (height - 4) + 2;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).filter(Boolean).join(' ');
+    let dot = '';
+    if (highlightIdx >= 0 && highlightIdx < rankTrend.length && rankTrend[highlightIdx] != null) {
+        const rank = rankTrend[highlightIdx];
+        const dx = rankTrend.length === 1 ? width / 2 : (highlightIdx / (rankTrend.length - 1)) * width;
+        const dy = ((rank - minRank) / span) * (height - 4) + 2;
+        dot = `<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="2" fill="rgb(125 211 252)" />`;
+    }
+    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="inline-block">
+        <polyline fill="none" stroke="rgb(125 211 252)" stroke-width="1.5" points="${points}" />${dot}
+    </svg>`;
 }
 
 function renderStandingsHistory() {
@@ -2188,23 +2121,58 @@ function renderStandingsHistory() {
     const event = history[idx];
     const prevSnap = idx > 0 ? history[idx - 1].standings : null;
     const prevRankById = prevSnap ? Object.fromEntries(prevSnap.map((m, i) => [m.id, i + 1])) : {};
+    const prevPointsById = prevSnap ? Object.fromEntries(prevSnap.map(m => [m.id, m.points_total])) : {};
+
+    // Build per-member rank trend across all events (for sparkline)
+    const rankTrendById = {};
+    history.forEach((ev, evIdx) => {
+        ev.standings.forEach((m, position) => {
+            if (!rankTrendById[m.id]) rankTrendById[m.id] = new Array(K).fill(null);
+            rankTrendById[m.id][evIdx] = position + 1;
+        });
+    });
+
+    // Build seriesById and picksByMember for potential points (only for current round, only when picks revealed)
+    const seriesById = Object.fromEntries((state.playoff.series || []).map(s => [s.id, s]));
+    const picksByMember = Object.fromEntries((state.playoff.roundPickDocs || []).map(p => [p.id, p]));
+    const currentRound = state.playoff.currentRound;
 
     // Snapshot rows
     const snapRows = event.standings.map((m, i) => {
         const rank = i + 1;
         const prev = prevRankById[m.id];
         const delta = prev !== undefined ? prev - rank : null;
-        const deltaHTML = delta === null ? '' : delta > 0
+        const deltaHTML = delta === null ? '<span class="text-slate-700 text-[10px]">—</span>' : delta > 0
             ? `<span class="text-emerald-400 text-[10px] font-black">▲${delta}</span>`
             : delta < 0
                 ? `<span class="text-rose-400 text-[10px] font-black">▼${Math.abs(delta)}</span>`
                 : `<span class="text-slate-600 text-[10px]">—</span>`;
+        const prevPts = prevPointsById[m.id] ?? 0;
+        const earnedThisEvent = (m.points_total || 0) - prevPts;
+        const earnedHTML = earnedThisEvent > 0
+            ? `<span class="text-amber-300 text-[11px] font-bold tabular-nums">+${earnedThisEvent}</span>`
+            : `<span class="text-slate-600 text-[11px]">—</span>`;
+
+        const trend = rankTrendById[m.id] || [];
+        const trendSparkline = buildRankSparkline(trend, idx);
+
+        const memberPick = picksByMember[m.id];
+        const potential = (memberPick && currentRound)
+            ? computeMemberPotentialPoints(memberPick.entries || [], seriesById, currentRound)
+            : 0;
+        const potentialHTML = potential > 0
+            ? `<span class="text-sky-300 text-[11px] font-bold tabular-nums">+${potential}</span>`
+            : `<span class="text-slate-600 text-[11px]">—</span>`;
+
         const isMe = m.id === state.authUser?.uid;
         return `<tr class="${isMe ? 'bg-emerald-400/5' : ''} border-b border-white/5 hover:bg-white/5 transition">
             <td class="px-3 py-1.5 text-[11px] font-bold text-slate-500 tabular-nums w-7">${rank}</td>
             <td class="px-3 py-1.5 text-sm font-semibold text-white">${escapeHtml(m.display_name)}</td>
-            <td class="px-3 py-1.5 text-sm tabular-nums font-semibold text-slate-200">${m.points_total}</td>
+            <td class="px-3 py-1.5 text-sm tabular-nums font-semibold text-slate-200 text-right">${m.points_total}</td>
+            <td class="px-3 py-1.5 text-right">${earnedHTML}</td>
             <td class="px-3 py-1.5 text-right">${deltaHTML}</td>
+            <td class="px-3 py-1.5 text-center w-16">${trendSparkline}</td>
+            <td class="px-3 py-1.5 text-right">${potentialHTML}</td>
         </tr>`;
     }).join('');
 
@@ -2261,8 +2229,11 @@ function renderStandingsHistory() {
                                 <tr>
                                     <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 w-7">#</th>
                                     <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Member</th>
-                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Pts</th>
-                                    <th class="px-3 py-1.5"></th>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 text-right">Total</th>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 text-right">Earned</th>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 text-right">Move</th>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 text-center">Trend</th>
+                                    <th class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 text-right">Potential</th>
                                 </tr>
                             </thead>
                             <tbody>${snapRows}</tbody>
