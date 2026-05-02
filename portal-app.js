@@ -876,12 +876,18 @@ async function loadPlayoffApp() {
         })();
         historySeriesMap[round.id] = roundSeries;
 
-        // Previous rounds: always load pick docs (finalized). Current round: only if revealed.
-        if (!isCurrentRound || isRoundRevealed(round, pool)) {
+        // Collection reads (all members' picks) are only safe when the round is revealed —
+        // Firestore rules allow users to read their own pick doc but block collection reads
+        // for unrevealed rounds. Fall back to a single-doc fetch for the current user only.
+        if (isRoundRevealed(round, pool)) {
             const roundPicksSnap = await getDocs(collection(db, 'playoff_pools', poolId, 'rounds', round.id, 'picks'));
             historyPickDocsMap[round.id] = roundPicksSnap.docs.map(item => normalizePickDoc({ id: item.id, ...item.data() }));
         } else {
-            historyPickDocsMap[round.id] = [];
+            // Unrevealed: only fetch the signed-in user's own pick (permitted by rules)
+            const userPickSnap = await getDoc(doc(db, 'playoff_pools', poolId, 'rounds', round.id, 'picks', state.authUser.uid));
+            historyPickDocsMap[round.id] = userPickSnap.exists()
+                ? [normalizePickDoc({ id: userPickSnap.id, ...userPickSnap.data() })]
+                : [];
         }
 
         // Build previousPicks for the current user's prior round picks display
