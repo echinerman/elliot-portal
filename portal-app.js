@@ -927,12 +927,7 @@ async function loadPlayoffApp() {
     state.playoff.teamNameDraft = preservedTeamNameDraft || member.team_name || '';
     state.playoff.draft = buildDraftFromEntries(currentPick?.entries || []);
     state.playoff.scenarioDraft = buildScenarioDraft(series, preservedScenarioDraft);
-    // isLocked controls the picks UI: only true if admin has explicitly locked/completed the round.
-    // lock_at passing by itself no longer freezes the whole UI — individual series handle their own
-    // lock deadlines via isSeriesLocked(series). This lets rounds with staggered start times (or
-    // rounds that overlap with the next round) stay editable until the admin says otherwise.
-    const roundStatus = String(currentRound?.status || '').toLowerCase();
-    state.playoff.isLocked = ['locked', 'complete', 'completed'].includes(roundStatus);
+    state.playoff.isLocked = isRoundLocked(currentRound);
     renderPlayoffApp();
 }
 
@@ -1158,8 +1153,9 @@ function renderSeriesCards() {
 
     submitButton.disabled = state.playoff.isLocked || !hasReadyTeamNameForPicks();
     const someSeriesLocked = !state.playoff.isLocked && (state.playoff.series || []).some(isSeriesLocked);
+    const roundIsAdminComplete = ['complete', 'completed'].includes(String(state.playoff.currentRound?.status || '').toLowerCase());
     roundMessage.textContent = state.playoff.isLocked
-        ? 'This round is locked. Your latest saved picks are shown below.'
+        ? (roundIsAdminComplete ? 'This round is complete. Final picks are shown below.' : 'Picks are locked for this round. Results are still being decided.')
         : someSeriesLocked
             ? 'Some series have locked (game already started). Save your remaining picks before their deadlines.'
             : hasReadyTeamNameForPicks()
