@@ -2849,6 +2849,19 @@ async function renderRoundRecap(roundId) {
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     const container = byId('round-recap-container');
+
+    // Only show picks if the round is revealed (locked or explicitly complete).
+    // A round with status 'open' hides all picks regardless of what Firestore contains.
+    if (!isRoundRevealed(round, state.playoff.pool)) {
+        container.innerHTML = `
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">Round Recap</p>
+                <h2 class="mt-2 text-3xl font-black text-white">${escapeHtml(round.name || round.id)}</h2>
+                <p class="mt-4 text-sm text-slate-400">Picks for this round are hidden until it locks.</p>
+            </div>`;
+        return;
+    }
+
     container.innerHTML = `<p class="text-sm text-slate-400 animate-pulse py-4">Loading ${escapeHtml(round.name || round.id)} recap…</p>`;
 
     const poolId = state.playoff.poolId;
