@@ -191,7 +191,9 @@ export function normalizePlayoffSeries(series = {}) {
         home_team_primary_color: series.home_team_primary_color || getTeamPrimaryColor(homeTeamId),
         away_team_primary_color: series.away_team_primary_color || getTeamPrimaryColor(awayTeamId),
         live_home_wins: Number(series.live_home_wins || 0),
-        live_away_wins: Number(series.live_away_wins || 0)
+        live_away_wins: Number(series.live_away_wins || 0),
+        result_decided_at: series.result_decided_at || '',
+        lock_at: series.lock_at || ''
     };
 }
 
@@ -500,6 +502,11 @@ export function isRoundRevealed(round = {}, pool = {}) {
     if (pool.pick_visibility === PLAYOFF_PICK_VISIBILITY.ALWAYS) return true;
     if (pool.pick_visibility === PLAYOFF_PICK_VISIBILITY.ADMIN_ONLY) return false;
     return isRoundLocked(round);
+}
+
+export function isSeriesLocked(series = {}) {
+    if (!series || !series.lock_at) return false;
+    return new Date(series.lock_at).getTime() < Date.now();
 }
 
 export function derivePaymentStatus({ amount_due = 0, amount_paid = 0, payment_status = '' } = {}) {

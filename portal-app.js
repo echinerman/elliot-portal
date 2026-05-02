@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260419-standings-history';
+import { CONFIG } from './config.js?v=20260502-round2-fixes';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260419-standings-history';
+} from './app-model.js?v=20260502-round2-fixes';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -19,6 +19,7 @@ import {
     computeMemberPotentialPoints,
     isRoundLocked,
     isRoundRevealed,
+    isSeriesLocked,
     mergeFinalizedPayouts,
     normalizePaymentRecord,
     normalizePlayoffMember,
@@ -30,7 +31,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260419-standings-history';
+} from './playoff-logic.js?v=20260502-round2-fixes';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -102,7 +103,9 @@ const state = {
         picksBoardFlipped: false,
         eventHistory: [],
         timelineIndex: 0,
-        chartType: 'rank'
+        chartType: 'rank',
+        historySeriesMap: {},
+        historyPickDocsMap: {}
     }
 };
 
@@ -204,7 +207,9 @@ function resetSessionState() {
         picksBoardFlipped: false,
         eventHistory: [],
         timelineIndex: 0,
-        chartType: 'rank'
+        chartType: 'rank',
+        historySeriesMap: {},
+        historyPickDocsMap: {}
     };
 }
 
@@ -857,26 +862,42 @@ async function loadPlayoffApp() {
         pool.finalized_payouts
     );
 
+    // Load ALL rounds' series and pick docs for multi-round scoreboard history
+    const historySeriesMap = {};   // { [roundId]: series[] }
+    const historyPickDocsMap = {}; // { [roundId]: pickDoc[] }
     const previousPicks = [];
+
     for (const round of rounds) {
-        if (!currentRound || round.id === currentRound.id) continue;
-        const previousSeriesSnap = await getDocs(query(collection(db, 'playoff_pools', poolId, 'rounds', round.id, 'series'), orderBy('sort_order')));
-        const previousSeries = previousSeriesSnap.docs.map(item => normalizePlayoffSeries({ id: item.id, ...item.data() }));
-        const pickSnap = await getDoc(doc(db, 'playoff_pools', poolId, 'rounds', round.id, 'picks', state.authUser.uid));
-        if (pickSnap.exists()) {
-            previousPicks.push({
-                round,
-                series: previousSeries,
-                pick: scorePickDocument(normalizePickDoc(pickSnap.data()), previousSeries, round)
-            });
+        const isCurrentRound = round.id === currentRoundId;
+        // Use already-loaded series for current round; fetch for others
+        const roundSeries = isCurrentRound ? series : await (async () => {
+            const snap = await getDocs(query(collection(db, 'playoff_pools', poolId, 'rounds', round.id, 'series'), orderBy('sort_order')));
+            return snap.docs.map(item => normalizePlayoffSeries({ id: item.id, ...item.data() }));
+        })();
+        historySeriesMap[round.id] = roundSeries;
+
+        // Previous rounds: always load pick docs (finalized). Current round: only if revealed.
+        if (!isCurrentRound || isRoundRevealed(round, pool)) {
+            const roundPicksSnap = await getDocs(collection(db, 'playoff_pools', poolId, 'rounds', round.id, 'picks'));
+            historyPickDocsMap[round.id] = roundPicksSnap.docs.map(item => normalizePickDoc({ id: item.id, ...item.data() }));
+        } else {
+            historyPickDocsMap[round.id] = [];
+        }
+
+        // Build previousPicks for the current user's prior round picks display
+        if (!isCurrentRound) {
+            const userPickDoc = historyPickDocsMap[round.id].find(d => d.id === state.authUser.uid);
+            if (userPickDoc) {
+                previousPicks.push({
+                    round,
+                    series: roundSeries,
+                    pick: scorePickDocument(userPickDoc, roundSeries, round)
+                });
+            }
         }
     }
 
-    let roundPickDocs = [];
-    if (currentRoundId && isRoundRevealed(currentRound, pool)) {
-        const roundPicksSnap = await getDocs(collection(db, 'playoff_pools', poolId, 'rounds', currentRoundId, 'picks'));
-        roundPickDocs = roundPicksSnap.docs.map(item => normalizePickDoc({ id: item.id, ...item.data() }));
-    }
+    const roundPickDocs = historyPickDocsMap[currentRoundId] || [];
 
     const preservedScenarioDraft = state.playoff.poolId === poolId && state.playoff.currentRound?.id === currentRoundId
         ? state.playoff.scenarioDraft
@@ -896,15 +917,22 @@ async function loadPlayoffApp() {
     state.playoff.previousPicks = previousPicks;
     state.playoff.standings = standings;
     state.playoff.roundPickDocs = roundPickDocs;
+    state.playoff.historySeriesMap = historySeriesMap;
+    state.playoff.historyPickDocsMap = historyPickDocsMap;
     state.playoff.payoutSummary = payoutSummary;
     state.playoff.pickDistribution = buildPickDistribution(series, roundPickDocs);
     state.playoff.standingsTrend = buildStandingsTrend(rounds, standings);
-    state.playoff.eventHistory = buildEventSnapshots(series, roundPickDocs, currentRound, standings);
+    state.playoff.eventHistory = buildAllEventSnapshots(historySeriesMap, historyPickDocsMap, rounds, standings);
     state.playoff.timelineIndex = Math.max(0, state.playoff.eventHistory.length - 1);
     state.playoff.teamNameDraft = preservedTeamNameDraft || member.team_name || '';
     state.playoff.draft = buildDraftFromEntries(currentPick?.entries || []);
     state.playoff.scenarioDraft = buildScenarioDraft(series, preservedScenarioDraft);
-    state.playoff.isLocked = isRoundLocked(currentRound);
+    // isLocked controls the picks UI: only true if admin has explicitly locked/completed the round.
+    // lock_at passing by itself no longer freezes the whole UI — individual series handle their own
+    // lock deadlines via isSeriesLocked(series). This lets rounds with staggered start times (or
+    // rounds that overlap with the next round) stay editable until the admin says otherwise.
+    const roundStatus = String(currentRound?.status || '').toLowerCase();
+    state.playoff.isLocked = ['locked', 'complete', 'completed'].includes(roundStatus);
     renderPlayoffApp();
 }
 
@@ -1073,14 +1101,17 @@ function renderSeriesCards() {
                     const saved = state.playoff.draft[series.id] || {};
                     const savedEntry = state.playoff.currentPick?.entries?.find(entry => entry.series_id === series.id) || null;
                     const winnerChoice = saved.winner_team_id || '';
+                    const thisSeriesLocked = state.playoff.isLocked || isSeriesLocked(series);
+                    const statusLabel = thisSeriesLocked ? 'Locked' : (series.status || 'Open');
+                    const statusBadgeClass = thisSeriesLocked ? 'bg-rose-500/10 text-rose-300' : 'bg-white/10 text-slate-200';
                     return `
-                        <article class="rounded-[1.75rem] border border-white/10 bg-slate-950/35 p-5">
+                        <article class="rounded-[1.75rem] border border-white/10 bg-slate-950/35 p-5" data-series-locked="${thisSeriesLocked}">
                             <div class="mb-4 flex items-start justify-between gap-4">
                                 <div>
                                     <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">${escapeHtml(series.matchup_label || `Series ${series.sort_order || ''}`)}</p>
                                     <h4 class="mt-2 text-xl font-black text-white">${escapeHtml((series.home_team_name || series.home_team_id) + ' vs ' + (series.away_team_name || series.away_team_id))}</h4>
                                 </div>
-                                <span class="rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase text-slate-200">${escapeHtml(series.status || 'Open')}</span>
+                                <span class="rounded-full px-3 py-1 text-[11px] font-bold uppercase ${statusBadgeClass}">${escapeHtml(statusLabel)}</span>
                             </div>
                             <div class="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
                                 <div>
@@ -1115,20 +1146,25 @@ function renderSeriesCards() {
     `).join('');
 
     container.querySelectorAll('.pick-team-option').forEach(button => {
-        button.disabled = state.playoff.isLocked;
+        const article = button.closest('article[data-series-locked]');
+        button.disabled = article ? article.dataset.seriesLocked === 'true' : state.playoff.isLocked;
         button.addEventListener('click', event => updatePlayoffDraft(event.currentTarget.dataset.seriesId, 'winner_team_id', event.currentTarget.dataset.teamId));
     });
     container.querySelectorAll('.pick-games-option').forEach(button => {
-        button.disabled = state.playoff.isLocked;
+        const article = button.closest('article[data-series-locked]');
+        button.disabled = article ? article.dataset.seriesLocked === 'true' : state.playoff.isLocked;
         button.addEventListener('click', event => updatePlayoffDraft(event.currentTarget.dataset.seriesId, 'games', event.currentTarget.dataset.games));
     });
 
     submitButton.disabled = state.playoff.isLocked || !hasReadyTeamNameForPicks();
+    const someSeriesLocked = !state.playoff.isLocked && (state.playoff.series || []).some(isSeriesLocked);
     roundMessage.textContent = state.playoff.isLocked
         ? 'This round is locked. Your latest saved picks are shown below.'
-        : hasReadyTeamNameForPicks()
-            ? 'Click a team logo, choose the exact series length, and save before the deadline.'
-            : 'Save your team name first, then lock in your series picks.';
+        : someSeriesLocked
+            ? 'Some series have locked (game already started). Save your remaining picks before their deadlines.'
+            : hasReadyTeamNameForPicks()
+                ? 'Click a team logo, choose the exact series length, and save before the deadline.'
+                : 'Save your team name first, then lock in your series picks.';
     roundSummary.innerHTML = `
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -2035,6 +2071,71 @@ function updateScenarioDraft(seriesId, field, value) {
 }
 
 
+// Multi-round scoreboard history builder — processes ALL rounds in order, carries totals forward.
+function buildAllEventSnapshots(historySeriesMap = {}, historyPickDocsMap = {}, rounds = [], members = []) {
+    const sortedRounds = [...rounds].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    const allEvents = [];
+    const cumulativePoints = Object.fromEntries(members.map(m => [m.id, 0]));
+
+    for (const round of sortedRounds) {
+        const roundSeries = historySeriesMap[round.id] || [];
+        const pickDocs = historyPickDocsMap[round.id] || [];
+        if (!pickDocs.length) continue;
+
+        const confirmedSeries = roundSeries
+            .filter(s => s.result_winner_team_id)
+            .sort((a, b) => {
+                const at = a.result_decided_at ? new Date(a.result_decided_at).getTime() : 0;
+                const bt = b.result_decided_at ? new Date(b.result_decided_at).getTime() : 0;
+                if (at && bt) return at - bt;
+                return Number(a.sort_order || 0) - Number(b.sort_order || 0);
+            });
+        if (!confirmedSeries.length) continue;
+
+        const pickById = Object.fromEntries(pickDocs.map(p => [p.id, p]));
+
+        confirmedSeries.forEach((s, i) => {
+            const confirmedIds = new Set(confirmedSeries.slice(0, i + 1).map(x => x.id));
+            const maskedSeries = roundSeries.map(rs =>
+                confirmedIds.has(rs.id) ? rs : { ...rs, result_winner_team_id: '', result_games: 0 }
+            );
+            const standings = members.map(m => {
+                const pd = pickById[m.id];
+                const roundPts = pd ? scorePickDocument(pd, maskedSeries, round).round_total : 0;
+                return {
+                    id: m.id,
+                    display_name: m.team_name || m.display_name || m.id,
+                    person_name: m.display_name || '',
+                    points_total: (cumulativePoints[m.id] || 0) + roundPts,
+                    round_points: roundPts
+                };
+            }).sort((a, b) => b.points_total - a.points_total);
+
+            allEvents.push({
+                seriesId: s.id,
+                roundId: round.id,
+                roundName: round.name || `Round ${round.round_number}`,
+                homeId: s.home_team_id,
+                awayId: s.away_team_id,
+                winnerId: s.result_winner_team_id,
+                games: s.result_games || 0,
+                label: `${s.home_team_id} vs ${s.away_team_id}`,
+                standings
+            });
+        });
+
+        // After this round's events, carry forward cumulative totals for next round
+        if (allEvents.length > 0) {
+            const lastEvent = allEvents[allEvents.length - 1];
+            for (const s of lastEvent.standings) {
+                cumulativePoints[s.id] = s.points_total;
+            }
+        }
+    }
+
+    return allEvents;
+}
+
 function buildEventSnapshots(series = [], pickDocs = [], currentRound = null, members = []) {
     if (!series.length || !pickDocs.length || !currentRound) return [];
 
@@ -2132,8 +2233,14 @@ function renderStandingsHistory() {
         });
     });
 
-    // Build seriesById and picksByMember for potential points (only for current round, only when picks revealed)
-    const seriesById = Object.fromEntries((state.playoff.series || []).map(s => [s.id, s]));
+    // Build seriesById across ALL rounds for logo/color lookups and potential points
+    const seriesById = {};
+    Object.values(state.playoff.historySeriesMap || {}).forEach(roundSeries => {
+        roundSeries.forEach(s => { seriesById[s.id] = s; });
+    });
+    // Fallback to current round series if historySeriesMap not yet populated
+    (state.playoff.series || []).forEach(s => { if (!seriesById[s.id]) seriesById[s.id] = s; });
+
     const picksByMember = Object.fromEntries((state.playoff.roundPickDocs || []).map(p => [p.id, p]));
     const currentRound = state.playoff.currentRound;
 
@@ -2165,9 +2272,12 @@ function renderStandingsHistory() {
             : `<span class="text-slate-600 text-[11px]">—</span>`;
 
         const isMe = m.id === state.authUser?.uid;
+        const personNameHTML = (m.person_name && m.person_name !== m.display_name)
+            ? `<span class="block text-[11px] text-slate-400">${escapeHtml(m.person_name)}</span>`
+            : '';
         return `<tr class="${isMe ? 'bg-emerald-400/5' : ''} border-b border-white/5 hover:bg-white/5 transition">
             <td class="px-3 py-1.5 text-[11px] font-bold text-slate-500 tabular-nums w-7">${rank}</td>
-            <td class="px-3 py-1.5 text-sm font-semibold text-white">${escapeHtml(m.display_name)}</td>
+            <td class="px-3 py-1.5"><span class="text-sm font-semibold text-white">${escapeHtml(m.display_name)}</span>${personNameHTML}</td>
             <td class="px-3 py-1.5 text-sm tabular-nums font-semibold text-slate-200 text-right">${m.points_total}</td>
             <td class="px-3 py-1.5 text-right">${earnedHTML}</td>
             <td class="px-3 py-1.5 text-right">${deltaHTML}</td>
@@ -2184,8 +2294,8 @@ function renderStandingsHistory() {
             ${escapeHtml(ev.label)}
         </button>`).join('');
 
-    // Winner info
-    const seriesObj = (state.playoff.series || []).find(s => s.id === event.seriesId);
+    // Winner info — look up across all rounds' series
+    const seriesObj = seriesById[event.seriesId] || null;
     const isWinnerHome = event.winnerId === event.homeId;
     const wLogo = seriesObj
         ? (isWinnerHome ? (seriesObj.home_team_logo_dark || seriesObj.home_team_logo_light || '') : (seriesObj.away_team_logo_dark || seriesObj.away_team_logo_light || ''))
@@ -2206,7 +2316,7 @@ function renderStandingsHistory() {
                     <div class="flex items-start justify-between gap-3 mb-3">
                         <div>
                             <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-sky-300">Scoreboard History</p>
-                            <p class="text-xs text-slate-400 mt-0.5">${K} scoring event${K !== 1 ? 's' : ''} this round</p>
+                            <p class="text-xs text-slate-400 mt-0.5">${K} scoring event${K !== 1 ? 's' : ''} across all rounds</p>
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0">
                             <button ${idx === 0 ? 'disabled' : 'data-timeline-nav="-1"'}
@@ -3038,23 +3148,35 @@ async function submitPlayoffPicks() {
     }
 
     const now = new Date().toISOString();
-    const entries = state.playoff.series.map(series => ({
-        series_id: series.id,
-        winner_team_id: state.playoff.draft[series.id]?.winner_team_id || '',
-        games: Number(state.playoff.draft[series.id]?.games || 0),
-        submitted_at: now,
-        updated_at: now,
-        winner_points_awarded: 0,
-        games_points_awarded: 0,
-        series_points_total: 0,
-        winner_eligibility: true,
-        games_eligibility: true,
-        eligibility_reason: ''
-    }));
+    const entries = state.playoff.series.map(series => {
+        const seriesLocked = isSeriesLocked(series);
+        // For locked series, preserve the existing saved pick rather than overwriting with draft
+        const existingEntry = seriesLocked
+            ? state.playoff.currentPick?.entries?.find(e => e.series_id === series.id)
+            : null;
+        return {
+            series_id: series.id,
+            winner_team_id: existingEntry?.winner_team_id || state.playoff.draft[series.id]?.winner_team_id || '',
+            games: Number(existingEntry?.games || state.playoff.draft[series.id]?.games || 0),
+            submitted_at: existingEntry?.submitted_at || now,
+            updated_at: now,
+            winner_points_awarded: existingEntry?.winner_points_awarded || 0,
+            games_points_awarded: existingEntry?.games_points_awarded || 0,
+            series_points_total: existingEntry?.series_points_total || 0,
+            winner_eligibility: existingEntry?.winner_eligibility ?? true,
+            games_eligibility: existingEntry?.games_eligibility ?? true,
+            eligibility_reason: existingEntry?.eligibility_reason || ''
+        };
+    });
 
-    const invalid = entries.some(entry => !entry.winner_team_id || !entry.games);
+    // Only require picks for series that aren't individually locked
+    const invalid = entries.some(entry => {
+        const series = state.playoff.series.find(s => s.id === entry.series_id);
+        if (series && isSeriesLocked(series)) return false; // locked series don't need a pick
+        return !entry.winner_team_id || !entry.games;
+    });
     if (invalid) {
-        showToast('Complete every series pick before saving', 'error');
+        showToast('Complete all open series picks before saving', 'error');
         return;
     }
 

@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260417-playoff-brand-compact';
+import { CONFIG } from './config.js?v=20260502-round2-fixes';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -10,7 +10,7 @@ import {
     normalizeStrong8kProfile,
     parseDelimitedList,
     slugify
-} from './app-model.js?v=20260417-playoff-brand-compact';
+} from './app-model.js?v=20260502-round2-fixes';
 import {
     buildOfficialRoundOneSeries,
     buildCompactPickLabel,
@@ -33,7 +33,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260417-playoff-brand-compact';
+} from './playoff-logic.js?v=20260502-round2-fixes';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -1328,6 +1328,12 @@ function loadSeriesIntoForm(seriesId) {
     byId('series-result-games-input').value = series.result_games || '';
     byId('series-live-home-wins-input').value = series.live_home_wins ?? '';
     byId('series-live-away-wins-input').value = series.live_away_wins ?? '';
+    byId('series-result-decided-at-input').value = series.result_decided_at
+        ? series.result_decided_at.slice(0, 16)
+        : '';
+    byId('series-lock-at-input').value = series.lock_at
+        ? series.lock_at.slice(0, 16)
+        : '';
     byId('series-notes-input').value = series.notes || '';
 }
 
@@ -1345,6 +1351,8 @@ function clearSeriesForm() {
     byId('series-result-games-input').value = '';
     byId('series-live-home-wins-input').value = '';
     byId('series-live-away-wins-input').value = '';
+    byId('series-result-decided-at-input').value = '';
+    byId('series-lock-at-input').value = '';
     byId('series-notes-input').value = '';
 }
 
@@ -1368,6 +1376,8 @@ async function saveSeries(event) {
         result_games: Number(byId('series-result-games-input').value || 0),
         live_home_wins: Number(byId('series-live-home-wins-input').value || 0),
         live_away_wins: Number(byId('series-live-away-wins-input').value || 0),
+        result_decided_at: byId('series-result-decided-at-input').value || '',
+        lock_at: byId('series-lock-at-input').value || '',
         notes: byId('series-notes-input').value
     });
     await setDoc(doc(db, 'playoff_pools', state.selectedPoolId, 'rounds', state.selectedRoundId, 'series', seriesId), nextSeries, { merge: true });
