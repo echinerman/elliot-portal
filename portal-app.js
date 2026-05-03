@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260502-round2-fixes';
+import { CONFIG } from './config.js?v=20260502-picks-auth';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260502-round2-fixes';
+} from './app-model.js?v=20260502-picks-auth';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -31,12 +31,13 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260502-round2-fixes';
+} from './playoff-logic.js?v=20260502-picks-auth';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
     getAuth,
     onAuthStateChanged,
+    sendPasswordResetEmail,
     signInWithEmailAndPassword,
     signOut
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -382,6 +383,21 @@ function bindAuthForms() {
             await createUserWithEmailAndPassword(auth, email, password);
         } catch (error) {
             showToast(error.message, 'error');
+        }
+    });
+
+    byId('forgot-password-link').addEventListener('click', async event => {
+        event.preventDefault();
+        const email = byId('login-email').value.trim();
+        if (!email) {
+            showToast('Enter your email address above first', 'error');
+            return;
+        }
+        try {
+            await sendPasswordResetEmail(auth, email);
+            showToast('Password reset email sent — check your inbox');
+        } catch (error) {
+            showToast(error.message || 'Failed to send reset email', 'error');
         }
     });
 }

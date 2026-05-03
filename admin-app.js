@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260502-round2-fixes';
+import { CONFIG } from './config.js?v=20260502-picks-auth';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -10,7 +10,7 @@ import {
     normalizeStrong8kProfile,
     parseDelimitedList,
     slugify
-} from './app-model.js?v=20260502-round2-fixes';
+} from './app-model.js?v=20260502-picks-auth';
 import {
     buildOfficialRoundOneSeries,
     buildCompactPickLabel,
@@ -33,9 +33,9 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260502-round2-fixes';
+} from './playoff-logic.js?v=20260502-picks-auth';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
     addDoc,
     collection,
@@ -992,6 +992,16 @@ function bindPlayoffForms() {
     byId('series-form').addEventListener('submit', saveSeries);
     byId('round-number-input').addEventListener('input', syncRoundScoringDefaults);
     byId('pool-member-form').addEventListener('submit', savePoolMember);
+    byId('send-password-reset-btn').addEventListener('click', async () => {
+        const email = byId('pool-member-email').value.trim();
+        if (!email) { showToast('Enter an email address first', 'error'); return; }
+        try {
+            await sendPasswordResetEmail(auth, email);
+            showToast('Password reset email sent to ' + email);
+        } catch (err) {
+            showToast(err.message || 'Failed to send reset email', 'error');
+        }
+    });
     byId('clear-pool-member-btn').addEventListener('click', () => {
         state.selectedMemberId = '';
         clearPoolMemberForm();
@@ -1504,19 +1514,45 @@ function renderPickOverrideList(member) {
 
     container.innerHTML = state.series.map(series => {
         const entry = pickDoc.entries.find(item => item.series_id === series.id) || { series_id: series.id };
+        const homeId = series.home_team_id || '';
+        const awayId = series.away_team_id || '';
+        const homeName = series.home_team_name || homeId;
+        const awayName = series.away_team_name || awayId;
+        const pickedTeam = entry.pick_team_id || '';
+        const pickedGames = entry.pick_games || '';
         return `
             <article class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
                 <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
-                        <p class="text-sm font-bold text-slate-950">${escapeHtml(series.matchup_label || `${series.home_team_name || series.home_team_id} vs ${series.away_team_name || series.away_team_id}`)}</p>
-                        <p class="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">Pick: ${escapeHtml(buildCompactPickLabel(entry, series) || 'No saved pick')}</p>
+                        <p class="text-sm font-bold text-slate-950">${escapeHtml(series.matchup_label || `${homeName} vs ${awayName}`)}</p>
+                        <p class="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">Saved pick: ${escapeHtml(buildCompactPickLabel(entry, series) || 'None')}</p>
                     </div>
                     <div class="text-right text-xs text-slate-500">
                         <p>Scored: ${entry.series_points_total || 0}</p>
                         <p>Winner ${entry.winner_points_awarded || 0} • Games ${entry.games_points_awarded || 0}</p>
                     </div>
                 </div>
-                <div class="mt-4 grid gap-3 md:grid-cols-3">
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    <label class="space-y-1">
+                        <span class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Pick Winner</span>
+                        <select data-pick-series="${series.id}" data-field="pick_team_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            <option value="">— no pick —</option>
+                            ${homeId ? `<option value="${escapeAttribute(homeId)}" ${pickedTeam === homeId ? 'selected' : ''}>${escapeHtml(homeName)}</option>` : ''}
+                            ${awayId ? `<option value="${escapeAttribute(awayId)}" ${pickedTeam === awayId ? 'selected' : ''}>${escapeHtml(awayName)}</option>` : ''}
+                        </select>
+                    </label>
+                    <label class="space-y-1">
+                        <span class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Pick Games</span>
+                        <select data-pick-series="${series.id}" data-field="pick_games" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            <option value="">— no pick —</option>
+                            <option value="4" ${pickedGames == 4 ? 'selected' : ''}>4 games</option>
+                            <option value="5" ${pickedGames == 5 ? 'selected' : ''}>5 games</option>
+                            <option value="6" ${pickedGames == 6 ? 'selected' : ''}>6 games</option>
+                            <option value="7" ${pickedGames == 7 ? 'selected' : ''}>7 games</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="mt-3 grid gap-3 md:grid-cols-3">
                     <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
                         <input type="checkbox" data-override-series="${series.id}" data-field="winner_eligibility" class="h-4 w-4 rounded border-slate-300" ${entry.winner_eligibility !== false ? 'checked' : ''}>
                         Winner eligible
@@ -1608,6 +1644,7 @@ async function savePickOverrides(event) {
         entries: state.series.map(series => ({ series_id: series.id }))
     });
 
+    // Read eligibility overrides
     const inputs = [...byId('pick-override-list').querySelectorAll('[data-override-series]')];
     const overrides = {};
     inputs.forEach(input => {
@@ -1617,12 +1654,27 @@ async function savePickOverrides(event) {
         overrides[seriesId][field] = input.type === 'checkbox' ? input.checked : input.value;
     });
 
+    // Read manual pick inputs (pick_team_id, pick_games)
+    const pickInputs = [...byId('pick-override-list').querySelectorAll('[data-pick-series]')];
+    const picksMap = {};
+    pickInputs.forEach(input => {
+        const seriesId = input.dataset.pickSeries;
+        const field = input.dataset.field;
+        picksMap[seriesId] = picksMap[seriesId] || {};
+        picksMap[seriesId][field] = input.value;
+    });
+
     const entries = state.series.map(series => {
         const currentEntry = existingPick.entries.find(item => item.series_id === series.id) || { series_id: series.id };
         const override = overrides[series.id] || {};
+        const picks = picksMap[series.id] || {};
+        const pickTeamId = picks.pick_team_id !== undefined ? picks.pick_team_id : (currentEntry.pick_team_id || '');
+        const pickGames = picks.pick_games !== undefined ? (picks.pick_games ? Number(picks.pick_games) : 0) : (currentEntry.pick_games || 0);
         return {
             ...currentEntry,
             series_id: series.id,
+            pick_team_id: pickTeamId,
+            pick_games: pickGames,
             winner_eligibility: override.winner_eligibility !== false,
             games_eligibility: override.games_eligibility !== false,
             eligibility_reason: override.eligibility_reason || ''

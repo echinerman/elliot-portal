@@ -516,7 +516,12 @@
                         </label>
                         <label class="space-y-2">
                             <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Email Address</span>
-                            <input id="pool-member-email" type="email" placeholder="Email" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            <div class="flex gap-2">
+                                <input id="pool-member-email" type="email" placeholder="Email" class="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                                <button id="send-password-reset-btn" type="button" title="Send password reset email" class="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-500 transition hover:border-slate-900 hover:text-slate-950">
+                                    <i class="fa-solid fa-key"></i>
+                                </button>
+                            </div>
                         </label>
                         <label class="space-y-2">
                             <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Team Name</span>
@@ -592,8 +597,8 @@
 
                 <div class="space-y-6">
                     <form id="pick-override-form" class="rounded-[1.75rem] bg-white p-6 shadow-sm">
-                        <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Pick Overrides</p>
-                        <h2 class="mt-2 text-2xl font-black text-slate-950">Selected member, selected round</h2>
+                        <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Picks &amp; Overrides</p>
+                        <h2 class="mt-2 text-2xl font-black text-slate-950">Set picks and eligibility for selected member</h2>
                         <div id="pick-override-list" class="mt-6 space-y-4"></div>
                         <div class="mt-6 flex flex-wrap gap-3">
                             <button type="submit" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Overrides</button>
@@ -775,6 +780,6 @@
         </div>
     </div>
 
-    <script type="module" src="./admin-app.js?v=20260502-round2-fixes"></script>
+    <script type="module" src="./admin-app.js?v=20260502-picks-auth"></script>
 </body>
 </html>
