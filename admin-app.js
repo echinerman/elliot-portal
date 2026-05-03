@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260502-picks-auth2';
+import { CONFIG } from './config.js?v=20260502-picks-auth3';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -10,7 +10,7 @@ import {
     normalizeStrong8kProfile,
     parseDelimitedList,
     slugify
-} from './app-model.js?v=20260502-picks-auth2';
+} from './app-model.js?v=20260502-picks-auth3';
 import {
     buildOfficialRoundOneSeries,
     buildCompactPickLabel,
@@ -33,7 +33,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260502-picks-auth2';
+} from './playoff-logic.js?v=20260502-picks-auth3';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -1664,6 +1664,7 @@ async function savePickOverrides(event) {
         picksMap[seriesId][field] = input.value;
     });
 
+    const now = new Date().toISOString();
     const entries = state.series.map(series => {
         const currentEntry = existingPick.entries.find(item => item.series_id === series.id) || { series_id: series.id };
         const override = overrides[series.id] || {};
@@ -1675,23 +1676,26 @@ async function savePickOverrides(event) {
             series_id: series.id,
             winner_team_id: winnerTeamId,
             games,
-            winner_eligibility: override.winner_eligibility !== false,
-            games_eligibility: override.games_eligibility !== false,
-            eligibility_reason: override.eligibility_reason || ''
+            submitted_at: currentEntry.submitted_at || (winnerTeamId ? now : ''),
+            updated_at: now,
+            winner_eligibility: override.winner_eligibility !== undefined ? override.winner_eligibility : (currentEntry.winner_eligibility !== false),
+            games_eligibility: override.games_eligibility !== undefined ? override.games_eligibility : (currentEntry.games_eligibility !== false),
+            eligibility_reason: override.eligibility_reason !== undefined ? (override.eligibility_reason || '') : (currentEntry.eligibility_reason || '')
         };
     });
 
     await setDoc(doc(db, 'playoff_pools', state.selectedPoolId, 'rounds', state.selectedRoundId, 'picks', state.selectedMemberId), {
-        ...existingPick,
         pool_id: state.selectedPoolId,
         round_id: state.selectedRoundId,
         member_uid: state.selectedMemberId,
         team_name: member?.team_name || '',
         entries,
-        updated_at: new Date().toISOString()
+        submitted_at: existingPick.submitted_at || now,
+        updated_at: now,
+        round_total: existingPick.round_total || 0
     }, { merge: true });
 
-    showToast('Overrides saved');
+    showToast('Picks saved');
     await loadSelectedPoolData();
     renderAdmin();
 }
