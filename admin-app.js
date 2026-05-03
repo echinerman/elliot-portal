@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260502-picks-auth';
+import { CONFIG } from './config.js?v=20260502-picks-auth2';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -10,7 +10,7 @@ import {
     normalizeStrong8kProfile,
     parseDelimitedList,
     slugify
-} from './app-model.js?v=20260502-picks-auth';
+} from './app-model.js?v=20260502-picks-auth2';
 import {
     buildOfficialRoundOneSeries,
     buildCompactPickLabel,
@@ -33,7 +33,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260502-picks-auth';
+} from './playoff-logic.js?v=20260502-picks-auth2';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -1518,8 +1518,8 @@ function renderPickOverrideList(member) {
         const awayId = series.away_team_id || '';
         const homeName = series.home_team_name || homeId;
         const awayName = series.away_team_name || awayId;
-        const pickedTeam = entry.pick_team_id || '';
-        const pickedGames = entry.pick_games || '';
+        const pickedTeam = entry.winner_team_id || '';
+        const pickedGames = entry.games || 0;
         return `
             <article class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
                 <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -1535,7 +1535,7 @@ function renderPickOverrideList(member) {
                 <div class="mt-4 grid gap-3 md:grid-cols-2">
                     <label class="space-y-1">
                         <span class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Pick Winner</span>
-                        <select data-pick-series="${series.id}" data-field="pick_team_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                        <select data-pick-series="${series.id}" data-field="winner_team_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
                             <option value="">— no pick —</option>
                             ${homeId ? `<option value="${escapeAttribute(homeId)}" ${pickedTeam === homeId ? 'selected' : ''}>${escapeHtml(homeName)}</option>` : ''}
                             ${awayId ? `<option value="${escapeAttribute(awayId)}" ${pickedTeam === awayId ? 'selected' : ''}>${escapeHtml(awayName)}</option>` : ''}
@@ -1543,8 +1543,8 @@ function renderPickOverrideList(member) {
                     </label>
                     <label class="space-y-1">
                         <span class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Pick Games</span>
-                        <select data-pick-series="${series.id}" data-field="pick_games" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            <option value="">— no pick —</option>
+                        <select data-pick-series="${series.id}" data-field="games" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                            <option value="0" ${!pickedGames ? 'selected' : ''}>— no pick —</option>
                             <option value="4" ${pickedGames == 4 ? 'selected' : ''}>4 games</option>
                             <option value="5" ${pickedGames == 5 ? 'selected' : ''}>5 games</option>
                             <option value="6" ${pickedGames == 6 ? 'selected' : ''}>6 games</option>
@@ -1668,13 +1668,13 @@ async function savePickOverrides(event) {
         const currentEntry = existingPick.entries.find(item => item.series_id === series.id) || { series_id: series.id };
         const override = overrides[series.id] || {};
         const picks = picksMap[series.id] || {};
-        const pickTeamId = picks.pick_team_id !== undefined ? picks.pick_team_id : (currentEntry.pick_team_id || '');
-        const pickGames = picks.pick_games !== undefined ? (picks.pick_games ? Number(picks.pick_games) : 0) : (currentEntry.pick_games || 0);
+        const winnerTeamId = picks.winner_team_id !== undefined ? picks.winner_team_id : (currentEntry.winner_team_id || '');
+        const games = picks.games !== undefined ? Number(picks.games || 0) : Number(currentEntry.games || 0);
         return {
             ...currentEntry,
             series_id: series.id,
-            pick_team_id: pickTeamId,
-            pick_games: pickGames,
+            winner_team_id: winnerTeamId,
+            games,
             winner_eligibility: override.winner_eligibility !== false,
             games_eligibility: override.games_eligibility !== false,
             eligibility_reason: override.eligibility_reason || ''
