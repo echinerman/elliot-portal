@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260502-picks-auth';
+import { CONFIG } from './config.js?v=20260504-golf-rank';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260502-picks-auth';
+} from './app-model.js?v=20260504-golf-rank';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -31,7 +31,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260502-picks-auth';
+} from './playoff-logic.js?v=20260504-golf-rank';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -1840,13 +1840,29 @@ function applyRulesInlineFormatting(text = '') {
         .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');
 }
 
+// Standard competition ranking (1-2-2-4, golf/payout style).
+// Input must already be sorted descending by points_total.
+// Returns a plain object { [memberId]: rank }.
+function computeRanks(sortedMembers = []) {
+    const ranks = {};
+    let i = 0;
+    while (i < sortedMembers.length) {
+        const pts = Number(sortedMembers[i].points_total || 0);
+        let j = i;
+        while (j < sortedMembers.length && Number(sortedMembers[j].points_total || 0) === pts) j++;
+        for (let k = i; k < j; k++) ranks[sortedMembers[k].id] = i + 1;
+        i = j;
+    }
+    return ranks;
+}
+
 function buildCurrentRankSummary() {
-    const currentRank = state.playoff.standings.findIndex(member => member.id === state.authUser.uid);
-    if (currentRank < 0) {
+    const rankMap = computeRanks(state.playoff.standings);
+    const rank = rankMap[state.authUser.uid];
+    if (rank === undefined) {
         return 'Your live placement will show up here once you are on the standings board.';
     }
-
-    return `Currently ${ordinal(currentRank + 1)} of ${state.playoff.standings.length}`;
+    return `Currently ${ordinal(rank)} of ${state.playoff.standings.length}`;
 }
 
 function renderIPTVUpsellBanner() {
@@ -1980,7 +1996,7 @@ function buildScenarioSnapshot() {
         selfScoredPick,
         selfProjectedTotal,
         projectedStandings,
-        projectedRank: projectedStandings.findIndex(member => member.id === state.authUser.uid)
+        projectedRank: computeRanks(projectedStandings)[state.authUser.uid] ?? -1
     };
 }
 
@@ -2046,7 +2062,7 @@ function renderScenarioLab() {
             <div class="rounded-3xl bg-white/5 p-4">
                 <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Your Projected Total</p>
                 <p class="mt-2 text-3xl font-black text-white">${snapshot.selfProjectedTotal}</p>
-                <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-400">${snapshot.projectedRank >= 0 ? `Projected ${ordinal(snapshot.projectedRank + 1)} place if these results happen.` : 'Projected rank appears once the round is revealed.'}</p>
+                <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-400">${snapshot.projectedRank > 0 ? `Projected ${ordinal(snapshot.projectedRank)} place if these results happen.` : 'Projected rank appears once the round is revealed.'}</p>
             </div>
         </div>
     `;
@@ -2239,15 +2255,16 @@ function renderStandingsHistory() {
     const idx = Math.max(0, Math.min(state.playoff.timelineIndex, K - 1));
     const event = history[idx];
     const prevSnap = idx > 0 ? history[idx - 1].standings : null;
-    const prevRankById = prevSnap ? Object.fromEntries(prevSnap.map((m, i) => [m.id, i + 1])) : {};
+    const prevRankById = prevSnap ? computeRanks(prevSnap) : {};
     const prevPointsById = prevSnap ? Object.fromEntries(prevSnap.map(m => [m.id, m.points_total])) : {};
 
     // Build per-member rank trend across all events (for sparkline)
     const rankTrendById = {};
     history.forEach((ev, evIdx) => {
-        ev.standings.forEach((m, position) => {
+        const evRanks = computeRanks(ev.standings);
+        ev.standings.forEach(m => {
             if (!rankTrendById[m.id]) rankTrendById[m.id] = new Array(K).fill(null);
-            rankTrendById[m.id][evIdx] = position + 1;
+            rankTrendById[m.id][evIdx] = evRanks[m.id] || null;
         });
     });
 
@@ -2263,8 +2280,9 @@ function renderStandingsHistory() {
     const currentRound = state.playoff.currentRound;
 
     // Snapshot rows
+    const eventRanks = computeRanks(event.standings);
     const snapRows = event.standings.map((m, i) => {
-        const rank = i + 1;
+        const rank = eventRanks[m.id] || (i + 1);
         const prev = prevRankById[m.id];
         const delta = prev !== undefined ? prev - rank : null;
         const deltaHTML = delta === null ? '<span class="text-slate-700 text-[10px]">—</span>' : delta > 0
@@ -2410,8 +2428,8 @@ function buildStandingsChartSVG(history, selectedIdx) {
 
     // For each member, build array of values across events
     function getRank(snap, memberId) {
-        const i = snap.standings.findIndex(m => m.id === memberId);
-        return i === -1 ? N : i + 1;
+        const r = computeRanks(snap.standings)[memberId];
+        return r !== undefined ? r : N;
     }
     function getPoints(snap, memberId) {
         return snap.standings.find(m => m.id === memberId)?.points_total || 0;
@@ -2716,10 +2734,11 @@ function renderPicksBoard() {
             </th>`
         ).join('');
 
+        const baseRankMap = computeRanks(baseStandings);
         const rows = filteredStandings.map((member, idx) => {
             const isCurrentUser = member.id === state.authUser.uid;
             const rowCls = isCurrentUser ? 'border-b border-emerald-300/20 bg-emerald-400/5' : 'border-b border-white/5 hover:bg-white/5';
-            const rank = sort === 'standings' ? (baseStandings.findIndex(m => m.id === member.id) + 1) : (idx + 1);
+            const rank = sort === 'standings' ? (baseRankMap[member.id] || idx + 1) : (idx + 1);
             return `<tr class="${rowCls} transition">
                 <td class="sticky left-0 bg-slate-950 px-3 py-1.5 font-semibold text-sm text-white z-10 whitespace-nowrap">
                     <span class="mr-1.5 text-[10px] font-bold text-slate-500 tabular-nums w-4 inline-block text-right">${rank}</span>${escapeHtml(member.team_name || member.display_name || member.email || member.id)}
