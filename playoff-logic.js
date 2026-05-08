@@ -590,18 +590,6 @@ export function buildPickDistribution(seriesList = [], pickDocs = []) {
     });
 }
 
-export function buildStandingsTrend(rounds = [], members = []) {
-    const orderedRounds = [...rounds].sort((left, right) => Number(left.sort_order || 0) - Number(right.sort_order || 0));
-    return members.map(member => ({
-        member_id: member.id || member.uid,
-        display_name: member.team_name || member.display_name || member.email || member.id || 'Member',
-        points: orderedRounds.map(round => {
-            const historyEntry = (member.round_history || []).find(item => item.round_id === round.id);
-            return Number(historyEntry?.points || 0);
-        })
-    }));
-}
-
 export function suggestPayouts({ collectedPot = 0, participantCount = 0, template = [] } = {}) {
     const payoutTemplate = normalizePayoutTemplate(template);
     const safePot = roundCurrency(Number(collectedPot || 0));

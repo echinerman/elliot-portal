@@ -30,6 +30,7 @@ import {
     normalizePlayoffSeries,
     normalizePickDoc,
     normalizePayoutTemplate,
+    pickCurrentRound,
     scorePickDocument,
     sortStandings,
     suggestPayouts
@@ -81,6 +82,7 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
     bindNavigation();
     bindUserModal();
+    bindMergeModal();
     bindStrong8kForms();
     bindPlayoffForms();
     byId('admin-signout-btn').addEventListener('click', () => signOut(auth));
@@ -263,7 +265,7 @@ async function loadSelectedPoolData() {
     const roundsSnap = await getDocs(query(collection(db, 'playoff_pools', state.selectedPoolId, 'rounds'), orderBy('sort_order')));
     state.rounds = roundsSnap.docs.map(item => normalizePlayoffRound({ id: item.id, ...item.data() }));
     if (!state.selectedRoundId && state.rounds.length) {
-        state.selectedRoundId = state.rounds[0].id;
+        state.selectedRoundId = (pickCurrentRound(state.rounds) || state.rounds[0]).id;
     }
 
     if (state.selectedRoundId) {
@@ -672,7 +674,10 @@ function renderLicenseList() {
             <td class="px-4 py-4 text-slate-500">${formatDate(license.expiry_date)}</td>
             <td class="px-4 py-4 text-slate-500">${escapeHtml(license.status || 'Active')}</td>
             <td class="px-4 py-4 text-right">
-                <button type="button" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950" data-license-edit="${index}">Edit</button>
+                <div class="inline-flex gap-2">
+                    <button type="button" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950" data-license-copy="${index}">Copy</button>
+                    <button type="button" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950" data-license-edit="${index}">Edit</button>
+                </div>
             </td>
         `;
         tbody.appendChild(row);
@@ -681,6 +686,23 @@ function renderLicenseList() {
     tbody.querySelectorAll('[data-license-edit]').forEach(button => {
         button.addEventListener('click', () => loadLicenseIntoForm(Number(button.dataset.licenseEdit)));
     });
+    tbody.querySelectorAll('[data-license-copy]').forEach(button => {
+        button.addEventListener('click', () => copyLicenseBlock(Number(button.dataset.licenseCopy)));
+    });
+}
+
+function copyLicenseBlock(index) {
+    const license = state.currentLicenses[index];
+    if (!license) return;
+    const lines = [
+        license.label ? `Label: ${license.label}` : null,
+        license.username_8k ? `Username: ${license.username_8k}` : null,
+        license.password_8k ? `Password: ${license.password_8k}` : null,
+        license.m3u_url_8k ? `M3U: ${license.m3u_url_8k}` : null,
+        license.epg_url_8k ? `EPG: ${license.epg_url_8k}` : null,
+        license.expiry_date ? `Expiry: ${license.expiry_date}` : null,
+    ].filter(Boolean);
+    navigator.clipboard.writeText(lines.join('\n')).then(() => showToast('Credentials copied!'));
 }
 
 function loadLicenseIntoForm(index = -1) {
@@ -887,6 +909,156 @@ async function archiveUser() {
     closeUserModal();
     showToast('User archived');
     await loadAdminData();
+}
+
+const mergeState = { sourceId: '', targetId: '', conflicts: [], conflictChoices: {} };
+
+function bindMergeModal() {
+    byId('merge-profiles-btn').addEventListener('click', openMergeModal);
+    byId('merge-modal-close').addEventListener('click', closeMergeModal);
+    byId('merge-preview-btn').addEventListener('click', renderMergePreview);
+    byId('merge-execute-btn').addEventListener('click', executeMerge);
+    byId('merge-reset-btn').addEventListener('click', resetMergeModal);
+}
+
+function openMergeModal() {
+    const options = state.users
+        .map(user => `<option value="${escapeAttribute(user.id)}">${escapeHtml(user.full_name || user.email || user.id)} — ${escapeHtml(user.email || '')}</option>`)
+        .join('');
+    byId('merge-source-select').innerHTML = '<option value="">Select source user…</option>' + options;
+    byId('merge-target-select').innerHTML = '<option value="">Select target user…</option>' + options;
+    resetMergeModal();
+    byId('merge-modal').classList.remove('hidden');
+}
+
+function closeMergeModal() {
+    byId('merge-modal').classList.add('hidden');
+}
+
+function resetMergeModal() {
+    mergeState.sourceId = '';
+    mergeState.targetId = '';
+    mergeState.conflicts = [];
+    mergeState.conflictChoices = {};
+    byId('merge-preview-area').classList.add('hidden');
+    byId('merge-conflict-area').classList.add('hidden');
+    byId('merge-action-row').classList.add('hidden');
+    byId('merge-preview-content').innerHTML = '';
+    byId('merge-conflict-area').innerHTML = '';
+    byId('merge-source-select').value = '';
+    byId('merge-target-select').value = '';
+}
+
+function renderMergePreview() {
+    const sourceId = byId('merge-source-select').value;
+    const targetId = byId('merge-target-select').value;
+
+    if (!sourceId || !targetId) {
+        showToast('Select both a source and a target user', 'error');
+        return;
+    }
+    if (sourceId === targetId) {
+        showToast('Source and target must be different users', 'error');
+        return;
+    }
+
+    const sourceUser = state.users.find(user => user.id === sourceId);
+    const targetUser = state.users.find(user => user.id === targetId);
+    const sourceProfile = state.strong8kProfiles[sourceId] || normalizeStrong8kProfile({}, sourceUser || {});
+    const sourceMembership = state.membershipsByUser[sourceId]?.[APP_IDS.STRONG8K];
+
+    mergeState.sourceId = sourceId;
+    mergeState.targetId = targetId;
+
+    const licenseCount = (sourceProfile.licenses || []).length;
+    const previewLines = [
+        sourceMembership ? `<li>Strong8K membership (role: ${escapeHtml(sourceMembership.role || 'member')}, status: ${escapeHtml(sourceMembership.status || 'active')})</li>` : '<li class="text-slate-400">No Strong8K membership on source</li>',
+        `<li>${licenseCount} license${licenseCount !== 1 ? 's' : ''}</li>`,
+        sourceProfile.domain_8k ? `<li>Primary domain: ${escapeHtml(sourceProfile.domain_8k)}</li>` : '',
+        sourceProfile.domain_8k_backup ? `<li>Backup domain: ${escapeHtml(sourceProfile.domain_8k_backup)}</li>` : '',
+        sourceProfile.credits_allocated ? `<li>Credits allocated: ${escapeHtml(String(sourceProfile.credits_allocated))}</li>` : '',
+        sourceProfile.setup_notes ? `<li>Setup notes: ${escapeHtml(sourceProfile.setup_notes.slice(0, 80))}${sourceProfile.setup_notes.length > 80 ? '…' : ''}</li>` : '',
+    ].filter(Boolean);
+
+    byId('merge-preview-content').innerHTML = `<ul class="list-disc pl-5 space-y-1">${previewLines.join('')}</ul>`;
+    byId('merge-preview-area').classList.remove('hidden');
+
+    const conflictFields = [
+        { key: 'full_name', label: 'Full name' },
+        { key: 'default_app_id', label: 'Default app' },
+    ];
+    mergeState.conflicts = conflictFields.filter(field => {
+        const src = String((sourceUser || {})[field.key] || '').trim();
+        const tgt = String((targetUser || {})[field.key] || '').trim();
+        return src && tgt && src !== tgt;
+    });
+
+    const conflictArea = byId('merge-conflict-area');
+    if (mergeState.conflicts.length) {
+        conflictArea.innerHTML = `
+            <p class="text-xs font-bold uppercase tracking-[0.22em] text-amber-500">Conflicts — choose which value to keep</p>
+            ${mergeState.conflicts.map(field => `
+                <div class="rounded-[1.25rem] border border-amber-100 bg-amber-50 p-4 space-y-3">
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">${escapeHtml(field.label)}</p>
+                    <label class="flex items-center gap-3 text-sm cursor-pointer">
+                        <input type="radio" name="conflict-${escapeAttribute(field.key)}" value="source" class="accent-slate-900">
+                        <span>Source: <strong>${escapeHtml(String((sourceUser || {})[field.key] || ''))}</strong></span>
+                    </label>
+                    <label class="flex items-center gap-3 text-sm cursor-pointer">
+                        <input type="radio" name="conflict-${escapeAttribute(field.key)}" value="target" class="accent-slate-900" checked>
+                        <span>Target (keep): <strong>${escapeHtml(String((targetUser || {})[field.key] || ''))}</strong></span>
+                    </label>
+                </div>
+            `).join('')}
+        `;
+        conflictArea.classList.remove('hidden');
+    } else {
+        conflictArea.classList.add('hidden');
+        conflictArea.innerHTML = '';
+    }
+
+    byId('merge-action-row').classList.remove('hidden');
+}
+
+async function executeMerge() {
+    const { sourceId, targetId, conflicts } = mergeState;
+    if (!sourceId || !targetId) return;
+
+    for (const field of conflicts) {
+        const chosen = document.querySelector(`input[name="conflict-${field.key}"]:checked`);
+        mergeState.conflictChoices[field.key] = chosen?.value || 'target';
+    }
+
+    try {
+        const sourceProfileSnap = await getDoc(doc(db, 'strong8k_profiles', sourceId));
+        if (sourceProfileSnap.exists()) {
+            await setDoc(doc(db, 'strong8k_profiles', targetId), sourceProfileSnap.data(), { merge: true });
+        }
+
+        const sourceMembershipSnap = await getDoc(doc(db, 'users', sourceId, 'memberships', APP_IDS.STRONG8K));
+        if (sourceMembershipSnap.exists()) {
+            await setDoc(doc(db, 'users', targetId, 'memberships', APP_IDS.STRONG8K), sourceMembershipSnap.data(), { merge: true });
+        }
+
+        if (Object.keys(mergeState.conflictChoices).length) {
+            const sourceUser = state.users.find(user => user.id === sourceId) || {};
+            const targetUpdates = {};
+            for (const [key, choice] of Object.entries(mergeState.conflictChoices)) {
+                if (choice === 'source') targetUpdates[key] = sourceUser[key];
+            }
+            if (Object.keys(targetUpdates).length) {
+                await updateDoc(doc(db, 'users', targetId), targetUpdates);
+            }
+        }
+
+        await updateDoc(doc(db, 'users', sourceId), { deleted: true });
+
+        closeMergeModal();
+        showToast('Profiles merged — source archived');
+        await loadAdminData();
+    } catch (error) {
+        showToast('Merge failed: ' + error.message, 'error');
+    }
 }
 
 function bindStrong8kForms() {

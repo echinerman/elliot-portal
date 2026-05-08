@@ -14,7 +14,6 @@ import {
     buildCompactPickLabel,
     buildDraftFromEntries,
     buildPickDistribution,
-    buildStandingsTrend,
     computeCollectedPot,
     computeMemberPotentialPoints,
     isRoundLocked,
@@ -93,7 +92,6 @@ const state = {
         roundPickDocs: [],
         payoutSummary: [],
         pickDistribution: [],
-        standingsTrend: [],
         teamNameDraft: '',
         draft: {},
         scenarioDraft: {},
@@ -197,7 +195,6 @@ function resetSessionState() {
         roundPickDocs: [],
         payoutSummary: [],
         pickDistribution: [],
-        standingsTrend: [],
         teamNameDraft: '',
         draft: {},
         scenarioDraft: {},
@@ -943,7 +940,6 @@ async function loadPlayoffApp() {
     state.playoff.historyPickDocsMap = historyPickDocsMap;
     state.playoff.payoutSummary = payoutSummary;
     state.playoff.pickDistribution = buildPickDistribution(series, roundPickDocs);
-    state.playoff.standingsTrend = buildStandingsTrend(rounds, standings);
     state.playoff.eventHistory = buildAllEventSnapshots(historySeriesMap, historyPickDocsMap, rounds, standings);
     state.playoff.timelineIndex = Math.max(0, state.playoff.eventHistory.length - 1);
     state.playoff.teamNameDraft = preservedTeamNameDraft || member.team_name || '';
@@ -1073,7 +1069,6 @@ function renderPlayoffApp() {
     renderSeriesCards();
     renderStandingsHistory();
     renderPayoutSummary();
-    renderStandingsTrend();
     renderPickDistribution();
     renderPreviousPicks();
     renderScenarioLab();
@@ -2539,38 +2534,6 @@ function renderPayoutSummary() {
         `;
         container.appendChild(card);
     });
-}
-
-function renderStandingsTrend() {
-    const container = byId('playoff-standings-trend');
-    container.innerHTML = '';
-
-    if (!state.playoff.standingsTrend.length || !state.playoff.rounds.length) {
-        container.innerHTML = '<p class="text-sm text-slate-400">Trend data will appear once rounds have been scored.</p>';
-        return;
-    }
-
-    const roundLabels = state.playoff.rounds.map(round => escapeHtml(round.name || `Round ${round.sort_order}`));
-    container.innerHTML = `
-        <div class="grid gap-3">
-            ${state.playoff.standingsTrend.slice(0, 6).map(line => `
-                <div class="rounded-3xl bg-slate-950/40 p-4">
-                    <div class="mb-3 flex items-center justify-between gap-4">
-                        <p class="text-sm font-bold text-white">${escapeHtml(line.display_name)}</p>
-                        <p class="text-xs uppercase tracking-[0.2em] text-slate-400">${line.points.reduce((sum, value) => sum + Number(value || 0), 0)} total</p>
-                    </div>
-                    <div class="grid gap-2 ${roundLabels.length > 1 ? 'md:grid-cols-4' : ''}">
-                        ${line.points.map((value, index) => `
-                            <div class="rounded-2xl bg-white/5 px-3 py-2">
-                                <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400">${roundLabels[index]}</p>
-                                <p class="mt-1 text-lg font-black text-white">${value}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-    `;
 }
 
 function renderPickDistribution() {
