@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260504-golf-rank';
+import { CONFIG } from './config.js?v=20260611-whatif-fix';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260504-golf-rank';
+} from './app-model.js?v=20260611-whatif-fix';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -30,7 +30,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260504-golf-rank';
+} from './playoff-logic.js?v=20260611-whatif-fix';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -1072,6 +1072,7 @@ function renderPlayoffApp() {
     renderPickDistribution();
     renderPreviousPicks();
     renderScenarioLab();
+    renderScenarioCombinations();
     renderPicksBoard();
     initSectionVisibility();
     renderSidebar();
@@ -1953,27 +1954,30 @@ function buildCurrentUserScenarioPickDoc() {
     });
 }
 
-function buildScenarioSnapshot() {
-    const scenarioSeries = buildScenarioSeriesList();
-    const currentRound = state.playoff.currentRound;
-    const currentRoundId = currentRound?.id || '';
-    const actualUserRoundPoints = Number((state.playoff.member?.round_history || []).find(item => item.round_id === currentRoundId)?.points || 0);
-    const selfScoredPick = scorePickDocument(buildCurrentUserScenarioPickDoc(), scenarioSeries, currentRound);
-    const selfProjectedTotal = Number(state.playoff.member?.points_total || 0) - actualUserRoundPoints + Number(selfScoredPick.round_total || 0);
-    const scoreboardVisible = Boolean(state.playoff.roundPickDocs.length) && isRoundRevealed(currentRound, state.playoff.pool);
-
-    if (!scoreboardVisible) {
-        return {
-            scoreboardVisible,
-            selfScoredPick,
-            selfProjectedTotal,
-            projectedStandings: [],
-            projectedRank: null
-        };
+// Points earned by each member across all rounds EXCEPT the current one, computed by
+// scoring the actual pick docs against the actual series results (same source the
+// standings timeline uses). Member docs' points_total/round_history are not reliable —
+// they are only populated when an admin runs a rescore.
+function buildPriorPointsBaseline() {
+    const currentRoundId = state.playoff.currentRound?.id || '';
+    const baseline = Object.fromEntries(state.playoff.standings.map(member => [member.id, 0]));
+    for (const round of state.playoff.rounds) {
+        if (round.id === currentRoundId) continue;
+        const roundSeries = state.playoff.historySeriesMap[round.id] || [];
+        const pickDocs = state.playoff.historyPickDocsMap[round.id] || [];
+        if (!roundSeries.length || !pickDocs.length) continue;
+        for (const pickDoc of pickDocs) {
+            if (!(pickDoc.id in baseline)) continue;
+            baseline[pickDoc.id] += Number(scorePickDocument(pickDoc, roundSeries, round).round_total || 0);
+        }
     }
+    return baseline;
+}
 
-    const projectedStandings = sortStandings(state.playoff.standings.map(member => {
-        const actualRoundPoints = Number((member.round_history || []).find(item => item.round_id === currentRoundId)?.points || 0);
+// Projects standings for an arbitrary set of current-round series results.
+function buildProjectedStandings(scenarioSeries, priorBaseline) {
+    const currentRound = state.playoff.currentRound;
+    return sortStandings(state.playoff.standings.map(member => {
         const pickDoc = state.playoff.roundPickDocs.find(item => item.id === member.id) || normalizePickDoc({
             id: member.id,
             entries: state.playoff.series.map(series => ({ series_id: series.id }))
@@ -1982,16 +1986,59 @@ function buildScenarioSnapshot() {
         return normalizePlayoffMember({
             ...member,
             round_points: Number(scoredPick.round_total || 0),
-            points_total: Number(member.points_total || 0) - actualRoundPoints + Number(scoredPick.round_total || 0)
+            points_total: Number(priorBaseline[member.id] || 0) + Number(scoredPick.round_total || 0)
         }, state.playoff.pool);
     }));
+}
+
+// Maps each member id to their share of the pot for the given (sorted) standings.
+// Tied members split the combined payouts of the places their tie spans.
+function assignPayoutAmounts(standings) {
+    const payouts = state.playoff.payoutSummary.map(item => Number(
+        item.manual_override && item.final_amount ? item.final_amount : (item.final_amount || item.suggested_amount || 0)
+    ));
+    const ranks = computeRanks(standings);
+    const amounts = {};
+    let i = 0;
+    while (i < standings.length) {
+        let j = i;
+        while (j < standings.length && ranks[standings[j].id] === ranks[standings[i].id]) j++;
+        const groupTotal = payouts.slice(i, j).reduce((sum, value) => sum + value, 0);
+        const share = groupTotal / (j - i);
+        for (let k = i; k < j; k++) amounts[standings[k].id] = share;
+        i = j;
+    }
+    return amounts;
+}
+
+function buildScenarioSnapshot() {
+    const scenarioSeries = buildScenarioSeriesList();
+    const currentRound = state.playoff.currentRound;
+    const priorBaseline = buildPriorPointsBaseline();
+    const selfScoredPick = scorePickDocument(buildCurrentUserScenarioPickDoc(), scenarioSeries, currentRound);
+    const selfProjectedTotal = Number(priorBaseline[state.authUser.uid] || 0) + Number(selfScoredPick.round_total || 0);
+    const scoreboardVisible = Boolean(state.playoff.roundPickDocs.length) && isRoundRevealed(currentRound, state.playoff.pool);
+
+    if (!scoreboardVisible) {
+        return {
+            scoreboardVisible,
+            selfScoredPick,
+            selfProjectedTotal,
+            projectedStandings: [],
+            projectedRank: null,
+            payoutAmounts: {}
+        };
+    }
+
+    const projectedStandings = buildProjectedStandings(scenarioSeries, priorBaseline);
 
     return {
         scoreboardVisible,
         selfScoredPick,
         selfProjectedTotal,
         projectedStandings,
-        projectedRank: computeRanks(projectedStandings)[state.authUser.uid] ?? -1
+        projectedRank: computeRanks(projectedStandings)[state.authUser.uid] ?? -1,
+        payoutAmounts: assignPayoutAmounts(projectedStandings)
     };
 }
 
@@ -2065,6 +2112,7 @@ function renderScenarioLab() {
     if (!snapshot.scoreboardVisible) {
         scoreboard.innerHTML = '<p class="text-sm text-slate-400">Full projected standings unlock after the round locks and everyone’s picks are revealed. Until then, this lab only shows your own projection.</p>';
     } else {
+        const hasPot = state.playoff.payoutSummary.length > 0;
         scoreboard.innerHTML = `
             <div class="overflow-hidden rounded-3xl border border-white/10">
                 <table class="w-full text-left">
@@ -2074,6 +2122,7 @@ function renderScenarioLab() {
                             <th class="px-4 py-3">Member</th>
                             <th class="px-4 py-3">Projected Pts</th>
                             <th class="px-4 py-3">Projected Round</th>
+                            ${hasPot ? '<th class="px-4 py-3 text-right">Money</th>' : ''}
                         </tr>
                     </thead>
                     <tbody>
@@ -2083,6 +2132,7 @@ function renderScenarioLab() {
                                 <td class="px-4 py-3 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
                                 <td class="px-4 py-3 text-slate-200">${member.points_total || 0}</td>
                                 <td class="px-4 py-3 text-slate-400">${member.round_points || 0}</td>
+                                ${hasPot ? `<td class="px-4 py-3 text-right font-bold text-emerald-300">${(snapshot.payoutAmounts[member.id] || 0) > 0 ? formatCurrency(snapshot.payoutAmounts[member.id]) : '—'}</td>` : ''}
                             </tr>
                         `).join('')}
                     </tbody>
@@ -2097,6 +2147,166 @@ function updateScenarioDraft(seriesId, field, value) {
     next[field] = value;
     state.playoff.scenarioDraft[seriesId] = next;
     renderScenarioLab();
+}
+
+// Cap on how many result combinations we will fully enumerate and chart. Beyond this we
+// show a message instead — rendering thousands of leaderboards is neither useful nor fast.
+const MAX_WHATIF_COMBINATIONS = 200;
+
+// Feasible (winner, games) results a series could still finish with, honoring live wins.
+// A decided series returns its single known result. Mirrors isPickStillPossible()'s rule:
+// the winner reaches 4 wins; the loser's current wins cannot exceed their final (games - 4).
+function enumerateSeriesOutcomes(series) {
+    if (series.result_winner_team_id) {
+        return [{ seriesId: series.id, result_winner_team_id: series.result_winner_team_id, result_games: Number(series.result_games || 0) }];
+    }
+    const homeWins = Number(series.live_home_wins || 0);
+    const awayWins = Number(series.live_away_wins || 0);
+    const sides = [
+        { teamId: series.home_team_id, won: homeWins, lost: awayWins },
+        { teamId: series.away_team_id, won: awayWins, lost: homeWins }
+    ];
+    const outcomes = [];
+    for (const side of sides) {
+        if (!side.teamId) continue;
+        for (let games = 4; games <= 7; games++) {
+            if (side.won <= 4 && side.lost <= games - 4) {
+                outcomes.push({ seriesId: series.id, result_winner_team_id: side.teamId, result_games: games });
+            }
+        }
+    }
+    return outcomes;
+}
+
+// Cartesian product of every series' feasible outcomes. Decided series contribute a single
+// fixed outcome, so they don't grow the count — only undecided series multiply it.
+function buildOutcomeCombinations() {
+    const perSeries = state.playoff.series.map(series => enumerateSeriesOutcomes(series));
+    const total = perSeries.reduce((product, list) => product * Math.max(1, list.length), 1);
+    if (total > MAX_WHATIF_COMBINATIONS) {
+        return { total, capped: true, combinations: [] };
+    }
+    let combinations = [[]];
+    for (const list of perSeries) {
+        const next = [];
+        for (const combo of combinations) {
+            for (const outcome of list) {
+                next.push(combo.concat(outcome));
+            }
+        }
+        combinations = next;
+    }
+    return { total, capped: false, combinations };
+}
+
+// Applies a combination's results onto the current series list for scoring.
+function scenarioSeriesForCombination(combo) {
+    const byId = Object.fromEntries(combo.map(outcome => [outcome.seriesId, outcome]));
+    return state.playoff.series.map(series => ({
+        ...series,
+        result_winner_team_id: byId[series.id]?.result_winner_team_id || '',
+        result_games: Number(byId[series.id]?.result_games || 0)
+    }));
+}
+
+function describeSeriesOutcome(outcome) {
+    const series = state.playoff.series.find(item => item.id === outcome.seriesId);
+    if (!series) return '';
+    const name = outcome.result_winner_team_id === series.home_team_id
+        ? (series.home_team_name || series.home_team_id)
+        : outcome.result_winner_team_id === series.away_team_id
+            ? (series.away_team_name || series.away_team_id)
+            : outcome.result_winner_team_id;
+    return `${name} in ${outcome.result_games}`;
+}
+
+function renderScenarioCombinations() {
+    const container = byId('playoff-whatif-combinations');
+    const countEl = byId('playoff-whatif-combos-count');
+    if (!container) return;
+    container.innerHTML = '';
+    if (countEl) countEl.textContent = '';
+
+    const currentRound = state.playoff.currentRound;
+    if (!currentRound || !state.playoff.series.length) {
+        container.innerHTML = '<p class="text-sm text-slate-400">Load a round to see outcome combinations.</p>';
+        return;
+    }
+
+    const scoreboardVisible = Boolean(state.playoff.roundPickDocs.length) && isRoundRevealed(currentRound, state.playoff.pool);
+    if (!scoreboardVisible) {
+        container.innerHTML = '<p class="text-sm text-slate-400">Outcome leaderboards unlock once the round locks and everyone’s picks are revealed.</p>';
+        return;
+    }
+
+    const { total, capped, combinations } = buildOutcomeCombinations();
+    if (capped) {
+        if (countEl) countEl.textContent = `${total} combinations`;
+        container.innerHTML = `<p class="text-sm text-slate-400">There are ${total} possible result combinations remaining — too many to chart at once. Use the scenario controls above to explore specific outcomes, or wait for more series to finish.</p>`;
+        return;
+    }
+
+    const undecidedIds = new Set(state.playoff.series.filter(series => !series.result_winner_team_id).map(series => series.id));
+    if (countEl) {
+        countEl.textContent = undecidedIds.size
+            ? `${combinations.length} possible ${combinations.length === 1 ? 'combination' : 'combinations'}`
+            : 'Round complete — actual result';
+    }
+
+    const priorBaseline = buildPriorPointsBaseline();
+    const hasPot = state.playoff.payoutSummary.length > 0;
+
+    combinations.forEach(combo => {
+        const scenarioSeries = scenarioSeriesForCombination(combo);
+        const standings = buildProjectedStandings(scenarioSeries, priorBaseline);
+        const payoutAmounts = assignPayoutAmounts(standings);
+        const champion = standings[0];
+        const variableOutcomes = combo.filter(outcome => undecidedIds.has(outcome.seriesId));
+        const headerLabel = variableOutcomes.length
+            ? variableOutcomes.map(describeSeriesOutcome).join(' · ')
+            : 'Final results as played';
+        const championMoney = champion ? (payoutAmounts[champion.id] || 0) : 0;
+
+        const details = document.createElement('details');
+        details.className = 'group rounded-[1.5rem] border border-white/10 bg-slate-950/35 p-4';
+        if (combinations.length === 1) details.open = true;
+        details.innerHTML = `
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+                <span class="flex items-center gap-3">
+                    <i class="fa-solid fa-chevron-right text-[10px] text-slate-500 transition-transform group-open:rotate-90"></i>
+                    <span class="text-sm font-bold text-white">${escapeHtml(headerLabel)}</span>
+                </span>
+                <span class="text-right text-xs uppercase tracking-[0.18em] text-slate-400">
+                    ${champion ? `${escapeHtml(champion.team_name || champion.display_name || champion.email || champion.id)} · ${champion.points_total || 0} pts${hasPot && championMoney > 0 ? ` · ${formatCurrency(championMoney)}` : ''}` : ''}
+                </span>
+            </summary>
+            <div class="mt-4 overflow-hidden rounded-2xl border border-white/10">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-950/70 text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                        <tr>
+                            <th class="px-4 py-2">#</th>
+                            <th class="px-4 py-2">Member</th>
+                            <th class="px-4 py-2">Pts</th>
+                            <th class="px-4 py-2">Round</th>
+                            ${hasPot ? '<th class="px-4 py-2 text-right">Money</th>' : ''}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${standings.map((member, index) => `
+                            <tr class="${member.id === state.authUser.uid ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm' : 'border-b border-white/10 text-sm'}">
+                                <td class="px-4 py-2 text-slate-300">${index + 1}</td>
+                                <td class="px-4 py-2 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
+                                <td class="px-4 py-2 text-slate-200">${member.points_total || 0}</td>
+                                <td class="px-4 py-2 text-slate-400">${member.round_points || 0}</td>
+                                ${hasPot ? `<td class="px-4 py-2 text-right font-bold text-emerald-300">${(payoutAmounts[member.id] || 0) > 0 ? formatCurrency(payoutAmounts[member.id]) : '—'}</td>` : ''}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.appendChild(details);
+    });
 }
 
 
