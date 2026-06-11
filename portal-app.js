@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260611-money-filter';
+import { CONFIG } from './config.js?v=20260611-whatif-polish';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260611-money-filter';
+} from './app-model.js?v=20260611-whatif-polish';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -30,7 +30,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260611-money-filter';
+} from './playoff-logic.js?v=20260611-whatif-polish';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -2063,6 +2063,26 @@ function buildScenarioSnapshot() {
     };
 }
 
+// Medal for the top 3 finishers (gold/silver/bronze) and the poop emoji for dead last,
+// keyed off the tie-aware rank so co-finishers share the same badge.
+function whatifPlaceBadge(rank, lastRank) {
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    if (rank === lastRank) return '💩';
+    return '';
+}
+
+// Leaderboard cell: team name with the individual's name underneath it.
+function whatifMemberCell(member, padY) {
+    const teamName = member.team_name || member.display_name || member.email || member.id;
+    const personName = member.display_name && member.display_name !== teamName ? member.display_name : '';
+    return `<td class="px-4 ${padY} font-semibold text-white">
+                                <div>${escapeHtml(teamName)}</div>
+                                ${personName ? `<div class="text-xs font-normal text-slate-400">${escapeHtml(personName)}</div>` : ''}
+                            </td>`;
+}
+
 function renderScenarioLab() {
     const resultContainer = byId('playoff-whatif-series');
     const summary = byId('playoff-whatif-summary');
@@ -2135,9 +2155,10 @@ function renderScenarioLab() {
     } else {
         const hasPot = state.playoff.payoutSummary.length > 0;
         const moneyOnly = hasPot && Boolean(byId('playoff-whatif-money-only')?.checked);
+        const ranks = computeRanks(snapshot.projectedStandings);
+        const lastRank = Math.max(...snapshot.projectedStandings.map(member => ranks[member.id]));
         const rows = snapshot.projectedStandings
-            .map((member, index) => ({ member, index }))
-            .filter(({ member }) => !moneyOnly || (snapshot.payoutAmounts[member.id] || 0) > 0);
+            .filter(member => !moneyOnly || (snapshot.payoutAmounts[member.id] || 0) > 0);
         scoreboard.innerHTML = `
             <div class="overflow-hidden rounded-3xl border border-white/10">
                 <table class="w-full text-left">
@@ -2151,15 +2172,18 @@ function renderScenarioLab() {
                         </tr>
                     </thead>
                     <tbody>
-                        ${rows.map(({ member, index }) => `
+                        ${rows.map(member => {
+                            const rank = ranks[member.id];
+                            const badge = whatifPlaceBadge(rank, lastRank);
+                            return `
                             <tr class="${member.id === state.authUser.uid ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm' : 'border-b border-white/10 text-sm'}">
-                                <td class="px-4 py-3 text-slate-300">${index + 1}</td>
-                                <td class="px-4 py-3 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-slate-300">${badge ? `${badge} ` : ''}${rank}</td>
+                                ${whatifMemberCell(member, 'py-3')}
                                 <td class="px-4 py-3 text-slate-200">${member.points_total || 0}</td>
                                 <td class="px-4 py-3 text-slate-400">${member.round_points || 0}</td>
                                 ${hasPot ? `<td class="px-4 py-3 text-right font-bold text-emerald-300">${(snapshot.payoutAmounts[member.id] || 0) > 0 ? formatCurrency(snapshot.payoutAmounts[member.id]) : '—'}</td>` : ''}
-                            </tr>
-                        `).join('')}
+                            </tr>`;
+                        }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -2286,10 +2310,13 @@ function renderScenarioCombinations() {
         const scenarioSeries = scenarioSeriesForCombination(combo);
         const standings = buildProjectedStandings(scenarioSeries, priorBaseline);
         const payoutAmounts = assignPayoutAmounts(standings);
+        const ranks = computeRanks(standings);
+        const lastRank = Math.max(...standings.map(member => ranks[member.id]));
         const rows = standings
-            .map((member, index) => ({ member, index }))
-            .filter(({ member }) => !moneyOnly || (payoutAmounts[member.id] || 0) > 0);
+            .filter(member => !moneyOnly || (payoutAmounts[member.id] || 0) > 0);
         const champion = standings[0];
+        const championTeam = champion ? (champion.team_name || champion.display_name || champion.email || champion.id) : '';
+        const championPerson = champion && champion.display_name && champion.display_name !== championTeam ? champion.display_name : '';
         const variableOutcomes = combo.filter(outcome => undecidedIds.has(outcome.seriesId));
         const headerLabel = variableOutcomes.length
             ? variableOutcomes.map(describeSeriesOutcome).join(' · ')
@@ -2306,7 +2333,7 @@ function renderScenarioCombinations() {
                     <span class="text-sm font-bold text-white">${escapeHtml(headerLabel)}</span>
                 </span>
                 <span class="text-right text-xs uppercase tracking-[0.18em] text-slate-400">
-                    ${champion ? `${escapeHtml(champion.team_name || champion.display_name || champion.email || champion.id)} · ${champion.points_total || 0} pts${hasPot && championMoney > 0 ? ` · ${formatCurrency(championMoney)}` : ''}` : ''}
+                    ${champion ? `🥇 ${escapeHtml(championTeam)}${championPerson ? ` (${escapeHtml(championPerson)})` : ''} · ${champion.points_total || 0} pts${hasPot && championMoney > 0 ? ` · ${formatCurrency(championMoney)}` : ''}` : ''}
                 </span>
             </summary>
             <div class="mt-4 overflow-hidden rounded-2xl border border-white/10">
@@ -2321,15 +2348,18 @@ function renderScenarioCombinations() {
                         </tr>
                     </thead>
                     <tbody>
-                        ${rows.map(({ member, index }) => `
+                        ${rows.map(member => {
+                            const rank = ranks[member.id];
+                            const badge = whatifPlaceBadge(rank, lastRank);
+                            return `
                             <tr class="${member.id === state.authUser.uid ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm' : 'border-b border-white/10 text-sm'}">
-                                <td class="px-4 py-2 text-slate-300">${index + 1}</td>
-                                <td class="px-4 py-2 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-slate-300">${badge ? `${badge} ` : ''}${rank}</td>
+                                ${whatifMemberCell(member, 'py-2')}
                                 <td class="px-4 py-2 text-slate-200">${member.points_total || 0}</td>
                                 <td class="px-4 py-2 text-slate-400">${member.round_points || 0}</td>
                                 ${hasPot ? `<td class="px-4 py-2 text-right font-bold text-emerald-300">${(payoutAmounts[member.id] || 0) > 0 ? formatCurrency(payoutAmounts[member.id]) : '—'}</td>` : ''}
-                            </tr>
-                        `).join('')}
+                            </tr>`;
+                        }).join('')}
                     </tbody>
                 </table>
             </div>
