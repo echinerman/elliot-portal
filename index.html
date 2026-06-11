@@ -403,7 +403,13 @@
                                             <p class="text-xs font-bold uppercase tracking-[0.35em] text-sky-300">All Outcome Combinations</p>
                                             <h3 class="mt-2 text-2xl font-black text-white">Every remaining result and where everyone lands</h3>
                                         </div>
-                                        <p id="playoff-whatif-combos-count" class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400"></p>
+                                        <div class="flex flex-col items-start gap-3 md:items-end">
+                                            <label class="inline-flex cursor-pointer items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">
+                                                <input id="playoff-whatif-money-only" type="checkbox" class="h-4 w-4 rounded border-white/20 bg-white/10 accent-emerald-400">
+                                                In the money only
+                                            </label>
+                                            <p id="playoff-whatif-combos-count" class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400"></p>
+                                        </div>
                                     </div>
                                     <div id="playoff-whatif-combinations" class="mt-6 space-y-3"></div>
                                 </section>
@@ -485,6 +491,6 @@
         </div>
     </div>
 
-    <script type="module" src="./portal-app.js?v=20260611-pity-fix"></script>
+    <script type="module" src="./portal-app.js?v=20260611-money-filter"></script>
 </body>
 </html>

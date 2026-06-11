@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260611-pity-fix';
+import { CONFIG } from './config.js?v=20260611-money-filter';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260611-pity-fix';
+} from './app-model.js?v=20260611-money-filter';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -30,7 +30,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260611-pity-fix';
+} from './playoff-logic.js?v=20260611-money-filter';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -2134,6 +2134,10 @@ function renderScenarioLab() {
         scoreboard.innerHTML = '<p class="text-sm text-slate-400">Full projected standings unlock after the round locks and everyone’s picks are revealed. Until then, this lab only shows your own projection.</p>';
     } else {
         const hasPot = state.playoff.payoutSummary.length > 0;
+        const moneyOnly = hasPot && Boolean(byId('playoff-whatif-money-only')?.checked);
+        const rows = snapshot.projectedStandings
+            .map((member, index) => ({ member, index }))
+            .filter(({ member }) => !moneyOnly || (snapshot.payoutAmounts[member.id] || 0) > 0);
         scoreboard.innerHTML = `
             <div class="overflow-hidden rounded-3xl border border-white/10">
                 <table class="w-full text-left">
@@ -2147,7 +2151,7 @@ function renderScenarioLab() {
                         </tr>
                     </thead>
                     <tbody>
-                        ${snapshot.projectedStandings.map((member, index) => `
+                        ${rows.map(({ member, index }) => `
                             <tr class="${member.id === state.authUser.uid ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm' : 'border-b border-white/10 text-sm'}">
                                 <td class="px-4 py-3 text-slate-300">${index + 1}</td>
                                 <td class="px-4 py-3 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
@@ -2276,11 +2280,15 @@ function renderScenarioCombinations() {
 
     const priorBaseline = buildPriorPointsBaseline();
     const hasPot = state.playoff.payoutSummary.length > 0;
+    const moneyOnly = hasPot && Boolean(byId('playoff-whatif-money-only')?.checked);
 
     combinations.forEach(combo => {
         const scenarioSeries = scenarioSeriesForCombination(combo);
         const standings = buildProjectedStandings(scenarioSeries, priorBaseline);
         const payoutAmounts = assignPayoutAmounts(standings);
+        const rows = standings
+            .map((member, index) => ({ member, index }))
+            .filter(({ member }) => !moneyOnly || (payoutAmounts[member.id] || 0) > 0);
         const champion = standings[0];
         const variableOutcomes = combo.filter(outcome => undecidedIds.has(outcome.seriesId));
         const headerLabel = variableOutcomes.length
@@ -2313,7 +2321,7 @@ function renderScenarioCombinations() {
                         </tr>
                     </thead>
                     <tbody>
-                        ${standings.map((member, index) => `
+                        ${rows.map(({ member, index }) => `
                             <tr class="${member.id === state.authUser.uid ? 'border-b border-emerald-300/30 bg-emerald-400/10 text-sm' : 'border-b border-white/10 text-sm'}">
                                 <td class="px-4 py-2 text-slate-300">${index + 1}</td>
                                 <td class="px-4 py-2 font-semibold text-white">${escapeHtml(member.team_name || member.display_name || member.email || member.id)}</td>
@@ -3264,6 +3272,10 @@ function bindPlayoffEvents() {
     byId('playoff-whatif-reset-btn').addEventListener('click', () => {
         state.playoff.scenarioDraft = buildScenarioDraft(state.playoff.series);
         renderScenarioLab();
+    });
+    byId('playoff-whatif-money-only').addEventListener('change', () => {
+        renderScenarioLab();
+        renderScenarioCombinations();
     });
 
     // Mobile sidebar open/close
