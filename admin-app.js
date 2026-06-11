@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260502-picks-auth3';
+import { CONFIG } from './config.js?v=20260611-pity-fix';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -10,7 +10,7 @@ import {
     normalizeStrong8kProfile,
     parseDelimitedList,
     slugify
-} from './app-model.js?v=20260502-picks-auth3';
+} from './app-model.js?v=20260611-pity-fix';
 import {
     buildOfficialRoundOneSeries,
     buildCompactPickLabel,
@@ -34,7 +34,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260502-picks-auth3';
+} from './playoff-logic.js?v=20260611-pity-fix';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -2010,10 +2010,17 @@ async function rescoreSelectedRound() {
 
     const rankedMembers = sortStandings(updatedMembers);
     const payoutSummary = getPoolPayoutSummary(pool);
-    const rankedPayouts = payoutSummary.filter(item => Number(item.final_amount || item.suggested_amount || 0) > 0);
+    const fundedPayouts = payoutSummary.filter(item => Number(item.final_amount || item.suggested_amount || 0) > 0);
+    // Ranked payouts (1st/2nd/3rd/…) go to the top finishers; the pity prize goes to last place.
+    const rankedPayouts = fundedPayouts.filter(item => item.place_key !== 'pity');
+    const pityPayout = fundedPayouts.find(item => item.place_key === 'pity') || null;
+    const lastIndex = rankedMembers.length - 1;
 
     for (const [index, member] of rankedMembers.entries()) {
-        const payout = member.eligible_for_payout ? rankedPayouts[index] : null;
+        let payout = null;
+        if (member.eligible_for_payout) {
+            payout = rankedPayouts[index] || (pityPayout && index === lastIndex ? pityPayout : null);
+        }
         const resolvedAmount = payout
             ? Number(payout.manual_override && payout.final_amount ? payout.final_amount : payout.final_amount || payout.suggested_amount || 0)
             : 0;

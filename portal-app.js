@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260611-whatif-fix';
+import { CONFIG } from './config.js?v=20260611-pity-fix';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260611-whatif-fix';
+} from './app-model.js?v=20260611-pity-fix';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -30,7 +30,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260611-whatif-fix';
+} from './playoff-logic.js?v=20260611-pity-fix';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -1992,22 +1992,43 @@ function buildProjectedStandings(scenarioSeries, priorBaseline) {
 }
 
 // Maps each member id to their share of the pot for the given (sorted) standings.
-// Tied members split the combined payouts of the places their tie spans.
+// The ranked payouts (1st/2nd/3rd/…) go to the top finishers in order, while the pity
+// prize goes to the LAST-place team. Tied members split whatever their tie spans evenly.
 function assignPayoutAmounts(standings) {
-    const payouts = state.playoff.payoutSummary.map(item => Number(
+    const amounts = Object.fromEntries(standings.map(member => [member.id, 0]));
+    if (!standings.length) return amounts;
+
+    const amountFor = item => Number(
         item.manual_override && item.final_amount ? item.final_amount : (item.final_amount || item.suggested_amount || 0)
-    ));
+    );
+    const rankedPayouts = state.playoff.payoutSummary.filter(item => item.place_key !== 'pity').map(amountFor);
+    const pityAmount = state.playoff.payoutSummary
+        .filter(item => item.place_key === 'pity')
+        .reduce((sum, item) => sum + amountFor(item), 0);
+
     const ranks = computeRanks(standings);
-    const amounts = {};
+
+    // Ranked payouts → top finishers, split within ties.
     let i = 0;
     while (i < standings.length) {
         let j = i;
         while (j < standings.length && ranks[standings[j].id] === ranks[standings[i].id]) j++;
-        const groupTotal = payouts.slice(i, j).reduce((sum, value) => sum + value, 0);
-        const share = groupTotal / (j - i);
-        for (let k = i; k < j; k++) amounts[standings[k].id] = share;
+        const groupTotal = rankedPayouts.slice(i, j).reduce((sum, value) => sum + value, 0);
+        if (groupTotal > 0) {
+            const share = groupTotal / (j - i);
+            for (let k = i; k < j; k++) amounts[standings[k].id] += share;
+        }
         i = j;
     }
+
+    // Pity prize → the last-place finisher(s); split evenly if tied for last.
+    if (pityAmount > 0) {
+        const lastRank = Math.max(...standings.map(member => ranks[member.id]));
+        const lastPlace = standings.filter(member => ranks[member.id] === lastRank);
+        const share = pityAmount / lastPlace.length;
+        for (const member of lastPlace) amounts[member.id] += share;
+    }
+
     return amounts;
 }
 
