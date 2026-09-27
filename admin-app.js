@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260611-pity-fix';
+import { CONFIG } from './config.js?v=20260927-expiry-sync';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -12,7 +12,7 @@ import {
     normalizeStrong8kUsername,
     parseDelimitedList,
     slugify
-} from './app-model.js?v=20260611-pity-fix';
+} from './app-model.js?v=20260927-expiry-sync';
 import {
     buildOfficialRoundOneSeries,
     buildCompactPickLabel,
@@ -36,7 +36,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260611-pity-fix';
+} from './playoff-logic.js?v=20260927-expiry-sync';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -2205,4 +2205,5 @@ function toDateTimeLocal(value) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
+
 
