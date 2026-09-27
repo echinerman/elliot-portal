@@ -7,7 +7,9 @@ import {
     escapeHtml,
     formatDate,
     normalizeMembership,
+    normalizeStrong8kPortalUser,
     normalizeStrong8kProfile,
+    normalizeStrong8kUsername,
     parseDelimitedList,
     slugify
 } from './app-model.js?v=20260611-pity-fix';
@@ -48,7 +50,8 @@ import {
     orderBy,
     query,
     setDoc,
-    updateDoc
+    updateDoc,
+    writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const firebaseApp = initializeApp(CONFIG.FIREBASE);
@@ -72,6 +75,7 @@ const state = {
     payments: [],
     roundPickDocs: [],
     currentLicenses: [],
+    pendingStrong8kSync: null,
     editingProductId: '',
     editingPoolId: '',
     editingRoundId: '',
@@ -1066,6 +1070,149 @@ function bindStrong8kForms() {
     byId('product-form').addEventListener('submit', saveStrong8kProduct);
     byId('new-product-btn').addEventListener('click', clearProductForm);
     byId('seed-strong8k-btn').addEventListener('click', seedStrong8kDefaults);
+    byId('strong8k-sync-preview-btn').addEventListener('click', previewStrong8kSync);
+    byId('strong8k-sync-apply-btn').addEventListener('click', applyStrong8kSync);
+}
+
+function parseStrong8kPortalPayload(rawValue) {
+    const parsed = JSON.parse(String(rawValue || '').trim());
+    const records = Array.isArray(parsed) ? parsed : parsed?.data;
+    if (!Array.isArray(records)) {
+        throw new Error('Expected a JSON array or a DataTables payload with a data array.');
+    }
+
+    const normalized = records.map(normalizeStrong8kPortalUser).filter(Boolean);
+    if (!normalized.length) {
+        throw new Error('No valid records with username and exp_date_flag were found.');
+    }
+
+    const seen = new Set();
+    const duplicates = [];
+    normalized.forEach(record => {
+        const key = normalizeStrong8kUsername(record.username);
+        if (seen.has(key)) duplicates.push(record.username);
+        seen.add(key);
+    });
+    if (duplicates.length) {
+        throw new Error('Duplicate usernames found: ' + duplicates.join(', '));
+    }
+
+    const declaredTotal = Number(parsed.recordsTotal);
+    return {
+        records: normalized,
+        warning: Number.isInteger(declaredTotal) && declaredTotal !== normalized.length
+            ? 'Payload declares ' + declaredTotal + ' records, but contains ' + normalized.length + '.'
+            : ''
+    };
+}
+
+function resolveStrong8kSync(payload) {
+    const records = payload.records;
+    const updates = [];
+    const unmatched = [];
+    const ambiguous = [];
+
+    records.forEach(record => {
+        const usernameKey = normalizeStrong8kUsername(record.username);
+        const candidates = state.users.filter(user => {
+            const profile = state.strong8kProfiles[user.id] || normalizeStrong8kProfile({}, user);
+            return (profile.licenses || []).some(license => normalizeStrong8kUsername(license.username_8k) === usernameKey)
+                || normalizeStrong8kUsername(user.username_8k) === usernameKey;
+        });
+
+        if (candidates.length === 0) {
+            unmatched.push(record.username);
+            return;
+        }
+        if (candidates.length > 1) {
+            ambiguous.push(record.username + ' (' + candidates.map(user => user.email || user.id).join(', ') + ')');
+            return;
+        }
+
+        const user = candidates[0];
+        const profile = normalizeStrong8kProfile(state.strong8kProfiles[user.id] || {}, user);
+        const licenseIndex = (profile.licenses || []).findIndex(license => normalizeStrong8kUsername(license.username_8k) === usernameKey);
+        if (licenseIndex < 0) {
+            unmatched.push(record.username + ' (matched user but no license)');
+            return;
+        }
+
+        const license = profile.licenses[licenseIndex];
+        updates.push({
+            record,
+            user,
+            profile,
+            licenseIndex,
+            changed: license.expiry_date !== record.expiry_date || String(license.status || '').toLowerCase() !== 'active'
+        });
+    });
+
+    return { updates, unmatched, ambiguous, warning: payload.warning };
+}
+
+function renderStrong8kSyncResult(result, mode = 'preview') {
+    const changed = result.updates.filter(item => item.changed);
+    const unchanged = result.updates.length - changed.length;
+    const lines = [
+        (mode === 'applied' ? 'Applied ' : 'Ready to update ') + changed.length + ' profile' + (changed.length === 1 ? '' : 's') + '.',
+        unchanged + ' already matched the portal expiry.',
+        result.unmatched.length ? 'Unmatched: ' + result.unmatched.join(', ') : 'Unmatched: none.',
+        result.ambiguous.length ? 'Ambiguous: ' + result.ambiguous.join('; ') : 'Ambiguous: none.'
+    ];
+    if (result.warning) lines.push('Warning: ' + result.warning);
+    byId('strong8k-sync-result').textContent = lines.join(' ');
+    const disabled = mode === 'applied' || changed.length === 0;
+    byId('strong8k-sync-apply-btn').disabled = disabled;
+    byId('strong8k-sync-apply-btn').classList.toggle('opacity-50', disabled);
+}
+
+function previewStrong8kSync() {
+    try {
+        const result = resolveStrong8kSync(parseStrong8kPortalPayload(byId('strong8k-userlist-json').value));
+        state.pendingStrong8kSync = result;
+        renderStrong8kSyncResult(result);
+    } catch (error) {
+        state.pendingStrong8kSync = null;
+        byId('strong8k-sync-result').textContent = error.message;
+        byId('strong8k-sync-apply-btn').disabled = true;
+        byId('strong8k-sync-apply-btn').classList.add('opacity-50');
+    }
+}
+
+async function applyStrong8kSync() {
+    if (!state.pendingStrong8kSync) previewStrong8kSync();
+    const result = state.pendingStrong8kSync;
+    if (!result) return;
+
+    const changed = result.updates.filter(item => item.changed);
+    if (!changed.length) {
+        renderStrong8kSyncResult(result);
+        return;
+    }
+
+    const batch = writeBatch(db);
+    changed.forEach(({ user, profile, licenseIndex, record }) => {
+        const licenses = profile.licenses.map((license, index) => index === licenseIndex
+            ? { ...license, expiry_date: record.expiry_date, status: record.status === 'active' ? 'Active' : (license.status || 'Active') }
+            : license);
+        batch.set(doc(db, 'strong8k_profiles', user.id), {
+            licenses,
+            updated_at: new Date().toISOString(),
+            expiry_sync_source: 'strong8k_userlist'
+        }, { merge: true });
+    });
+
+    await batch.commit();
+    changed.forEach(({ user, profile, licenseIndex, record }) => {
+        state.strong8kProfiles[user.id] = {
+            ...profile,
+            licenses: profile.licenses.map((license, index) => index === licenseIndex
+                ? { ...license, expiry_date: record.expiry_date, status: record.status === 'active' ? 'Active' : (license.status || 'Active') }
+                : license)
+        };
+    });
+    renderStrong8kSyncResult(result, 'applied');
+    showToast('Updated ' + changed.length + ' Strong8K profile' + (changed.length === 1 ? '' : 's'));
 }
 
 async function saveStrong8kConfig(event) {
@@ -2058,3 +2205,4 @@ function toDateTimeLocal(value) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
+

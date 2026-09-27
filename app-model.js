@@ -124,6 +124,23 @@ export function normalizeStrong8kProfile(profileData = {}, legacyUserData = {}) 
     return profile;
 }
 
+export function normalizeStrong8kPortalUser(record = {}) {
+    const username = String(record.username || '').trim();
+    const expiryDate = String(record.exp_date_flag || '').trim().slice(0, 10);
+    if (!username || /^\d{4}-\d{2}-\d{2}$/.test(expiryDate) === false) return null;
+
+    return {
+        id: record.id || '',
+        username,
+        expiry_date: expiryDate,
+        status: String(record.status || '').trim().toLowerCase() || 'active'
+    };
+}
+
+export function normalizeStrong8kUsername(value = '') {
+    return String(value || '').trim().toLowerCase();
+}
+
 export function legacyStrong8kProfile(userData = {}) {
     return {
         status: userData.status || 'Pending',
@@ -230,3 +247,4 @@ export function formatDate(value) {
     if (!value) return 'N/A';
     return String(value).slice(0, 10);
 }
+
