@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260611-whatif-polish';
+import { CONFIG } from './config.js?v=20261027-room-rail';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20260611-whatif-polish';
+} from './app-model.js?v=20261027-room-rail';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -30,7 +30,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260611-whatif-polish';
+} from './playoff-logic.js?v=20261027-room-rail';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -69,6 +69,7 @@ const VIEW_IDS = [
 const state = {
     authUser: null,
     sharedUser: null,
+    isPlatformAdmin: false,
     memberships: {},
     accessibleApps: {},
     activeAppId: null,
@@ -122,6 +123,7 @@ const SECTIONS_DEFAULT_ON = new Set(['standings', 'picksBoard']);
 const LS_VISIBLE_KEY = 'playoff_visible_sections';
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderPortalChrome();
     bindAuthForms();
     bindNoAccessEvents();
     bindStrong8kEvents();
@@ -151,8 +153,178 @@ function showToast(message, tone = 'default') {
     setTimeout(() => toast.classList.add('translate-x-full', 'opacity-0'), 3000);
 }
 
+async function copyTextToClipboard(value) {
+    const text = String(value ?? '');
+    const clipboardAttempt = navigator.clipboard?.writeText && window.isSecureContext
+        ? navigator.clipboard.writeText(text)
+        : null;
+
+    const activeElement = document.activeElement;
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.inset = '-1000px auto auto -1000px';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    let copiedWithSelection = false;
+    try {
+        copiedWithSelection = document.execCommand('copy');
+    } finally {
+        textarea.remove();
+        activeElement?.focus?.({ preventScroll: true });
+    }
+
+    if (copiedWithSelection) {
+        clipboardAttempt?.catch(() => {});
+        return;
+    }
+    if (clipboardAttempt) {
+        await clipboardAttempt;
+        return;
+    }
+    throw new Error('Copy command was rejected.');
+}
+
 function setView(viewId) {
     VIEW_IDS.forEach(id => byId(id).classList.toggle('hidden', id !== viewId));
+    syncPortalChrome(viewId);
+}
+
+function renderPortalChrome() {
+    const railMarkup = `
+        <div class="room-rail-inner">
+            <div class="room-brand">
+                <span class="room-brand-mark">E</span>
+                <div>
+                    <div class="room-brand-name">Elliot's clubhouse</div>
+                    <div class="room-brand-subtitle">Private access</div>
+                </div>
+                <button type="button" class="room-rail-close" data-rail-close aria-label="Close room menu">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <nav class="room-nav" aria-label="Portal rooms">
+                <a class="room-nav-item" data-room-link="home" href="#/apps"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Home</span></a>
+                <a class="room-nav-item" data-room-link="strong8k" data-room-app="strong8k" href="#/app/strong8k"><i class="fa-solid fa-tv" aria-hidden="true"></i><span>Strong8K</span></a>
+                <a class="room-nav-item" data-room-link="playoff-pool" data-room-app="playoff-pool" href="#/app/playoff-pool"><i class="fa-solid fa-hockey-puck" aria-hidden="true"></i><span>Playoff Pool</span></a>
+                <button type="button" class="room-nav-item" data-room-link="support" data-room-support><i class="fa-solid fa-life-ring" aria-hidden="true"></i><span>Support</span></button>
+                <div class="room-nav-label">For Elliot</div>
+                <a class="room-nav-item hidden" data-room-link="operations" data-room-operations href="./admin.html"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>Operations</span></a>
+            </nav>
+            <div class="room-account">
+                <div class="room-account-name" data-portal-name>Member</div>
+                <div class="room-account-email" data-portal-email></div>
+                <button type="button" class="room-signout" data-action="signout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>Sign out</button>
+            </div>
+        </div>
+    `;
+
+    document.querySelectorAll('[data-room-rail]').forEach(rail => {
+        rail.innerHTML = railMarkup;
+    });
+
+    document.querySelectorAll('[data-rail-toggle]').forEach(button => {
+        button.addEventListener('click', () => setRailOpen(button.closest('.portal-shell'), true));
+    });
+    document.querySelectorAll('[data-rail-close], [data-rail-backdrop]').forEach(control => {
+        control.addEventListener('click', () => setRailOpen(control.closest('.portal-shell'), false));
+    });
+    document.querySelectorAll('.room-nav-item').forEach(item => {
+        item.addEventListener('click', () => setRailOpen(item.closest('.portal-shell'), false));
+    });
+    document.querySelectorAll('[data-room-support]').forEach(button => {
+        button.addEventListener('click', openSupportRoom);
+    });
+
+    syncRailAccessibility();
+    window.addEventListener('resize', syncRailAccessibility, { passive: true });
+}
+
+function setRailOpen(shell, isOpen) {
+    if (!shell) return;
+    const rail = shell.querySelector('[data-room-rail]');
+    rail?.classList.toggle('is-open', isOpen);
+    rail?.toggleAttribute('inert', !isOpen && window.innerWidth <= 960);
+    shell.querySelector('[data-rail-backdrop]')?.classList.toggle('is-open', isOpen);
+    shell.querySelector('[data-rail-toggle]')?.setAttribute('aria-expanded', String(isOpen));
+    document.body.classList.toggle('overflow-hidden', isOpen && window.innerWidth <= 960);
+}
+
+function syncRailAccessibility() {
+    document.querySelectorAll('.portal-shell').forEach(shell => {
+        const rail = shell.querySelector('[data-room-rail]');
+        if (!rail) return;
+
+        const isMobile = window.innerWidth <= 960;
+        const isOpen = rail.classList.contains('is-open');
+        rail.toggleAttribute('inert', isMobile && !isOpen);
+        shell.querySelector('[data-rail-toggle]')?.setAttribute('aria-expanded', String(isMobile && isOpen));
+        if (!isMobile) {
+            shell.querySelector('[data-rail-backdrop]')?.classList.remove('is-open');
+        }
+    });
+}
+
+async function openSupportRoom() {
+    if (!getActiveMemberships()[APP_IDS.STRONG8K]) return;
+
+    window.location.hash = APP_DEFINITIONS[APP_IDS.STRONG8K].route;
+    if (state.activeAppId !== APP_IDS.STRONG8K) {
+        try {
+            await openApp(APP_IDS.STRONG8K);
+            setView('strong8k-view');
+        } catch (error) {
+            handlePortalLoadError(error);
+            return;
+        }
+    }
+
+    requestAnimationFrame(() => {
+        byId('strong8k-support')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setActivePortalRoom('support');
+    });
+}
+
+function setActivePortalRoom(roomId) {
+    document.querySelectorAll('[data-room-link]').forEach(item => {
+        const active = item.dataset.roomLink === roomId;
+        item.classList.toggle('is-active', active);
+        if (active) {
+            item.setAttribute('aria-current', 'page');
+        } else {
+            item.removeAttribute('aria-current');
+        }
+    });
+}
+
+function syncPortalChrome(viewId = '') {
+    const activeMemberships = getActiveMemberships();
+    document.querySelectorAll('[data-room-app]').forEach(item => {
+        item.classList.toggle('hidden', !activeMemberships[item.dataset.roomApp]);
+    });
+    document.querySelectorAll('[data-room-support]').forEach(item => {
+        item.classList.toggle('hidden', !activeMemberships[APP_IDS.STRONG8K]);
+    });
+    document.querySelectorAll('[data-room-operations]').forEach(item => {
+        item.classList.toggle('hidden', !state.isPlatformAdmin);
+    });
+    document.querySelectorAll('[data-portal-name]').forEach(item => {
+        item.textContent = state.sharedUser?.full_name || state.authUser?.email?.split('@')[0] || 'Member';
+    });
+    document.querySelectorAll('[data-portal-email]').forEach(item => {
+        item.textContent = state.authUser?.email || '';
+    });
+
+    const activeRoom = viewId === 'app-switcher-view'
+        ? 'home'
+        : viewId === 'strong8k-view'
+            ? APP_IDS.STRONG8K
+            : viewId === 'playoff-view'
+                ? APP_IDS.PLAYOFF
+                : '';
+    setActivePortalRoom(activeRoom);
 }
 
 function currentHashApp() {
@@ -172,6 +344,7 @@ function resolveInviteCode(code) {
 
 function resetSessionState() {
     state.sharedUser = null;
+    state.isPlatformAdmin = false;
     state.memberships = {};
     state.accessibleApps = {};
     state.activeAppId = null;
@@ -233,8 +406,27 @@ async function hydrateSession(user) {
     state.sharedUser = await loadSharedUser(user);
     state.memberships = await loadMemberships(user.uid);
     state.accessibleApps = deriveAccessibleApps(state.memberships, state.sharedUser);
+    state.isPlatformAdmin = await resolvePlatformAdmin(user);
     byId('switcher-email').textContent = user.email;
     byId('no-access-email').textContent = user.email;
+    syncPortalChrome();
+}
+
+function isConfiguredAdminEmail(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    return Boolean(normalizedEmail) && Array.isArray(CONFIG.ADMIN_EMAILS)
+        && CONFIG.ADMIN_EMAILS.some(candidate => String(candidate || '').trim().toLowerCase() === normalizedEmail);
+}
+
+async function resolvePlatformAdmin(user) {
+    if (isConfiguredAdminEmail(user?.email)) return true;
+    try {
+        const roleSnap = await getDoc(doc(db, 'roles', user.uid));
+        return roleSnap.exists() && roleSnap.data().platform_admin === true;
+    } catch (error) {
+        console.warn('Unable to verify the optional platform role for portal navigation.', error);
+        return false;
+    }
 }
 
 function getActiveMemberships() {
@@ -392,7 +584,7 @@ function bindAuthForms() {
         }
         try {
             await sendPasswordResetEmail(auth, email);
-            showToast('Password reset email sent — check your inbox');
+            showToast('Password reset email sent - check your inbox');
         } catch (error) {
             showToast(error.message || 'Failed to send reset email', 'error');
         }
@@ -566,19 +758,22 @@ function renderAppSwitcher(activeMemberships) {
     Object.keys(activeMemberships).forEach(appId => {
         const app = APP_DEFINITIONS[appId];
         const button = document.createElement('button');
-        button.className = 'group rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-slate-900 hover:shadow-xl';
+        const icon = appId === APP_IDS.STRONG8K ? 'fa-tv' : 'fa-hockey-puck';
+        button.type = 'button';
+        button.className = 'room-ledger-row group';
         button.innerHTML = `
-            <div class="mb-4 flex items-center justify-between">
-                <span class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-600">${app.shortLabel}</span>
-                <i class="fa-solid fa-arrow-right text-slate-300 transition group-hover:text-slate-900"></i>
-            </div>
-            <h3 class="text-2xl font-bold text-slate-950">${app.authTitle}</h3>
-            <p class="mt-3 text-sm leading-6 text-slate-500">${app.authDescription}</p>
+            <span class="room-ledger-icon"><i class="fa-solid ${icon}" aria-hidden="true"></i></span>
+            <span>
+                <span class="room-ledger-title">${escapeHtml(app.authTitle)}</span>
+                <span class="room-ledger-copy block">${escapeHtml(app.authDescription)}</span>
+            </span>
+            <span class="room-ledger-action">Open room <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
         `;
         button.addEventListener('click', async () => {
             window.location.hash = app.route;
             try {
                 await openApp(appId);
+                syncPortalChrome(appId === APP_IDS.STRONG8K ? 'strong8k-view' : 'playoff-view');
             } catch (error) {
                 handlePortalLoadError(error);
             }
@@ -586,6 +781,29 @@ function renderAppSwitcher(activeMemberships) {
         container.appendChild(button);
     });
 
+    if (state.isPlatformAdmin) {
+        const operationsLink = document.createElement('a');
+        operationsLink.className = 'room-ledger-row group';
+        operationsLink.href = './admin.html';
+        operationsLink.innerHTML = `
+            <span class="room-ledger-icon bg-emerald-600"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span>
+            <span>
+                <span class="room-ledger-title">Operations</span>
+                <span class="room-ledger-copy block">Review people, expiring licenses, renewal work, and configuration.</span>
+            </span>
+            <span class="room-ledger-action">Open workspace <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+        `;
+        container.appendChild(operationsLink);
+    }
+
+    if (!container.children.length) {
+        container.innerHTML = `
+            <div class="py-10 text-center">
+                <p class="font-black text-slate-950">No rooms are active yet.</p>
+                <p class="mt-2 text-sm text-slate-500">Use your invite code or contact Elliot for access.</p>
+            </div>
+        `;
+    }
 }
 
 async function loadStrong8kApp() {
@@ -633,6 +851,8 @@ function renderStrong8k() {
     byId('strong8k-user-name').textContent = state.sharedUser.full_name || 'Client';
     byId('strong8k-user-email').textContent = state.authUser.email;
     byId('contact-link').href = CONFIG.CONTACT_LINK;
+    const licenseCount = profile.licenses?.length || 0;
+    byId('strong8k-license-summary').textContent = `${licenseCount} ${licenseCount === 1 ? 'license' : 'licenses'}`;
 
     renderStrong8kLicenses(profile);
     renderStrong8kProducts(products);
@@ -649,8 +869,9 @@ function renderStrong8kLicenses(profile) {
     const licenses = profile.licenses || [];
     if (!licenses.length) {
         container.innerHTML = `
-            <div class="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-400">
-                No active licenses found yet.
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+                <p class="font-black text-slate-950">No licenses have been added yet.</p>
+                <p class="mt-2 text-sm text-slate-500">If you recently paid, Elliot may still be preparing your access.</p>
             </div>
         `;
         return;
@@ -658,31 +879,27 @@ function renderStrong8kLicenses(profile) {
 
     licenses.forEach(license => {
         const card = document.createElement('article');
-        const status = license.status || 'Unknown';
-        const statusClass = status === 'Active'
-            ? 'bg-emerald-100 text-emerald-700'
-            : status === 'Expired'
-                ? 'bg-rose-100 text-rose-700'
-                : 'bg-slate-100 text-slate-500';
+        const presentation = getLicensePresentation(license);
         const domain = profile.domain_8k || 'Contact Admin';
         const backup = profile.domain_8k_backup || '';
-        card.className = 'rounded-3xl border border-slate-200 bg-white p-6 shadow-sm';
+        card.className = 'license-ledger-card';
+        card.style.setProperty('--license-accent', presentation.accent);
         card.innerHTML = `
-            <div class="mb-5 flex items-start justify-between gap-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <h3 class="text-lg font-bold text-slate-950">${license.label || 'License'}</h3>
-                    <p class="mt-1 text-xs uppercase tracking-[0.25em] text-slate-400">Expiry ${formatDate(license.expiry_date)}</p>
+                    <h3 class="text-xl font-black tracking-[-0.02em] text-slate-950">${escapeHtml(license.label || 'License')}</h3>
+                    <p class="mt-1 text-sm text-slate-500">Expires <time datetime="${escapeAttribute(license.expiry_date || '')}">${escapeHtml(formatDate(license.expiry_date))}</time></p>
                 </div>
-                <span class="rounded-full px-3 py-1 text-[11px] font-bold uppercase ${statusClass}">${status}</span>
+                <span class="self-start rounded-full px-3 py-1.5 text-xs font-black ${presentation.className}">${escapeHtml(presentation.label)}</span>
             </div>
-            <div class="grid gap-4 rounded-2xl bg-slate-50 p-4">
+            <div class="license-fields">
                 <div class="grid gap-3 md:grid-cols-2">
                     ${copyField('Primary Domain', domain)}
                     ${backup ? copyField('Backup Domain', backup) : ''}
                 </div>
                 <div class="grid gap-3 md:grid-cols-2">
                     ${copyField('Username', license.username_8k)}
-                    ${copyField('Password', license.password_8k)}
+                    ${copyField('License Password', license.password_8k)}
                 </div>
                 ${license.m3u_url_8k ? copyBlock('8K M3U URL', license.m3u_url_8k) : ''}
                 ${license.epg_url_8k ? copyBlock('8K EPG URL', license.epg_url_8k) : ''}
@@ -694,19 +911,44 @@ function renderStrong8kLicenses(profile) {
 
     container.querySelectorAll('[data-copy]').forEach(button => {
         button.addEventListener('click', async () => {
-            await navigator.clipboard.writeText(button.dataset.copy || '');
-            showToast('Copied to clipboard');
+            try {
+                await copyTextToClipboard(button.dataset.copy || '');
+                showToast('Copied to clipboard');
+            } catch (error) {
+                console.error('Unable to copy credential', error);
+                showToast('Copy failed. Select the text and copy it manually.', 'error');
+            }
         });
     });
+}
+
+function getLicensePresentation(license = {}) {
+    const status = String(license.status || '').trim().toLowerCase();
+    const expiryValue = String(license.expiry_date || '').slice(0, 10);
+    const expiry = /^\d{4}-\d{2}-\d{2}$/.test(expiryValue) ? new Date(`${expiryValue}T00:00:00`) : null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysRemaining = expiry ? Math.ceil((expiry.getTime() - today.getTime()) / 86400000) : null;
+
+    if (status === 'expired' || (daysRemaining !== null && daysRemaining < 0)) {
+        return { label: 'Expired', className: 'bg-rose-100 text-rose-800', accent: '#e11d48' };
+    }
+    if (daysRemaining !== null && daysRemaining <= 30) {
+        return { label: `${Math.max(daysRemaining, 0)} days left`, className: 'bg-amber-100 text-amber-900', accent: '#d97706' };
+    }
+    if (status === 'active') {
+        return { label: 'Active', className: 'bg-emerald-100 text-emerald-800', accent: '#10b981' };
+    }
+    return { label: license.status || 'Status unknown', className: 'bg-slate-100 text-slate-700', accent: '#94a3b8' };
 }
 
 function copyField(label, value) {
     return `
         <div>
-            <label class="mb-1 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">${label}</label>
-            <button type="button" class="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-mono text-slate-700 hover:border-slate-900" data-copy="${escapeAttribute(value || '')}">
-                <span class="truncate">${value || 'N/A'}</span>
-                <i class="fa-regular fa-copy text-xs text-slate-300"></i>
+            <span class="mb-1.5 block text-xs font-black text-slate-500">${escapeHtml(label)}</span>
+            <button type="button" class="credential-button flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left text-sm font-mono text-slate-800" data-copy="${escapeAttribute(value || '')}" aria-label="Copy ${escapeAttribute(label)}">
+                <span class="credential-value">${escapeHtml(value || 'N/A')}</span>
+                <i class="fa-regular fa-copy shrink-0 text-xs text-slate-400" aria-hidden="true"></i>
             </button>
         </div>
     `;
@@ -715,10 +957,10 @@ function copyField(label, value) {
 function copyBlock(label, value, extraBorderClass = '') {
     return `
         <div>
-            <label class="mb-1 block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">${label}</label>
-            <button type="button" class="flex w-full items-center justify-between rounded-2xl border ${extraBorderClass || 'border-slate-200'} bg-white px-3 py-2 text-left text-xs font-mono text-slate-600 hover:border-slate-900" data-copy="${escapeAttribute(value || '')}">
-                <span class="truncate">${value}</span>
-                <i class="fa-regular fa-copy text-xs text-slate-300"></i>
+            <span class="mb-1.5 block text-xs font-black text-slate-500">${escapeHtml(label)}</span>
+            <button type="button" class="credential-button flex w-full items-start justify-between gap-3 rounded-xl border ${extraBorderClass || 'border-slate-200'} bg-slate-50 px-3 py-2.5 text-left text-xs font-mono text-slate-700" data-copy="${escapeAttribute(value || '')}" aria-label="Copy ${escapeAttribute(label)}">
+                <span class="credential-value">${escapeHtml(value)}</span>
+                <i class="fa-regular fa-copy mt-0.5 shrink-0 text-xs text-slate-400" aria-hidden="true"></i>
             </button>
         </div>
     `;
@@ -728,17 +970,26 @@ function renderStrong8kProducts(products) {
     const list = byId('product-list');
     list.innerHTML = '';
 
+    if (!products.length) {
+        list.innerHTML = `
+            <div class="py-8 text-center">
+                <p class="font-black text-slate-950">No renewal packages are available right now.</p>
+                <p class="mt-2 text-sm text-slate-500">Contact Elliot if your license is close to expiring.</p>
+            </div>
+        `;
+        return;
+    }
+
     products.forEach(product => {
         const row = document.createElement('div');
-        row.className = 'flex items-center justify-between gap-4 border-b border-slate-100 py-4 last:border-b-0';
+        row.className = 'room-ledger-row';
         row.innerHTML = `
-            <div>
-                <h4 class="text-sm font-bold text-slate-950">${product.name}</h4>
-                <p class="mt-1 text-xs font-bold text-slate-500">${CONFIG.CURRENCY_SYMBOL}${product.price}</p>
-            </div>
-            <button type="button" class="rounded-full bg-slate-100 px-4 py-2 text-xs font-bold text-slate-900 transition hover:bg-slate-900 hover:text-white" data-product-name="${escapeAttribute(product.name)}" data-product-price="${product.price}">
-                Purchase
-            </button>
+            <span class="room-ledger-icon"><i class="fa-solid fa-rotate" aria-hidden="true"></i></span>
+            <span>
+                <span class="room-ledger-title">${escapeHtml(product.name)}</span>
+                <span class="room-ledger-copy block">${CONFIG.CURRENCY_SYMBOL}${escapeHtml(product.price)}${product.credits ? ` · ${escapeHtml(product.credits)} credits` : ''}</span>
+            </span>
+            <button type="button" class="portal-secondary room-ledger-action" data-product-name="${escapeAttribute(product.name)}" data-product-price="${escapeAttribute(product.price)}">Choose package</button>
         `;
         list.appendChild(row);
     });
@@ -1836,9 +2087,6 @@ function applyRulesInlineFormatting(text = '') {
         .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');
 }
 
-// Standard competition ranking (1-2-2-4, golf/payout style).
-// Input must already be sorted descending by points_total.
-// Returns a plain object { [memberId]: rank }.
 function computeRanks(sortedMembers = []) {
     const ranks = {};
     let i = 0;
@@ -2692,8 +2940,8 @@ function buildStandingsChartSVG(history, selectedIdx) {
 
     // For each member, build array of values across events
     function getRank(snap, memberId) {
-        const r = computeRanks(snap.standings)[memberId];
-        return r !== undefined ? r : N;
+        const rank = computeRanks(snap.standings)[memberId];
+        return rank !== undefined ? rank : N;
     }
     function getPoints(snap, memberId) {
         return snap.standings.find(m => m.id === memberId)?.points_total || 0;

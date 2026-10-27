@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-App Client Portal</title>
+    <title>Elliot's Private Clubhouse</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -25,6 +25,261 @@
             }
         }
     </script>
+    <style>
+        @font-face {
+            font-family: "Sora";
+            src: url("./assets/fonts/sora-400.woff2") format("woff2");
+            font-display: swap;
+            font-style: normal;
+            font-weight: 400;
+        }
+        @font-face {
+            font-family: "Sora";
+            src: url("./assets/fonts/sora-600.woff2") format("woff2");
+            font-display: swap;
+            font-style: normal;
+            font-weight: 500 700;
+        }
+        @font-face {
+            font-family: "Sora";
+            src: url("./assets/fonts/sora-800.woff2") format("woff2");
+            font-display: swap;
+            font-style: normal;
+            font-weight: 800 900;
+        }
+        :root {
+            color-scheme: light;
+            --ink: #020617;
+            --ink-soft: #0f172a;
+            --paper: #ffffff;
+            --mist: #f1f5f9;
+            --line: #e2e8f0;
+            --copy: #475569;
+            --muted: #94a3b8;
+            --emerald: #10b981;
+            --emerald-deep: #064e3b;
+            --amber: #d97706;
+            --rose: #e11d48;
+            --ease-out: cubic-bezier(.16, 1, .3, 1);
+        }
+
+        html { scroll-behavior: smooth; }
+        body { background: var(--mist); font-family: "Sora", sans-serif; font-feature-settings: "tnum" 1, "ss01" 1; }
+        ::selection { background: #a7f3d0; color: var(--ink); }
+        * { scrollbar-color: #64748b var(--ink); scrollbar-width: thin; }
+        *:focus-visible { outline: 3px solid #34d399; outline-offset: 3px; }
+        input::placeholder, textarea::placeholder { color: #64748b; opacity: 1; }
+
+        .portal-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 15.5rem minmax(0, 1fr);
+            background: var(--mist);
+        }
+
+        .room-rail {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            display: flex;
+            height: 100vh;
+            min-height: 38rem;
+            flex-direction: column;
+            overflow-y: auto;
+            background: var(--ink);
+            color: #fff;
+            box-shadow: 12px 0 36px rgba(2, 6, 23, .12);
+        }
+
+        .room-rail-inner { display: flex; min-height: 100%; flex-direction: column; padding: 1.5rem 1rem 1rem; }
+        .room-brand { display: flex; align-items: center; gap: .75rem; padding: .25rem .75rem 1.5rem; }
+        .room-brand-mark {
+            display: grid;
+            width: 2.5rem;
+            height: 2.5rem;
+            place-items: center;
+            border-radius: .75rem;
+            background: var(--emerald);
+            color: var(--ink);
+            font-size: 1rem;
+            font-weight: 900;
+            box-shadow: 0 10px 24px rgba(16, 185, 129, .22);
+        }
+        .room-brand-name { font-size: .95rem; font-weight: 900; letter-spacing: -.02em; }
+        .room-brand-subtitle { margin-top: .12rem; color: #94a3b8; font-size: .72rem; }
+        .room-rail-close { display: none; margin-left: auto; color: #cbd5e1; }
+
+        .room-nav { display: grid; gap: .35rem; }
+        .room-nav-label { padding: 1rem .75rem .4rem; color: #64748b; font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+        .room-nav-item {
+            position: relative;
+            display: flex;
+            min-height: 2.85rem;
+            align-items: center;
+            gap: .8rem;
+            border-radius: .75rem;
+            padding: .7rem .8rem;
+            color: #cbd5e1;
+            font-size: .86rem;
+            font-weight: 750;
+            text-align: left;
+            transition: background-color .2s ease, color .2s ease, transform .35s var(--ease-out);
+        }
+        .room-nav-item i { width: 1.2rem; color: #64748b; text-align: center; transition: color .2s ease; }
+        .room-nav-item:hover { background: rgba(255, 255, 255, .07); color: #fff; transform: translateX(2px); }
+        .room-nav-item.is-active { background: rgba(16, 185, 129, .12); color: #fff; }
+        .room-nav-item.is-active::before {
+            position: absolute;
+            top: .55rem;
+            bottom: .55rem;
+            left: 0;
+            width: 1px;
+            background: #34d399;
+            content: "";
+        }
+        .room-nav-item.is-active i { color: #34d399; }
+
+        .room-account { margin-top: auto; border-top: 1px solid rgba(148, 163, 184, .18); padding: 1rem .75rem .25rem; }
+        .room-account-name { overflow: hidden; color: #fff; font-size: .8rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+        .room-account-email { margin-top: .2rem; overflow: hidden; color: #64748b; font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
+        .room-signout { margin-top: .9rem; display: inline-flex; align-items: center; gap: .5rem; color: #94a3b8; font-size: .76rem; font-weight: 750; }
+        .room-signout:hover { color: #fff; }
+
+        .portal-main { min-width: 0; }
+        .portal-mobilebar {
+            display: none;
+            min-height: 4rem;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--line);
+            background: rgba(255, 255, 255, .96);
+            padding: .75rem 1rem;
+        }
+        .portal-mobilebar button { display: inline-flex; min-height: 2.75rem; align-items: center; gap: .65rem; font-size: .82rem; font-weight: 850; }
+        .portal-mobilebar span { color: var(--copy); font-size: .76rem; font-weight: 750; }
+        .portal-canvas { width: min(100%, 82rem); min-width: 0; margin: 0 auto; padding: clamp(1.5rem, 3vw, 3rem); }
+
+        .portal-page-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 2rem;
+            margin-bottom: 1.75rem;
+        }
+        .portal-page-header h1 { max-width: 17ch; overflow-wrap: anywhere; color: var(--ink); font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 900; letter-spacing: -.035em; line-height: .98; }
+        .portal-page-header p { max-width: 66ch; margin-top: .9rem; color: var(--copy); font-size: .93rem; line-height: 1.65; }
+        .portal-page-meta { min-width: 0; max-width: 34%; flex: none; overflow-wrap: anywhere; color: #64748b; font-size: .76rem; font-weight: 750; text-align: right; }
+
+        .portal-paper {
+            min-width: 0;
+            overflow: hidden;
+            border: 1px solid #dbe3ec;
+            border-radius: 1rem;
+            background: var(--paper);
+            box-shadow: 0 20px 55px rgba(15, 23, 42, .08);
+        }
+        .ledger-section { min-width: 0; padding: clamp(1.35rem, 3vw, 2.35rem); }
+        .ledger-section + .ledger-section { border-top: 1px solid var(--line); }
+        .ledger-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.35rem; }
+        .ledger-section-head h2 { color: var(--ink); font-size: clamp(1.2rem, 2vw, 1.65rem); font-weight: 900; letter-spacing: -.025em; }
+        .ledger-section-head p { max-width: 60ch; margin-top: .45rem; color: var(--copy); font-size: .84rem; line-height: 1.6; }
+        .ledger-count { flex: none; color: #64748b; font-size: .72rem; font-weight: 800; letter-spacing: .06em; }
+
+        .room-ledger { border-top: 1px solid var(--line); }
+        .room-ledger-row {
+            position: relative;
+            display: grid;
+            width: 100%;
+            grid-template-columns: 2.8rem minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--line);
+            padding: 1.25rem .25rem;
+            text-align: left;
+            transition: background-color .2s ease, padding .35s var(--ease-out);
+        }
+        .room-ledger-row:last-child { border-bottom: 0; }
+        .room-ledger-row:hover { background: #f8fafc; padding-inline: .85rem; }
+        .room-ledger-icon { display: grid; width: 2.55rem; height: 2.55rem; place-items: center; border-radius: .75rem; background: var(--ink); color: #fff; }
+        .room-ledger-title { color: var(--ink); font-size: 1rem; font-weight: 900; }
+        .room-ledger-copy { margin-top: .25rem; color: var(--copy); font-size: .8rem; line-height: 1.5; }
+        .room-ledger-action { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; gap: .6rem; color: #334155; font-size: .76rem; font-weight: 850; white-space: nowrap; }
+
+        .license-ledger { border-top: 1px solid var(--line); }
+        .license-ledger-card {
+            position: relative;
+            overflow: hidden;
+            border-bottom: 1px solid var(--line);
+            background: #fff;
+            padding: clamp(1.25rem, 2.5vw, 1.75rem) .25rem;
+            transition: background-color .2s ease, padding .35s var(--ease-out);
+        }
+        .license-ledger-card:last-child { border-bottom: 0; }
+        .license-ledger-card::before { position: absolute; inset-block: 0; left: 0; width: 1px; background: var(--license-accent, var(--emerald)); content: ""; }
+        .license-ledger-card:hover, .license-ledger-card:focus-within { background: #f8fafc; padding-inline: .85rem; }
+        .license-fields { display: grid; gap: .85rem; margin-top: 1.2rem; }
+        .credential-button { min-height: 3.2rem; transition: border-color .2s ease, background-color .2s ease; }
+        .credential-button:hover { border-color: #64748b; background: #f8fafc; }
+        .credential-value { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+
+        .portal-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2.25rem; }
+        .portal-field { width: 100%; border: 1px solid #cbd5e1; border-radius: .8rem; background: #f8fafc; padding: .8rem .9rem; color: var(--ink); }
+        .portal-field:focus { border-color: #0f172a; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(16, 185, 129, .2); }
+        .portal-primary { border-radius: .75rem; background: var(--ink); padding: .78rem 1rem; color: #fff; font-size: .82rem; font-weight: 850; transition: background-color .2s ease, transform .3s var(--ease-out); }
+        .portal-primary:hover { background: #1e293b; transform: translateY(-1px); }
+        .portal-secondary { border: 1px solid #cbd5e1; border-radius: 999px; padding: .7rem 1rem; color: #334155; font-size: .78rem; font-weight: 800; }
+        .portal-secondary:hover { border-color: #334155; color: var(--ink); }
+
+        .auth-room-list { margin-top: 2.5rem; border-top: 1px solid rgba(255, 255, 255, .14); }
+        .auth-room-row { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: .9rem; border-bottom: 1px solid rgba(255, 255, 255, .14); padding: 1rem 0; }
+        .auth-room-row i { margin-top: .18rem; color: #6ee7b7; }
+        .auth-room-row strong { display: block; font-size: .92rem; }
+        .auth-room-row span { display: block; margin-top: .25rem; color: #cbd5e1; font-size: .78rem; line-height: 1.5; }
+
+        .portal-shell--playoff { background: var(--ink); }
+        .portal-shell--playoff .portal-main { background: var(--ink); }
+        .portal-shell--playoff .portal-mobilebar { border-color: rgba(255, 255, 255, .1); background: rgba(2, 6, 23, .96); color: #fff; }
+        .portal-shell--playoff .portal-mobilebar span { color: #94a3b8; }
+        .playoff-room-canvas { min-width: 0; padding: 1.25rem; }
+
+        .room-rail-backdrop { display: none; }
+
+        @media (max-width: 960px) {
+            .portal-shell { display: block; }
+            .room-rail {
+                position: fixed;
+                inset: 0 auto 0 0;
+                width: min(19rem, 86vw);
+                transform: translateX(-105%);
+                transition: transform .42s var(--ease-out);
+            }
+            .room-rail.is-open { transform: translateX(0); }
+            .room-rail-close { display: inline-grid; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 999px; }
+            .portal-mobilebar { position: sticky; top: 0; z-index: 30; display: flex; }
+            .room-rail-backdrop { position: fixed; inset: 0; z-index: 35; display: block; visibility: hidden; background: rgba(2, 6, 23, .58); opacity: 0; transition: opacity .25s ease, visibility .25s ease; }
+            .room-rail-backdrop.is-open { visibility: visible; opacity: 1; }
+            .portal-page-header { align-items: flex-start; flex-direction: column; gap: .75rem; }
+            .portal-page-meta { max-width: 100%; white-space: normal; text-align: left; }
+            .portal-form-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+            .playoff-room-canvas { padding: .75rem; }
+        }
+
+        @media (max-width: 640px) {
+            .portal-canvas { padding: 1.15rem .85rem 2rem; }
+            .portal-page-header { margin-bottom: 1.2rem; }
+            .portal-page-header h1 { max-width: 100%; font-size: 2.35rem; }
+            .portal-paper { border-radius: .85rem; }
+            .ledger-section { padding: 1.15rem; }
+            .ledger-section-head { align-items: flex-start; flex-direction: column; gap: .5rem; }
+            .room-ledger-row { grid-template-columns: 2.55rem minmax(0, 1fr); }
+            .room-ledger-action { width: 100%; grid-column: 1 / -1; justify-self: stretch; border-radius: .75rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+        }
+    </style>
 </head>
 <body class="min-h-screen bg-[radial-gradient(circle_at_top,_#f7f6f2,_#e7edf5_45%,_#f1eee7_100%)] text-slate-900 antialiased">
     <div id="toast" class="fixed right-4 top-4 z-50 translate-x-full opacity-0 transition-all duration-300">
@@ -44,30 +299,32 @@
 
         <section id="auth-view" class="min-h-screen px-4 py-12">
             <div class="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-                <div class="rounded-[2rem] bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-900 p-8 text-white shadow-float lg:p-12">
+                <div class="rounded-2xl bg-[radial-gradient(circle_at_top_right,_#065f46,_#0f172a_48%,_#020617_100%)] p-8 text-white shadow-float lg:p-12">
                     <div class="max-w-xl">
-                        <p class="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-emerald-200">Elliot's Portal</p>
-                        <h1 class="text-4xl font-black leading-tight lg:text-6xl">Your playoff picks &amp; IPTV, in one place.</h1>
+                        <div class="mb-7 flex items-center gap-3 text-sm font-black">
+                            <span class="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400 text-slate-950">E</span>
+                            <span>Elliot's private clubhouse</span>
+                        </div>
+                        <h1 class="max-w-[12ch] text-4xl font-black leading-[1.02] tracking-[-0.035em] lg:text-6xl">Everything we share, in one clear place.</h1>
                         <p class="mt-6 text-base leading-7 text-slate-200 lg:text-lg">
-                            Track your NHL playoff pool picks and manage your Strong8K IPTV subscription — all under one account.
+                            Open your Strong8K details, join the playoff pool, or get help from Elliot without hunting through old messages.
                         </p>
                     </div>
-                    <div class="mt-10 grid gap-4 md:grid-cols-2">
-                        <article class="rounded-3xl border border-white/10 bg-white/5 p-5">
-                            <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-emerald-200">NHL Playoff Pool</p>
-                            <h2 class="mt-3 text-2xl font-bold">Round-by-round series picks, standings, and payouts</h2>
-                        </article>
-                        <article class="rounded-3xl border border-white/10 bg-white/5 p-5">
-                            <p class="text-[11px] font-bold uppercase tracking-[0.25em] text-amber-200">Strong8K IPTV</p>
-                            <h2 class="mt-3 text-2xl font-bold">Live TV, sports, and VOD — watch the games as they happen</h2>
-                        </article>
+                    <div class="auth-room-list">
+                        <div class="auth-room-row">
+                            <i class="fa-solid fa-tv" aria-hidden="true"></i>
+                            <div><strong>Strong8K</strong><span>Your licenses, sign-in details, renewal options, and shared setup notes.</span></div>
+                        </div>
+                        <div class="auth-room-row">
+                            <i class="fa-solid fa-hockey-puck" aria-hidden="true"></i>
+                            <div><strong>NHL Playoff Pool</strong><span>Your picks, live standings, pool rules, and what-if scenarios.</span></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-float backdrop-blur lg:p-10">
+                <div class="rounded-2xl bg-white p-8 shadow-float lg:p-10">
                     <div class="mb-8">
-                        <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-400">Portal Access</p>
-                        <h2 class="mt-3 text-3xl font-black text-slate-950">Sign in or join an app</h2>
+                        <h2 class="text-3xl font-black tracking-[-0.025em] text-slate-950">Come on in</h2>
                         <p id="auth-helper-text" class="mt-3 text-sm leading-6 text-slate-500"></p>
                     </div>
 
@@ -78,7 +335,7 @@
                         <p class="text-center text-sm text-slate-500">
                             Need an account?
                             <a href="#" id="show-register-link" class="font-bold text-slate-950 hover:underline">Create one now</a>
-                            &nbsp;·&nbsp;
+                            &nbsp;&middot;&nbsp;
                             <a href="#" id="forgot-password-link" class="font-bold text-slate-950 hover:underline">Forgot password?</a>
                         </p>
                     </form>
@@ -96,19 +353,35 @@
             </div>
         </section>
 
-        <section id="app-switcher-view" class="hidden min-h-screen px-4 py-12">
-            <div class="mx-auto max-w-5xl">
-                <header class="flex flex-col gap-4 rounded-[2rem] border border-white/70 bg-white/85 p-8 shadow-float backdrop-blur md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-400">App Switcher</p>
-                        <h1 class="mt-3 text-4xl font-black text-slate-950">Choose your portal</h1>
-                        <p class="mt-2 text-sm text-slate-500">Signed in as <span id="switcher-email" class="font-semibold text-slate-700"></span></p>
+        <section id="app-switcher-view" class="hidden min-h-screen">
+            <div class="portal-shell" data-shell-room="home">
+                <aside class="room-rail" data-room-rail aria-label="Clubhouse rooms"></aside>
+                <div class="room-rail-backdrop" data-rail-backdrop></div>
+                <div class="portal-main">
+                    <div class="portal-mobilebar">
+                        <button type="button" data-rail-toggle aria-expanded="false"><i class="fa-solid fa-bars" aria-hidden="true"></i>Rooms</button>
+                        <span>Clubhouse home</span>
                     </div>
-                    <button id="switcher-signout-btn" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">
-                        <i class="fa-solid fa-right-from-bracket mr-2"></i>Sign Out
-                    </button>
-                </header>
-                <div id="app-switcher-cards" class="mt-8 grid gap-6 md:grid-cols-2"></div>
+                    <div class="portal-canvas">
+                        <header class="portal-page-header">
+                            <div>
+                                <h1>Your rooms</h1>
+                                <p>Everything available to your account stays here. Open a room and this navigation remains in the same place.</p>
+                            </div>
+                            <p class="portal-page-meta">Signed in as <span id="switcher-email" class="font-semibold text-slate-800"></span></p>
+                        </header>
+                        <section class="portal-paper ledger-section" aria-labelledby="available-rooms-title">
+                            <div class="ledger-section-head">
+                                <div>
+                                    <h2 id="available-rooms-title">Available now</h2>
+                                    <p>Your account only shows rooms Elliot has activated for you.</p>
+                                </div>
+                            </div>
+                            <div id="app-switcher-cards" class="room-ledger"></div>
+                        </section>
+                        <button id="switcher-signout-btn" class="sr-only">Sign Out</button>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -126,97 +399,108 @@
             </div>
         </section>
 
-        <section id="strong8k-view" class="hidden px-4 py-8 lg:py-10">
-            <div class="mx-auto max-w-7xl space-y-8">
-                <header class="flex flex-col gap-4 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-sm backdrop-blur lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-400">Strong8K Portal</p>
-                        <h1 class="mt-2 text-3xl font-black text-slate-950">Welcome back, <span id="strong8k-user-name" class="text-slate-600"></span></h1>
-                        <p id="strong8k-user-email" class="mt-2 text-sm text-slate-400"></p>
+        <section id="strong8k-view" class="hidden min-h-screen">
+            <div class="portal-shell" data-shell-room="strong8k">
+                <aside class="room-rail" data-room-rail aria-label="Clubhouse rooms"></aside>
+                <div class="room-rail-backdrop" data-rail-backdrop></div>
+                <div class="portal-main">
+                    <div class="portal-mobilebar">
+                        <button type="button" data-rail-toggle aria-expanded="false"><i class="fa-solid fa-bars" aria-hidden="true"></i>Rooms</button>
+                        <span>Strong8K</span>
                     </div>
-                    <div class="flex flex-wrap gap-3">
-                        <button data-action="app-home" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">
-                            <i class="fa-solid fa-grid-2 mr-2"></i>All Apps
-                        </button>
-                        <button data-action="signout" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">
-                            <i class="fa-solid fa-right-from-bracket mr-2"></i>Sign Out
-                        </button>
-                    </div>
-                </header>
-
-                <div class="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
-                    <div class="space-y-8">
-                        <section>
-                            <h2 class="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-slate-400">My Active Licenses</h2>
-                            <div id="licenses-container" class="space-y-4"></div>
-                        </section>
-
-                        <section class="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-sm">
-                            <h2 class="text-sm font-bold uppercase tracking-[0.3em] text-slate-400">Setup Whiteboard</h2>
-                            <p class="mt-3 text-sm leading-6 text-slate-500">Describe your devices, rooms, apps, and connection details for support. This note is shared with admin support.</p>
-                            <textarea id="setup-notes" rows="10" class="mt-5 w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 text-sm leading-7 outline-none transition focus:border-slate-900" placeholder="Example: Living room Fire Stick on Wi-Fi, bedroom TV on WebOS, sports buffering mostly at night."></textarea>
-                            <div class="mt-5 text-center">
-                                <a id="contact-link" href="#" class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-slate-400 transition hover:text-slate-950">
-                                    <i class="fa-regular fa-envelope"></i>Contact Elliot for Support
-                                </a>
+                    <div class="portal-canvas">
+                        <header class="portal-page-header">
+                            <div>
+                                <h1>Strong8K for <span id="strong8k-user-name"></span></h1>
+                                <p>Your complete license details are shown below. Select any credential to copy it directly into your player.</p>
                             </div>
-                        </section>
-                    </div>
+                            <p id="strong8k-user-email" class="portal-page-meta"></p>
+                        </header>
 
-                    <div class="space-y-8">
-                        <section class="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-sm">
-                            <h2 class="text-sm font-bold uppercase tracking-[0.3em] text-slate-400">Available Packages</h2>
-                            <div id="product-list" class="mt-4"></div>
-                        </section>
+                        <div class="portal-paper">
+                            <section class="ledger-section" aria-labelledby="licenses-title">
+                                <div class="ledger-section-head">
+                                    <div>
+                                        <h2 id="licenses-title">Your licenses</h2>
+                                        <p>Passwords shown here belong to each Strong8K license, not to your clubhouse account.</p>
+                                    </div>
+                                    <span id="strong8k-license-summary" class="ledger-count"></span>
+                                </div>
+                                <div id="licenses-container" class="license-ledger"></div>
+                            </section>
 
-                        <section class="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-sm">
-                            <h2 class="text-sm font-bold uppercase tracking-[0.3em] text-slate-400">Viewing Preferences</h2>
-                            <div class="mt-6 space-y-6">
-                                <div>
-                                    <div class="mb-3 flex items-center justify-between gap-4">
-                                        <h3 class="text-sm font-bold text-slate-950">Live TV</h3>
-                                        <select id="live-pref-select" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-500 outline-none"></select>
+                            <section id="strong8k-renewal" class="ledger-section" aria-labelledby="packages-title">
+                                <div class="ledger-section-head">
+                                    <div>
+                                        <h2 id="packages-title">Renew or add time</h2>
+                                        <p>Choose a package, send payment, and let Elliot know. Activation happens after payment is verified.</p>
                                     </div>
-                                    <div id="live-tags" class="flex flex-wrap gap-2"></div>
                                 </div>
-                                <div>
-                                    <div class="mb-3 flex items-center justify-between gap-4">
-                                        <h3 class="text-sm font-bold text-slate-950">Movies & Series</h3>
-                                        <select id="vod-pref-select" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-500 outline-none"></select>
+                                <div id="product-list" class="room-ledger"></div>
+                            </section>
+
+                            <section id="strong8k-support" class="ledger-section" aria-labelledby="support-title">
+                                <div class="ledger-section-head">
+                                    <div>
+                                        <h2 id="support-title">Setup and support</h2>
+                                        <p>Keep the device and app details Elliot needs for future troubleshooting. These notes are shared with admin support.</p>
                                     </div>
-                                    <div id="vod-tags" class="flex flex-wrap gap-2"></div>
+                                    <a id="contact-link" href="#" class="portal-secondary inline-flex items-center gap-2"><i class="fa-regular fa-envelope" aria-hidden="true"></i>Contact Elliot</a>
                                 </div>
-                                <div>
-                                    <label for="custom-req" class="mb-2 block text-sm font-bold text-slate-950">Special Requests</label>
-                                    <textarea id="custom-req" rows="3" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 text-sm outline-none transition focus:border-slate-900" placeholder="Specific international channels, sports priorities, language requests..."></textarea>
+                                <div class="portal-form-grid">
+                                    <label class="block">
+                                        <span class="mb-2 block text-sm font-black text-slate-950">Shared setup notes</span>
+                                        <textarea id="setup-notes" rows="11" class="portal-field text-sm leading-7" placeholder="Example: Living room Fire Stick on Wi-Fi, TiviMate Premium, sports buffering mostly at night."></textarea>
+                                    </label>
+                                    <div class="space-y-6">
+                                        <div>
+                                            <div class="mb-3 flex items-center justify-between gap-4">
+                                                <h3 class="text-sm font-black text-slate-950">Live TV preferences</h3>
+                                                <select id="live-pref-select" class="portal-secondary bg-white outline-none"></select>
+                                            </div>
+                                            <div id="live-tags" class="flex flex-wrap gap-2"></div>
+                                        </div>
+                                        <div>
+                                            <div class="mb-3 flex items-center justify-between gap-4">
+                                                <h3 class="text-sm font-black text-slate-950">Movies and series</h3>
+                                                <select id="vod-pref-select" class="portal-secondary bg-white outline-none"></select>
+                                            </div>
+                                            <div id="vod-tags" class="flex flex-wrap gap-2"></div>
+                                        </div>
+                                        <label class="block">
+                                            <span class="mb-2 block text-sm font-black text-slate-950">Special requests</span>
+                                            <textarea id="custom-req" rows="3" class="portal-field text-sm" placeholder="Specific channels, sports, languages, or anything else Elliot should know."></textarea>
+                                        </label>
+                                    </div>
                                 </div>
-                            </div>
-                            <button id="save-config-btn" class="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Preferences & Notes</button>
-                        </section>
+                                <div class="mt-6 flex justify-end">
+                                    <button id="save-config-btn" class="portal-primary">Save notes and preferences</button>
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section id="playoff-view" class="hidden min-h-screen bg-slate-950 px-4 py-5 text-white">
+        <section id="playoff-view" class="hidden min-h-screen bg-slate-950 text-white">
+            <div class="portal-shell portal-shell--playoff" data-shell-room="playoff-pool">
+                <aside class="room-rail" data-room-rail aria-label="Clubhouse rooms"></aside>
+                <div class="room-rail-backdrop" data-rail-backdrop></div>
+                <div class="portal-main">
+                    <div class="portal-mobilebar">
+                        <button type="button" data-rail-toggle aria-expanded="false"><i class="fa-solid fa-bars" aria-hidden="true"></i>Rooms</button>
+                        <span>NHL Playoff Pool</span>
+                    </div>
+                    <div class="playoff-room-canvas">
             <div class="mx-auto max-w-7xl space-y-5">
-                <header class="rounded-[1.5rem] border border-white/10 bg-[linear-gradient(90deg,rgba(6,78,89,0.85),rgba(15,23,42,0.95)_35%,rgba(2,6,23,1)_100%)] px-5 py-4 shadow-float">
+                <header class="rounded-2xl border border-white/10 bg-[linear-gradient(100deg,rgba(6,78,89,0.72),rgba(15,23,42,0.96)_42%,rgba(2,6,23,1)_100%)] px-5 py-4 shadow-float">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div class="min-w-0">
-                            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                                <p class="text-[11px] font-bold uppercase tracking-[0.35em] text-emerald-200">Private Playoff App</p>
-                                <h1 id="playoff-brand-name" class="text-2xl font-black"></h1>
-                            </div>
+                            <h1 id="playoff-brand-name" class="text-2xl font-black tracking-[-0.025em]"></h1>
                             <p class="mt-2 text-sm leading-[1.35] text-slate-300">Signed in as <span id="playoff-user-name" class="font-semibold text-white"></span> • <span id="playoff-user-email"></span></p>
                         </div>
-                        <div class="flex flex-wrap gap-2">
-                            <button data-action="app-home" class="rounded-full border border-white/20 px-4 py-2.5 text-sm font-bold text-white transition hover:border-white hover:bg-white/10">
-                                <i class="fa-solid fa-grid-2 mr-2"></i>All Apps
-                            </button>
-                            <button data-action="signout" class="rounded-full bg-white px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-200">
-                                <i class="fa-solid fa-right-from-bracket mr-2"></i>Sign Out
-                            </button>
-                        </div>
+                        <p class="max-w-md text-sm leading-6 text-slate-300">Picks, standings, rules, and scenarios stay together in this room.</p>
                     </div>
                 </header>
 
@@ -465,10 +749,13 @@
                     </div><!-- /.flex sidebar+main -->
                 </div>
             </div>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 
-    <div id="purchase-modal" class="fixed inset-0 hidden flex items-center justify-center bg-black/70 p-4">
+    <div id="purchase-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-product-name">
         <div class="w-full max-w-md rounded-[2rem] bg-white shadow-float">
             <div class="rounded-t-[2rem] bg-slate-950 p-6 text-center text-white">
                 <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-300">Strong8K Purchase</p>
@@ -491,6 +778,6 @@
         </div>
     </div>
 
-    <script type="module" src="./portal-app.js?v=20260611-whatif-polish"></script>
+    <script type="module" src="./portal-app.js?v=20261027-room-rail"></script>
 </body>
 </html>

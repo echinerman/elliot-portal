@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Platform Admin</title>
+    <title>Operations | Elliot's Private Clubhouse</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -20,6 +20,181 @@
             }
         }
     </script>
+    <style>
+        @font-face {
+            font-family: "Sora";
+            src: url("./assets/fonts/sora-400.woff2") format("woff2");
+            font-display: swap;
+            font-style: normal;
+            font-weight: 400;
+        }
+        @font-face {
+            font-family: "Sora";
+            src: url("./assets/fonts/sora-600.woff2") format("woff2");
+            font-display: swap;
+            font-style: normal;
+            font-weight: 500 700;
+        }
+        @font-face {
+            font-family: "Sora";
+            src: url("./assets/fonts/sora-800.woff2") format("woff2");
+            font-display: swap;
+            font-style: normal;
+            font-weight: 800 900;
+        }
+        :root {
+            color-scheme: light;
+            --ink: #020617;
+            --ink-soft: #0f172a;
+            --paper: #ffffff;
+            --mist: #f1f5f9;
+            --line: #e2e8f0;
+            --copy: #475569;
+            --muted: #94a3b8;
+            --emerald: #10b981;
+            --amber: #d97706;
+            --rose: #e11d48;
+            --ease-out: cubic-bezier(.16, 1, .3, 1);
+        }
+
+        html { scroll-behavior: smooth; }
+        body { background: var(--mist); font-family: "Sora", sans-serif; font-feature-settings: "tnum" 1, "ss01" 1; }
+        ::selection { background: #a7f3d0; color: var(--ink); }
+        * { scrollbar-color: #64748b var(--ink); scrollbar-width: thin; }
+        *:focus-visible { outline: 3px solid #34d399; outline-offset: 3px; }
+        input::placeholder, textarea::placeholder { color: #64748b; opacity: 1; }
+
+        .admin-shell { min-height: 100vh; display: grid; grid-template-columns: 15.5rem minmax(0, 1fr); }
+        .admin-room-rail {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            display: flex;
+            height: 100vh;
+            flex-direction: column;
+            overflow-y: auto;
+            background: var(--ink);
+            color: #fff;
+            box-shadow: 12px 0 36px rgba(2, 6, 23, .12);
+        }
+        .admin-rail-inner { display: flex; min-height: 100%; flex-direction: column; padding: 1.5rem 1rem 1rem; }
+        .admin-brand { display: flex; align-items: center; gap: .75rem; padding: .25rem .75rem 1.5rem; }
+        .admin-brand-mark { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: .75rem; background: var(--emerald); color: var(--ink); font-weight: 900; box-shadow: 0 10px 24px rgba(16, 185, 129, .22); }
+        .admin-brand-name { font-size: .95rem; font-weight: 900; letter-spacing: -.02em; }
+        .admin-brand-subtitle { margin-top: .12rem; color: #94a3b8; font-size: .72rem; }
+        .admin-rail-close { display: none; margin-left: auto; color: #cbd5e1; }
+        .admin-nav { display: grid; gap: .35rem; }
+        .admin-nav-label { padding: 1rem .75rem .4rem; color: #64748b; font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+        .admin-nav-item {
+            position: relative;
+            display: flex;
+            min-height: 2.85rem;
+            align-items: center;
+            gap: .8rem;
+            border-radius: .75rem;
+            padding: .7rem .8rem;
+            color: #cbd5e1;
+            font-size: .86rem;
+            font-weight: 750;
+            transition: background-color .2s ease, color .2s ease, transform .35s var(--ease-out);
+        }
+        .admin-nav-item i { width: 1.2rem; color: #64748b; text-align: center; }
+        .admin-nav-item:hover { background: rgba(255, 255, 255, .07); color: #fff; transform: translateX(2px); }
+        .admin-nav-item.is-active { background: rgba(16, 185, 129, .12); color: #fff; }
+        .admin-nav-item.is-active::before { position: absolute; inset-block: .55rem; left: 0; width: 1px; background: #34d399; content: ""; }
+        .admin-nav-item.is-active i { color: #34d399; }
+        .admin-account { margin-top: auto; border-top: 1px solid rgba(148, 163, 184, .18); padding: 1rem .75rem .25rem; }
+        .admin-account-name { color: #fff; font-size: .8rem; font-weight: 850; }
+        .admin-account-email { margin-top: .2rem; overflow: hidden; color: #64748b; font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
+        .admin-signout { margin-top: .9rem; display: inline-flex; align-items: center; gap: .5rem; color: #94a3b8; font-size: .76rem; font-weight: 750; }
+        .admin-signout:hover { color: #fff; }
+
+        .admin-workspace { min-width: 0; }
+        .admin-mobilebar { display: none; min-height: 4rem; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, .97); padding: .75rem 1rem; }
+        .admin-mobilebar button { display: inline-flex; min-height: 2.75rem; align-items: center; gap: .65rem; font-size: .82rem; font-weight: 850; }
+        .admin-mobilebar span { color: var(--copy); font-size: .76rem; font-weight: 750; }
+        .admin-header { border-bottom: 1px solid var(--line); background: #fff; }
+        .admin-header-inner { display: flex; width: min(100%, 92rem); margin: 0 auto; align-items: flex-end; justify-content: space-between; gap: 2rem; padding: 2.25rem clamp(1rem, 3vw, 3rem) 1.75rem; }
+        .admin-header h1 { color: var(--ink); font-size: clamp(2.15rem, 4vw, 3.8rem); font-weight: 900; letter-spacing: -.035em; line-height: .95; }
+        .admin-header p { max-width: 66ch; margin-top: .85rem; color: var(--copy); font-size: .9rem; line-height: 1.6; }
+        .admin-header-actions { display: flex; flex: none; flex-wrap: wrap; gap: .65rem; }
+        .admin-canvas { width: min(100%, 92rem); margin: 0 auto; padding: clamp(1.25rem, 3vw, 2.5rem); }
+
+        .admin-tabs { display: flex; flex-wrap: wrap; gap: .5rem; border-bottom: 1px solid var(--line); }
+        .admin-tabs button { margin-bottom: -1px; border-bottom: 2px solid transparent; padding: .85rem 1rem; color: #64748b; font-size: .8rem; font-weight: 850; }
+        .admin-tabs button.is-active { border-bottom-color: var(--ink); color: var(--ink); }
+
+        .admin-paper { overflow: hidden; border: 1px solid #dbe3ec; border-radius: 1rem; background: #fff; box-shadow: 0 20px 55px rgba(15, 23, 42, .07); }
+        .admin-paper-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; border-bottom: 1px solid var(--line); padding: 1.5rem; }
+        .admin-paper-head h2 { color: var(--ink); font-size: clamp(1.35rem, 2.2vw, 1.85rem); font-weight: 900; letter-spacing: -.025em; }
+        .admin-paper-head p { max-width: 68ch; margin-top: .45rem; color: var(--copy); font-size: .82rem; line-height: 1.55; }
+
+        .ops-filter-bar { display: flex; flex-wrap: wrap; gap: .5rem; border-bottom: 1px solid var(--line); padding: .9rem 1.25rem; }
+        .ops-filter { border: 1px solid #cbd5e1; border-radius: 999px; padding: .55rem .8rem; color: #475569; font-size: .72rem; font-weight: 850; }
+        .ops-filter:hover { border-color: #475569; color: var(--ink); }
+        .ops-filter.is-active { border-color: var(--ink); background: var(--ink); color: #fff; }
+        .ops-filter-count { margin-left: .35rem; color: inherit; opacity: .72; }
+        .ops-row { position: relative; display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) auto; align-items: center; gap: 1rem; border-bottom: 1px solid var(--line); padding: 1rem 1.25rem; transition: background-color .2s ease, padding .35s var(--ease-out); }
+        .ops-row:last-child { border-bottom: 0; }
+        .ops-row:hover { background: #f8fafc; padding-inline: 1.55rem; }
+        .ops-row::before { position: absolute; inset-block: 0; left: 0; width: 1px; background: var(--ops-accent, #94a3b8); content: ""; }
+        .ops-kind { display: inline-flex; width: max-content; align-items: center; gap: .4rem; border-radius: 999px; background: #f1f5f9; padding: .35rem .55rem; color: #475569; font-size: .72rem; font-weight: 850; }
+        .ops-title { color: var(--ink); font-size: .9rem; font-weight: 900; }
+        .ops-copy { margin-top: .2rem; color: #64748b; font-size: .76rem; line-height: 1.45; }
+        .ops-action { border: 1px solid #cbd5e1; border-radius: 999px; padding: .55rem .75rem; color: #334155; font-size: .72rem; font-weight: 850; }
+        .ops-action:hover { border-color: var(--ink); color: var(--ink); }
+        .ops-row.is-open { background: #f8fafc; }
+        .ops-row.is-open::before { background: var(--emerald); }
+        .ops-detail {
+            display: flex;
+            max-height: 0;
+            grid-column: 2 / -1;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            visibility: hidden;
+            overflow: hidden;
+            border-top: 1px solid transparent;
+            padding-top: 0;
+            opacity: 0;
+            transform: translateY(-.3rem);
+            transition: max-height .42s var(--ease-out), padding .42s var(--ease-out), border-color .2s ease, opacity .2s ease, transform .42s var(--ease-out), visibility .42s;
+        }
+        .ops-row.is-open .ops-detail { max-height: 11rem; visibility: visible; border-top-color: var(--line); padding-top: .9rem; opacity: 1; transform: translateY(0); }
+        .ops-detail p { max-width: 70ch; color: #475569; font-size: .78rem; line-height: 1.55; }
+        .ops-detail button { flex: none; border-radius: .7rem; background: var(--ink); padding: .65rem .8rem; color: #fff; font-size: .72rem; font-weight: 850; }
+        .ops-empty { padding: 2.5rem 1.25rem; text-align: center; }
+        .ops-empty strong { color: var(--ink); font-size: .95rem; }
+        .ops-empty p { margin: .35rem auto 0; max-width: 54ch; color: #64748b; font-size: .78rem; line-height: 1.55; }
+
+        .admin-rail-backdrop { display: none; }
+        .admin-workspace table { min-width: 42rem; }
+        .admin-workspace .overflow-hidden { overflow-x: auto; }
+
+        @media (max-width: 1100px) {
+            .admin-shell { display: block; }
+            .admin-room-rail { position: fixed; inset: 0 auto 0 0; width: min(19rem, 86vw); transform: translateX(-105%); transition: transform .42s var(--ease-out); }
+            .admin-room-rail.is-open { transform: translateX(0); }
+            .admin-rail-close { display: inline-grid; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 999px; }
+            .admin-mobilebar { position: sticky; top: 0; z-index: 30; display: flex; }
+            .admin-rail-backdrop { position: fixed; inset: 0; z-index: 35; display: block; visibility: hidden; background: rgba(2, 6, 23, .58); opacity: 0; transition: opacity .25s ease, visibility .25s ease; }
+            .admin-rail-backdrop.is-open { visibility: visible; opacity: 1; }
+            .admin-header-inner { align-items: flex-start; flex-direction: column; gap: 1.25rem; }
+        }
+        @media (max-width: 720px) {
+            .admin-header-inner { padding: 1.5rem 1rem 1.25rem; }
+            .admin-canvas { padding: 1rem .75rem 2rem; }
+            .admin-paper-head { align-items: flex-start; flex-direction: column; }
+            .ops-row { grid-template-columns: 1fr; gap: .65rem; }
+            .ops-action { justify-self: start; }
+            .ops-detail { grid-column: 1; }
+            .ops-row.is-open .ops-detail { align-items: flex-start; flex-direction: column; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+        }
+    </style>
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900 antialiased">
     <div id="toast" class="fixed right-4 top-4 z-50 translate-x-full opacity-0 transition-all duration-300">
@@ -29,21 +204,52 @@
         </div>
     </div>
 
-    <header class="border-b border-slate-200 bg-white">
-        <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-                <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-400">Platform Admin</p>
-                <h1 class="mt-2 text-3xl font-black text-slate-950">Admin Portal</h1>
-                <p class="mt-2 text-sm text-slate-500">Signed in as <span id="admin-email"></span></p>
+    <div class="admin-shell">
+        <aside class="admin-room-rail" id="admin-room-rail" aria-label="Clubhouse rooms">
+            <div class="admin-rail-inner">
+                <div class="admin-brand">
+                    <span class="admin-brand-mark">E</span>
+                    <div>
+                        <div class="admin-brand-name">Elliot's clubhouse</div>
+                        <div class="admin-brand-subtitle">Operator workspace</div>
+                    </div>
+                    <button type="button" class="admin-rail-close" id="admin-rail-close" aria-label="Close room menu"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                </div>
+                <nav class="admin-nav" aria-label="Portal rooms">
+                    <a class="admin-nav-item" href="./index.html#/apps"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Home</span></a>
+                    <a class="admin-nav-item" href="./index.html#/app/strong8k"><i class="fa-solid fa-tv" aria-hidden="true"></i><span>Strong8K</span></a>
+                    <a class="admin-nav-item" href="./index.html#/app/playoff-pool"><i class="fa-solid fa-hockey-puck" aria-hidden="true"></i><span>Playoff Pool</span></a>
+                    <a class="admin-nav-item" href="mailto:info@goelliot.vip"><i class="fa-solid fa-life-ring" aria-hidden="true"></i><span>Support</span></a>
+                    <div class="admin-nav-label">For Elliot</div>
+                    <a class="admin-nav-item is-active" href="./admin.html" aria-current="page"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>Operations</span></a>
+                </nav>
+                <div class="admin-account">
+                    <div class="admin-account-name">Operator account</div>
+                    <div id="admin-email-rail" class="admin-account-email"></div>
+                    <button id="admin-signout-btn" type="button" class="admin-signout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>Sign out</button>
+                </div>
             </div>
-            <div class="flex flex-wrap gap-3">
-                <a href="./index.html" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Back to Portal</a>
-                <button id="admin-signout-btn" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Sign Out</button>
+        </aside>
+        <div id="admin-rail-backdrop" class="admin-rail-backdrop"></div>
+        <div class="admin-workspace">
+            <div class="admin-mobilebar">
+                <button id="admin-rail-open" type="button" aria-expanded="false"><i class="fa-solid fa-bars" aria-hidden="true"></i>Rooms</button>
+                <span>Operations</span>
             </div>
-        </div>
-    </header>
+            <header class="admin-header">
+                <div class="admin-header-inner">
+                    <div>
+                        <h1>Operations</h1>
+                        <p>Start with the people and subscriptions that need attention, then move into configuration or playoff administration when the queue is clear.</p>
+                        <p class="!mt-2 text-xs">Signed in as <span id="admin-email" class="font-bold text-slate-700"></span></p>
+                    </div>
+                    <div class="admin-header-actions">
+                        <a href="./index.html#/apps" class="rounded-full border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Open customer portal</a>
+                    </div>
+                </div>
+            </header>
 
-    <main class="mx-auto max-w-7xl space-y-8 px-4 py-8">
+    <main class="admin-canvas space-y-6">
         <section id="admin-access-state" class="hidden rounded-[1.75rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
             <p class="text-xs font-bold uppercase tracking-[0.3em] text-amber-500">Admin Access</p>
             <h2 id="admin-access-title" class="mt-2 text-2xl font-black text-slate-950">Checking access…</h2>
@@ -55,45 +261,47 @@
             </div>
         </section>
 
-        <section class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <article class="rounded-[1.75rem] bg-white p-6 shadow-sm">
-                <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Users</p>
-                <p id="stat-users" class="mt-4 text-4xl font-black text-slate-950">0</p>
-            </article>
-            <article class="rounded-[1.75rem] bg-white p-6 shadow-sm">
-                <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Strong8K Active</p>
-                <p id="stat-strong8k" class="mt-4 text-4xl font-black text-slate-950">0</p>
-            </article>
-            <article class="rounded-[1.75rem] bg-white p-6 shadow-sm">
-                <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Playoff Active</p>
-                <p id="stat-playoff" class="mt-4 text-4xl font-black text-slate-950">0</p>
-            </article>
-            <article class="rounded-[1.75rem] bg-white p-6 shadow-sm">
-                <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Pool Members</p>
-                <p id="stat-pools" class="mt-4 text-4xl font-black text-slate-950">0</p>
-            </article>
+        <section class="admin-tabs" role="tablist" aria-label="Operations workspaces">
+            <button id="admin-tab-platform" type="button" role="tab" aria-controls="admin-panel-platform" aria-selected="true" data-tab="platform" class="is-active">Action inbox</button>
+            <button id="admin-tab-strong8k" type="button" role="tab" aria-controls="admin-panel-strong8k" aria-selected="false" data-tab="strong8k">Strong8K tools</button>
+            <button id="admin-tab-playoff" type="button" role="tab" aria-controls="admin-panel-playoff" aria-selected="false" data-tab="playoff">Playoff administration</button>
         </section>
 
-        <section class="flex flex-wrap gap-3">
-            <button data-tab="platform" class="rounded-full border border-slate-950 bg-slate-950 px-5 py-3 text-sm font-bold text-white">Platform</button>
-            <button data-tab="strong8k" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">Strong8K</button>
-            <button data-tab="playoff" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">Playoff Pool</button>
-        </section>
-
-        <section data-panel="platform" class="space-y-6">
-            <div class="rounded-[1.75rem] bg-white p-6 shadow-sm">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <section id="admin-panel-platform" role="tabpanel" aria-labelledby="admin-tab-platform" data-panel="platform" class="space-y-6">
+            <section class="admin-paper" aria-labelledby="operations-inbox-title">
+                <div class="admin-paper-head">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Shared Users</p>
-                        <h2 class="mt-2 text-2xl font-black text-slate-950">Identity + membership routing</h2>
+                        <h2 id="operations-inbox-title">Needs attention</h2>
+                        <p>Profile-derived items are live. Payment and automation stay visibly empty until their verified sources are connected and tested.</p>
                     </div>
-                    <div class="flex flex-wrap gap-3">
+                    <span id="operations-inbox-summary" class="text-xs font-bold text-slate-500">Loading queue…</span>
+                </div>
+                <div class="ops-filter-bar" role="group" aria-label="Filter action inbox">
+                    <button type="button" class="ops-filter is-active" data-ops-filter="all">All <span class="ops-filter-count" data-ops-count="all">0</span></button>
+                    <button type="button" class="ops-filter" data-ops-filter="renewal">Renewals <span class="ops-filter-count" data-ops-count="renewal">0</span></button>
+                    <button type="button" class="ops-filter" data-ops-filter="expiry">Expiring <span class="ops-filter-count" data-ops-count="expiry">0</span></button>
+                    <button type="button" class="ops-filter" data-ops-filter="review">Manual review <span class="ops-filter-count" data-ops-count="review">0</span></button>
+                    <button type="button" class="ops-filter" data-ops-filter="support">Support <span class="ops-filter-count" data-ops-count="support">0</span></button>
+                    <button type="button" class="ops-filter" data-ops-filter="payment">Payments <span class="ops-filter-count" data-ops-count="payment">0</span></button>
+                    <button type="button" class="ops-filter" data-ops-filter="automation">Automation <span class="ops-filter-count" data-ops-count="automation">0</span></button>
+                </div>
+                <div id="operations-inbox-list"></div>
+                <p class="border-t border-slate-100 px-5 py-3 text-xs leading-5 text-slate-500">Source status: no Strong8K payment collection and no n8n review-state collection are connected. Those filters intentionally show empty states; this screen never infers a payment or workflow failure.</p>
+            </section>
+
+            <div class="admin-paper">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="p-6 pb-0">
+                        <h2 class="text-2xl font-black tracking-[-0.025em] text-slate-950">People and access</h2>
+                        <p class="mt-2 text-sm text-slate-500">Search profiles, memberships, licenses, and shared setup history.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3 px-6 pt-6 lg:pl-0">
                         <input id="user-search" type="text" placeholder="Search name or email" class="rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
                         <button id="merge-profiles-btn" type="button" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Merge Profiles</button>
                         <button id="new-user-btn" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">+ New User</button>
                     </div>
                 </div>
-                <div class="mt-6 overflow-hidden rounded-[1.5rem] border border-slate-100">
+                <div class="mt-6 overflow-hidden border-t border-slate-100">
                     <table class="w-full text-left">
                         <thead class="bg-slate-50 text-[11px] uppercase tracking-[0.22em] text-slate-400">
                             <tr>
@@ -109,7 +317,7 @@
             </div>
         </section>
 
-        <section data-panel="strong8k" class="hidden space-y-6">
+        <section id="admin-panel-strong8k" role="tabpanel" aria-labelledby="admin-tab-strong8k" data-panel="strong8k" class="hidden space-y-6">
             <div class="grid gap-6 xl:grid-cols-[1fr_1fr]">
                 <form id="strong8k-config-form" class="rounded-[1.75rem] bg-white p-6 shadow-sm">
                     <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Strong8K Config</p>
@@ -175,7 +383,7 @@
             </section>
         </section>
 
-        <section data-panel="playoff" class="hidden space-y-6">
+        <section id="admin-panel-playoff" role="tabpanel" aria-labelledby="admin-tab-playoff" data-panel="playoff" class="hidden space-y-6">
             <section class="rounded-[1.75rem] bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                     <div class="max-w-3xl">
@@ -530,8 +738,8 @@
                             <span class="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">Email Address</span>
                             <div class="flex gap-2">
                                 <input id="pool-member-email" type="email" placeholder="Email" class="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                <button id="send-password-reset-btn" type="button" title="Send password reset email" class="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-500 transition hover:border-slate-900 hover:text-slate-950">
-                                    <i class="fa-solid fa-key"></i>
+                                <button id="send-password-reset-btn" type="button" title="Send password reset email" aria-label="Send password reset email" class="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-500 transition hover:border-slate-900 hover:text-slate-950">
+                                    <i class="fa-solid fa-key" aria-hidden="true"></i>
                                 </button>
                             </div>
                         </label>
@@ -609,12 +817,12 @@
 
                 <div class="space-y-6">
                     <form id="pick-override-form" class="rounded-[1.75rem] bg-white p-6 shadow-sm">
-                        <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Picks &amp; Overrides</p>
-                        <h2 class="mt-2 text-2xl font-black text-slate-950">Set picks and eligibility for selected member</h2>
+                        <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Pick Overrides</p>
+                        <h2 class="mt-2 text-2xl font-black text-slate-950">Selected member, selected round</h2>
                         <div id="pick-override-list" class="mt-6 space-y-4"></div>
                         <div class="mt-6 flex flex-wrap gap-3">
-                            <button type="submit" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Picks</button>
-                            <button id="reload-pick-overrides-btn" type="button" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Reload</button>
+                            <button type="submit" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save Overrides</button>
+                            <button id="reload-pick-overrides-btn" type="button" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Reload Picks</button>
                         </div>
                     </form>
 
@@ -628,6 +836,8 @@
             </div>
         </section>
     </main>
+        </div>
+    </div>
 
     <div id="user-modal" class="fixed inset-0 hidden flex items-start justify-center overflow-y-auto bg-slate-950/60 p-4 py-10">
         <div class="w-full max-w-6xl rounded-[2rem] bg-white shadow-float">
@@ -831,8 +1041,6 @@
         </div>
     </div>
 
-    <script type="module" src="./admin-app.js?v=20260927-expiry-sync"></script>
+    <script type="module" src="./admin-app.js?v=20261027-room-rail"></script>
 </body>
 </html>
-
-

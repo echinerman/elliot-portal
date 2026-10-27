@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20260927-expiry-sync';
+import { CONFIG } from './config.js?v=20261027-room-rail';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -12,7 +12,7 @@ import {
     normalizeStrong8kUsername,
     parseDelimitedList,
     slugify
-} from './app-model.js?v=20260927-expiry-sync';
+} from './app-model.js?v=20261027-room-rail';
 import {
     buildOfficialRoundOneSeries,
     buildCompactPickLabel,
@@ -36,7 +36,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20260927-expiry-sync';
+} from './playoff-logic.js?v=20261027-room-rail';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -76,6 +76,7 @@ const state = {
     roundPickDocs: [],
     currentLicenses: [],
     pendingStrong8kSync: null,
+    operationsFilter: 'all',
     editingProductId: '',
     editingPoolId: '',
     editingRoundId: '',
@@ -84,6 +85,7 @@ const state = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    bindAdminShell();
     bindNavigation();
     bindUserModal();
     bindMergeModal();
@@ -97,6 +99,38 @@ function byId(id) {
     return document.getElementById(id);
 }
 
+function bindAdminShell() {
+    const rail = byId('admin-room-rail');
+    const backdrop = byId('admin-rail-backdrop');
+    const openButton = byId('admin-rail-open');
+    const closeButton = byId('admin-rail-close');
+
+    const setOpen = isOpen => {
+        rail?.classList.toggle('is-open', isOpen);
+        rail?.toggleAttribute('inert', !isOpen && window.innerWidth <= 1100);
+        backdrop?.classList.toggle('is-open', isOpen);
+        openButton?.setAttribute('aria-expanded', String(isOpen));
+        document.body.classList.toggle('overflow-hidden', isOpen && window.innerWidth <= 1100);
+    };
+
+    const syncAccessibility = () => {
+        const isMobile = window.innerWidth <= 1100;
+        const isOpen = rail?.classList.contains('is-open') || false;
+        rail?.toggleAttribute('inert', isMobile && !isOpen);
+        openButton?.setAttribute('aria-expanded', String(isMobile && isOpen));
+        if (!isMobile) backdrop?.classList.remove('is-open');
+    };
+
+    openButton?.addEventListener('click', () => setOpen(true));
+    closeButton?.addEventListener('click', () => setOpen(false));
+    backdrop?.addEventListener('click', () => setOpen(false));
+    document.querySelectorAll('.admin-nav-item').forEach(item => {
+        item.addEventListener('click', () => setOpen(false));
+    });
+    syncAccessibility();
+    window.addEventListener('resize', syncAccessibility, { passive: true });
+}
+
 function showToast(message, tone = 'default') {
     const toast = byId('toast');
     const icon = byId('toast-icon');
@@ -106,6 +140,40 @@ function showToast(message, tone = 'default') {
         : 'fa-solid fa-circle-check';
     toast.classList.remove('translate-x-full', 'opacity-0');
     setTimeout(() => toast.classList.add('translate-x-full', 'opacity-0'), 3000);
+}
+
+async function copyTextToClipboard(value) {
+    const text = String(value ?? '');
+    const clipboardAttempt = navigator.clipboard?.writeText && window.isSecureContext
+        ? navigator.clipboard.writeText(text)
+        : null;
+
+    const activeElement = document.activeElement;
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.inset = '-1000px auto auto -1000px';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    let copiedWithSelection = false;
+    try {
+        copiedWithSelection = document.execCommand('copy');
+    } finally {
+        textarea.remove();
+        activeElement?.focus?.({ preventScroll: true });
+    }
+
+    if (copiedWithSelection) {
+        clipboardAttempt?.catch(() => {});
+        return;
+    }
+    if (clipboardAttempt) {
+        await clipboardAttempt;
+        return;
+    }
+    throw new Error('Copy command was rejected.');
 }
 
 function setAdminPanelsHidden(hidden) {
@@ -181,6 +249,7 @@ async function handleAdminAuth(user) {
 
     state.currentUser = user;
     byId('admin-email').textContent = user.email;
+    byId('admin-email-rail').textContent = user.email;
     hideAdminAccessState();
     try {
         await loadAdminData();
@@ -302,7 +371,7 @@ async function loadSelectedPoolData() {
 }
 
 function renderAdmin() {
-    renderStats();
+    renderOperationsInbox();
     renderUsers();
     renderStrong8kSection();
     renderPlayoffAdminSummary();
@@ -320,13 +389,19 @@ function bindNavigation() {
         button.addEventListener('click', () => {
             const tabId = button.dataset.tab;
             document.querySelectorAll('[data-tab]').forEach(item => {
-                item.classList.toggle('bg-slate-950', item === button);
-                item.classList.toggle('text-white', item === button);
-                item.classList.toggle('border-slate-950', item === button);
+                item.classList.toggle('is-active', item === button);
+                item.setAttribute('aria-selected', String(item === button));
             });
             document.querySelectorAll('[data-panel]').forEach(panel => {
                 panel.classList.toggle('hidden', panel.dataset.panel !== tabId);
             });
+        });
+    });
+
+    document.querySelectorAll('[data-ops-filter]').forEach(button => {
+        button.addEventListener('click', () => {
+            state.operationsFilter = button.dataset.opsFilter || 'all';
+            renderOperationsInbox();
         });
     });
 
@@ -335,13 +410,210 @@ function bindNavigation() {
     });
 }
 
-function renderStats() {
-    const strong8kCount = state.users.filter(user => state.membershipsByUser[user.id]?.[APP_IDS.STRONG8K]?.status === 'active').length;
-    const playoffCount = state.users.filter(user => state.membershipsByUser[user.id]?.[APP_IDS.PLAYOFF]?.status === 'active').length;
-    byId('stat-users').textContent = String(state.users.length);
-    byId('stat-strong8k').textContent = String(strong8kCount);
-    byId('stat-playoff').textContent = String(playoffCount);
-    byId('stat-pools').textContent = String(state.pools.length);
+function renderOperationsInbox() {
+    const container = byId('operations-inbox-list');
+    if (!container) return;
+
+    const items = buildOperationsInboxItems();
+    const counts = items.reduce((result, item) => {
+        result.all += 1;
+        result[item.category] = (result[item.category] || 0) + 1;
+        return result;
+    }, { all: 0, renewal: 0, expiry: 0, review: 0, support: 0, payment: 0, automation: 0 });
+
+    document.querySelectorAll('[data-ops-count]').forEach(node => {
+        node.textContent = String(counts[node.dataset.opsCount] || 0);
+    });
+    document.querySelectorAll('[data-ops-filter]').forEach(button => {
+        const active = button.dataset.opsFilter === state.operationsFilter;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+
+    byId('operations-inbox-summary').textContent = counts.all
+        ? `${counts.all} ${counts.all === 1 ? 'item needs' : 'items need'} attention`
+        : 'Queue clear';
+
+    const visibleItems = state.operationsFilter === 'all'
+        ? items
+        : items.filter(item => item.category === state.operationsFilter);
+
+    if (!visibleItems.length) {
+        const emptyStates = {
+            all: {
+                title: 'Nothing needs attention right now.',
+                detail: 'The live queue is calculated from saved customer profiles, memberships, licenses, expiries, and requests.'
+            },
+            payment: {
+                title: 'Payment queue not connected yet.',
+                detail: 'There is no verified Strong8K payment record source in Firestore. Continue checking payment manually before any renewal.'
+            },
+            automation: {
+                title: 'Automation queue not connected yet.',
+                detail: 'n8n is not writing workflow review states to Firestore, so this portal deliberately shows no inferred failures.'
+            }
+        };
+        const emptyState = emptyStates[state.operationsFilter] || {
+            title: `No ${state.operationsFilter === 'review' ? 'manual review' : state.operationsFilter} items right now.`,
+            detail: 'This filter is calculated from saved customer profiles and license records.'
+        };
+        container.innerHTML = `
+            <div class="ops-empty">
+                <strong>${escapeHtml(emptyState.title)}</strong>
+                <p>${escapeHtml(emptyState.detail)}</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = visibleItems.map((item, index) => `
+        <article class="ops-row" style="--ops-accent: ${item.accent}" data-ops-row="${index}">
+            <span class="ops-kind"><i class="fa-solid ${item.icon}" aria-hidden="true"></i>${escapeHtml(item.kind)}</span>
+            <div>
+                <div class="ops-title">${escapeHtml(item.title)}</div>
+                <div class="ops-copy">${escapeHtml(item.summary)}</div>
+            </div>
+            <button type="button" class="ops-action" data-ops-expand="${index}" aria-expanded="false">Review</button>
+            <div class="ops-detail">
+                <p>${escapeHtml(item.detail)}</p>
+                <button type="button" data-ops-user="${escapeAttribute(item.userId)}">Open full profile</button>
+            </div>
+        </article>
+    `).join('');
+
+    container.querySelectorAll('[data-ops-expand]').forEach(button => {
+        button.addEventListener('click', () => {
+            const row = button.closest('[data-ops-row]');
+            const isOpen = !row.classList.contains('is-open');
+            container.querySelectorAll('[data-ops-row]').forEach(candidate => {
+                candidate.classList.remove('is-open');
+                const candidateButton = candidate.querySelector('[data-ops-expand]');
+                candidateButton?.setAttribute('aria-expanded', 'false');
+                if (candidateButton) candidateButton.textContent = 'Review';
+            });
+            row.classList.toggle('is-open', isOpen);
+            button.setAttribute('aria-expanded', String(isOpen));
+            button.textContent = isOpen ? 'Close' : 'Review';
+        });
+    });
+    container.querySelectorAll('[data-ops-user]').forEach(button => {
+        button.addEventListener('click', () => openUserModal(button.dataset.opsUser));
+    });
+}
+
+function buildOperationsInboxItems() {
+    const items = [];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    state.users.forEach(user => {
+        const displayName = user.full_name || user.email || 'Unnamed account';
+        const memberships = state.membershipsByUser[user.id] || {};
+        const strong8kMembership = memberships[APP_IDS.STRONG8K];
+        const profile = state.strong8kProfiles[user.id];
+
+        Object.values(memberships).forEach(membership => {
+            if (membership?.status !== 'pending') return;
+            items.push({
+                category: 'review',
+                priority: 2,
+                kind: 'Access',
+                icon: 'fa-user-clock',
+                accent: '#d97706',
+                title: `${displayName} is waiting for access`,
+                summary: `${APP_DEFINITIONS[membership.app_id]?.label || membership.app_id} membership is pending.`,
+                detail: 'Review the membership and activate it only after the account and requested room have been confirmed.',
+                userId: user.id
+            });
+        });
+
+        if (!strong8kMembership || !profile) return;
+
+        const licenses = Array.isArray(profile.licenses) ? profile.licenses : [];
+        if (!licenses.length) {
+            items.push({
+                category: 'review',
+                priority: 3,
+                kind: 'Setup',
+                icon: 'fa-key',
+                accent: '#e11d48',
+                title: `${displayName} has no Strong8K license`,
+                summary: 'Strong8K access exists, but no license credentials are saved.',
+                detail: 'Add the purchased license or confirm that this account should remain active without one.',
+                userId: user.id
+            });
+        }
+
+        licenses.forEach((license, licenseIndex) => {
+            const licenseName = license.label || `License ${licenseIndex + 1}`;
+            const missing = [
+                !String(license.username_8k || '').trim() ? 'username' : '',
+                !String(license.password_8k || '').trim() ? 'password' : '',
+                !String(license.expiry_date || '').trim() ? 'expiry date' : ''
+            ].filter(Boolean);
+
+            if (missing.length) {
+                items.push({
+                    category: 'review',
+                    priority: 3,
+                    kind: 'Incomplete',
+                    icon: 'fa-triangle-exclamation',
+                    accent: '#e11d48',
+                    title: `${displayName}'s ${licenseName} is incomplete`,
+                    summary: `Missing ${missing.join(', ')}.`,
+                    detail: 'Complete the saved credentials so the customer can use and renew this license without another message thread.',
+                    userId: user.id
+                });
+            }
+
+            const expiryValue = String(license.expiry_date || '').slice(0, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryValue)) return;
+            const expiry = new Date(`${expiryValue}T00:00:00`);
+            const daysRemaining = Math.ceil((expiry.getTime() - now.getTime()) / 86400000);
+            if (daysRemaining < 0) {
+                items.push({
+                    category: 'renewal',
+                    priority: 4,
+                    kind: 'Renewal',
+                    icon: 'fa-rotate',
+                    accent: '#e11d48',
+                    title: `${displayName}'s ${licenseName} has expired`,
+                    summary: `Expired ${formatDate(expiryValue)} · ${Math.abs(daysRemaining)} days ago.`,
+                    detail: 'Confirm payment or customer intent before renewing. Recheck the provider expiry before and after any renewal action.',
+                    userId: user.id
+                });
+            } else if (daysRemaining <= 30) {
+                items.push({
+                    category: 'expiry',
+                    priority: daysRemaining <= 7 ? 3 : 2,
+                    kind: 'Expiry',
+                    icon: 'fa-calendar-day',
+                    accent: daysRemaining <= 7 ? '#d97706' : '#10b981',
+                    title: `${displayName}'s ${licenseName} expires soon`,
+                    summary: `${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} left · ${formatDate(expiryValue)}.`,
+                    detail: 'Confirm the authoritative provider expiry and make sure the customer receives the appropriate renewal reminder.',
+                    userId: user.id
+                });
+            }
+        });
+
+        const customRequest = String(profile.custom_request || '').trim();
+        if (customRequest) {
+            items.push({
+                category: 'support',
+                priority: 1,
+                kind: 'Support',
+                icon: 'fa-life-ring',
+                accent: '#10b981',
+                title: `${displayName} left a viewing request`,
+                summary: customRequest.length > 110 ? `${customRequest.slice(0, 107)}...` : customRequest,
+                detail: `Customer request: ${customRequest}`,
+                userId: user.id
+            });
+        }
+    });
+
+    return items.sort((left, right) => right.priority - left.priority || left.title.localeCompare(right.title));
 }
 
 function renderUsers(filter = '') {
@@ -706,7 +978,12 @@ function copyLicenseBlock(index) {
         license.epg_url_8k ? `EPG: ${license.epg_url_8k}` : null,
         license.expiry_date ? `Expiry: ${license.expiry_date}` : null,
     ].filter(Boolean);
-    navigator.clipboard.writeText(lines.join('\n')).then(() => showToast('Credentials copied!'));
+    copyTextToClipboard(lines.join('\n'))
+        .then(() => showToast('Credentials copied!'))
+        .catch(error => {
+            console.error('Unable to copy credentials', error);
+            showToast('Copy failed. Select the credentials and copy them manually.', 'error');
+        });
 }
 
 function loadLicenseIntoForm(index = -1) {
@@ -1313,12 +1590,15 @@ function bindPlayoffForms() {
     byId('pool-member-form').addEventListener('submit', savePoolMember);
     byId('send-password-reset-btn').addEventListener('click', async () => {
         const email = byId('pool-member-email').value.trim();
-        if (!email) { showToast('Enter an email address first', 'error'); return; }
+        if (!email) {
+            showToast('Enter an email address first', 'error');
+            return;
+        }
         try {
             await sendPasswordResetEmail(auth, email);
             showToast('Password reset email sent to ' + email);
-        } catch (err) {
-            showToast(err.message || 'Failed to send reset email', 'error');
+        } catch (error) {
+            showToast(error.message || 'Failed to send reset email', 'error');
         }
     });
     byId('clear-pool-member-btn').addEventListener('click', () => {
@@ -2205,5 +2485,3 @@ function toDateTimeLocal(value) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
-
-

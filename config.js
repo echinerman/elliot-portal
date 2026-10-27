@@ -20,9 +20,9 @@ export const CONFIG = {
 
     // Business Logic
     ADMIN_EMAILS: ["e.chinerman@gmail.com"],
-    SUPPORT_EMAIL: "e.chinerman@gmail.com",
+    SUPPORT_EMAIL: "info@goelliot.vip",
     PAYMENT_EMAIL: "e.chinerman@gmail.com",
-    CONTACT_LINK: "mailto:whaleshark809@flounderfantasy.com",
+    CONTACT_LINK: "mailto:info@goelliot.vip",
 
     // UI Constants
     CURRENCY_SYMBOL: "$",

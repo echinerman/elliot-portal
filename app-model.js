@@ -127,7 +127,7 @@ export function normalizeStrong8kProfile(profileData = {}, legacyUserData = {}) 
 export function normalizeStrong8kPortalUser(record = {}) {
     const username = String(record.username || '').trim();
     const expiryDate = String(record.exp_date_flag || '').trim().slice(0, 10);
-    if (!username || /^\d{4}-\d{2}-\d{2}$/.test(expiryDate) === false) return null;
+    if (!username || !/^\\d{4}-\\d{2}-\\d{2}$/.test(expiryDate)) return null;
 
     return {
         id: record.id || '',
@@ -247,4 +247,3 @@ export function formatDate(value) {
     if (!value) return 'N/A';
     return String(value).slice(0, 10);
 }
-
