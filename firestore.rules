@@ -20,8 +20,15 @@ service cloud.firestore {
       );
     }
 
+    function linkedAccountId() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/account_links/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/account_links/$(request.auth.uid)).data.account_id
+        : request.auth.uid;
+    }
+
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return isSignedIn() && (request.auth.uid == userId || linkedAccountId() == userId);
     }
 
     function emailMatchesAccount(userId) {
@@ -40,7 +47,34 @@ service cloud.firestore {
     }
 
     function currentUserHasApp(appId) {
-      return isSignedIn() && hasAppMembership(request.auth.uid, appId);
+      return isSignedIn() && hasAppMembership(appId == 'strong8k' ? linkedAccountId() : request.auth.uid, appId);
+    }
+
+    function canAccessStrong8kProfile(userId) {
+      return canAccessOwnAccount(userId)
+        && (currentUserHasApp('strong8k') || hasAppMembership(userId, 'strong8k'));
+    }
+
+    function validCustomerProfileCreate() {
+      return request.resource.data.keys().hasOnly([
+        'live_preferences',
+        'vod_preferences',
+        'custom_request',
+        'setup_notes',
+        'devices',
+        'updated_at'
+      ]);
+    }
+
+    function validCustomerProfileUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'live_preferences',
+        'vod_preferences',
+        'custom_request',
+        'setup_notes',
+        'devices',
+        'updated_at'
+      ]);
     }
 
     function isPoolMember(poolId) {
@@ -76,6 +110,17 @@ service cloud.firestore {
         );
     }
 
+    match /account_links/{authUid} {
+      allow read: if isPlatformAdmin() || (isSignedIn() && request.auth.uid == authUid);
+      allow create: if isSignedIn()
+        && request.auth.uid == authUid
+        && request.resource.data.keys().hasOnly(['account_id', 'email', 'created_at'])
+        && request.resource.data.email == request.auth.token.email
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.account_id))
+        && get(/databases/$(database)/documents/users/$(request.resource.data.account_id)).data.email == request.auth.token.email;
+      allow update, delete: if isPlatformAdmin();
+    }
+
     match /roles/{userId} {
       allow read: if isPlatformAdmin() || isOwner(userId);
       allow write: if isPlatformAdmin();
@@ -90,11 +135,24 @@ service cloud.firestore {
     match /users/{userId}/memberships/{appId} {
       allow read: if isPlatformAdmin() || canAccessOwnAccount(userId);
       allow create: if isPlatformAdmin() || (isOwner(userId) && validSelfMembership(appId));
-      allow update, delete: if isPlatformAdmin() || canAccessOwnAccount(userId);
+      allow update, delete: if isPlatformAdmin();
     }
 
     match /strong8k_profiles/{userId} {
-      allow read, write: if isPlatformAdmin() || (canAccessOwnAccount(userId) && (currentUserHasApp('strong8k') || hasAppMembership(userId, 'strong8k')));
+      allow read: if isPlatformAdmin() || canAccessStrong8kProfile(userId);
+      allow create: if isPlatformAdmin() || (canAccessStrong8kProfile(userId) && validCustomerProfileCreate());
+      allow update: if isPlatformAdmin() || (canAccessStrong8kProfile(userId) && validCustomerProfileUpdate());
+      allow delete: if isPlatformAdmin();
+
+      match /support_events/{eventId} {
+        allow read: if isPlatformAdmin() || (canAccessStrong8kProfile(userId) && resource.data.visibility == 'shared');
+        allow create: if isPlatformAdmin();
+        allow update, delete: if false;
+      }
+    }
+
+    match /strong8k_private/{userId} {
+      allow read, write: if isPlatformAdmin();
     }
 
     match /strong8k_config/{docId} {

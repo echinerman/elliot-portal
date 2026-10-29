@@ -63,7 +63,6 @@ export function defaultStrong8kProfile() {
         vod_preferences: ["Elliot's Default (Movies & Series)"],
         custom_request: '',
         setup_notes: '',
-        internal_notes: '',
         devices: []
     };
 }

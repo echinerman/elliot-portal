@@ -229,6 +229,16 @@
         .portal-primary:hover { background: #1e293b; transform: translateY(-1px); }
         .portal-secondary { border: 1px solid #cbd5e1; border-radius: 999px; padding: .7rem 1rem; color: #334155; font-size: .78rem; font-weight: 800; }
         .portal-secondary:hover { border-color: #334155; color: var(--ink); }
+        .customer-support-history { margin-top: 1.5rem; border-top: 1px solid var(--line); }
+        .customer-support-event { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 1rem; border-bottom: 1px solid var(--line); padding: 1.1rem .15rem; }
+        .customer-support-event:last-child { border-bottom: 0; }
+        .customer-support-event time { color: #64748b; font-size: .72rem; font-weight: 800; line-height: 1.5; }
+        .customer-support-event h3 { color: var(--ink); font-size: .9rem; font-weight: 900; }
+        .customer-support-event p { margin-top: .35rem; color: #475569; font-size: .8rem; line-height: 1.6; white-space: pre-wrap; }
+        .customer-support-event span { display: inline-flex; margin-top: .55rem; border-radius: 999px; background: #d1fae5; padding: .28rem .5rem; color: #047857; font-size: .72rem; font-weight: 850; }
+        .customer-support-empty { padding: 1.75rem .5rem .5rem; text-align: center; }
+        .customer-support-empty strong { color: var(--ink); font-size: .85rem; }
+        .customer-support-empty p { max-width: 48ch; margin: .35rem auto 0; color: #64748b; font-size: .8rem; line-height: 1.55; }
 
         .auth-room-list { margin-top: 2.5rem; border-top: 1px solid rgba(255, 255, 255, .14); }
         .auth-room-row { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: .9rem; border-bottom: 1px solid rgba(255, 255, 255, .14); padding: 1rem 0; }
@@ -273,6 +283,7 @@
             .ledger-section-head { align-items: flex-start; flex-direction: column; gap: .5rem; }
             .room-ledger-row { grid-template-columns: 2.55rem minmax(0, 1fr); }
             .room-ledger-action { width: 100%; grid-column: 1 / -1; justify-self: stretch; border-radius: .75rem; }
+            .customer-support-event { grid-template-columns: 1fr; gap: .35rem; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -475,6 +486,15 @@
                                 </div>
                                 <div class="mt-6 flex justify-end">
                                     <button id="save-config-btn" class="portal-primary">Save notes and preferences</button>
+                                </div>
+                                <div class="mt-8 border-t border-slate-200 pt-6">
+                                    <div class="ledger-section-head !mb-0">
+                                        <div>
+                                            <h2 class="!text-lg">Shared support history</h2>
+                                            <p>Setup, troubleshooting, renewal, and communication updates Elliot has shared with you appear here. Private working notes are never included.</p>
+                                        </div>
+                                    </div>
+                                    <div id="shared-support-history" class="customer-support-history" aria-live="polite"></div>
                                 </div>
                             </section>
                         </div>
@@ -778,6 +798,6 @@
         </div>
     </div>
 
-    <script type="module" src="./portal-app.js?v=20261027-room-rail"></script>
+    <script type="module" src="./portal-app.js?v=20261027-user-workspace"></script>
 </body>
 </html>

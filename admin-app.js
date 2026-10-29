@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20261027-room-rail';
+import { CONFIG } from './config.js?v=20261027-user-workspace';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -12,7 +12,7 @@ import {
     normalizeStrong8kUsername,
     parseDelimitedList,
     slugify
-} from './app-model.js?v=20261027-room-rail';
+} from './app-model.js?v=20261027-user-workspace';
 import {
     buildOfficialRoundOneSeries,
     buildCompactPickLabel,
@@ -36,11 +36,11 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20261027-room-rail';
+} from './playoff-logic.js?v=20261027-user-workspace';
+import { createUserEditor } from './user-editor.js?v=20261027-user-workspace';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
-    addDoc,
     collection,
     deleteDoc,
     doc,
@@ -57,6 +57,7 @@ import {
 const firebaseApp = initializeApp(CONFIG.FIREBASE);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
+let userEditor = null;
 
 const state = {
     currentUser: null,
@@ -87,10 +88,21 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
     bindAdminShell();
     bindNavigation();
-    bindUserModal();
     bindMergeModal();
     bindStrong8kForms();
     bindPlayoffForms();
+    userEditor = createUserEditor({
+        db,
+        auth,
+        state,
+        showToast,
+        copyTextToClipboard,
+        reloadAdminData: loadAdminData,
+        syncMembership,
+        syncPoolMembers,
+        appIds: APP_IDS
+    });
+    userEditor.bind();
     byId('admin-signout-btn').addEventListener('click', () => signOut(auth));
     onAuthStateChanged(auth, handleAdminAuth);
 });
@@ -177,11 +189,21 @@ async function copyTextToClipboard(value) {
 }
 
 function setAdminPanelsHidden(hidden) {
-    document.querySelectorAll('main > section').forEach(section => {
-        if (section.id === 'admin-access-state') {
-            return;
+    if (hidden) {
+        document.querySelectorAll('main > section').forEach(section => {
+            if (section.id !== 'admin-access-state') section.classList.add('hidden');
+        });
+        return;
+    }
+
+    const activeTab = document.querySelector('[data-tab].is-active')?.dataset.tab || 'platform';
+    byId('user-workspace')?.classList.add('hidden');
+    document.querySelectorAll('[data-admin-dashboard]').forEach(section => {
+        if (section.matches('[data-panel]')) {
+            section.classList.toggle('hidden', section.dataset.panel !== activeTab);
+        } else {
+            section.classList.remove('hidden');
         }
-        section.classList.toggle('hidden', hidden);
     });
 }
 
@@ -321,6 +343,7 @@ async function loadAdminData() {
 
     await loadSelectedPoolData();
     renderAdmin();
+    userEditor?.handleDataLoaded();
 }
 
 async function loadSelectedPoolData() {
@@ -497,7 +520,7 @@ function renderOperationsInbox() {
         });
     });
     container.querySelectorAll('[data-ops-user]').forEach(button => {
-        button.addEventListener('click', () => openUserModal(button.dataset.opsUser));
+        button.addEventListener('click', () => userEditor?.open(button.dataset.opsUser));
     });
 }
 
@@ -651,7 +674,7 @@ function renderUsers(filter = '') {
     });
 
     tbody.querySelectorAll('[data-edit-user]').forEach(button => {
-        button.addEventListener('click', () => openUserModal(button.dataset.editUser));
+        button.addEventListener('click', () => userEditor?.open(button.dataset.editUser));
     });
 }
 
@@ -865,277 +888,6 @@ function setPlayoffWorkspace(workspace = 'setup') {
     });
 }
 
-function bindUserModal() {
-    byId('new-user-btn').addEventListener('click', () => openUserModal());
-    byId('user-search').addEventListener('input', event => renderUsers(event.target.value));
-    byId('user-modal-close').addEventListener('click', closeUserModal);
-    byId('user-modal-cancel').addEventListener('click', closeUserModal);
-    byId('archive-user-btn').addEventListener('click', archiveUser);
-    byId('member-strong8k-enabled').addEventListener('change', toggleMembershipPanels);
-    byId('member-playoff-enabled').addEventListener('change', toggleMembershipPanels);
-    byId('add-license-btn').addEventListener('click', () => loadLicenseIntoForm());
-    byId('license-form-save').addEventListener('click', saveLicenseLine);
-    byId('license-form-cancel').addEventListener('click', clearLicenseForm);
-    byId('user-form').addEventListener('submit', saveUser);
-}
-
-function openUserModal(userId = '') {
-    const user = state.users.find(item => item.id === userId);
-    const memberships = user ? (state.membershipsByUser[user.id] || {}) : {};
-    const profile = user ? (state.strong8kProfiles[user.id] || normalizeStrong8kProfile({}, user)) : normalizeStrong8kProfile({}, {});
-    const hasStrong8kData = Boolean(
-        memberships[APP_IDS.STRONG8K]
-        || state.strong8kProfiles[user?.id]
-        || user?.username_8k
-        || (Array.isArray(user?.licenses) && user.licenses.length)
-        || user?.domain_8k
-        || user?.setup_notes
-    );
-
-    byId('user-form').reset();
-    byId('user-id').value = user?.id || '';
-    byId('user-full-name').value = user?.full_name || '';
-    byId('user-email').value = user?.email || '';
-    byId('user-default-app').value = user?.default_app_id || '';
-
-    byId('member-strong8k-enabled').checked = hasStrong8kData;
-    byId('member-strong8k-role').value = memberships[APP_IDS.STRONG8K]?.role || 'member';
-    byId('member-strong8k-status').value = memberships[APP_IDS.STRONG8K]?.status || 'active';
-    byId('member-playoff-enabled').checked = Boolean(memberships[APP_IDS.PLAYOFF]);
-    byId('member-playoff-role').value = memberships[APP_IDS.PLAYOFF]?.role || 'member';
-    byId('member-playoff-status').value = memberships[APP_IDS.PLAYOFF]?.status || 'active';
-    byId('member-playoff-pool-note').textContent = buildPlayoffPoolAssignmentNote();
-
-    byId('strong8k-domain').value = profile.domain_8k || '';
-    byId('strong8k-backup-domain').value = profile.domain_8k_backup || '';
-    byId('strong8k-credits').value = profile.credits_allocated || 0;
-    byId('strong8k-live').value = (profile.live_preferences || []).join(', ');
-    byId('strong8k-vod').value = (profile.vod_preferences || []).join(', ');
-    byId('strong8k-custom-request').value = profile.custom_request || '';
-    byId('strong8k-setup-notes').value = profile.setup_notes || '';
-    byId('strong8k-internal-notes').value = profile.internal_notes || '';
-
-    state.currentLicenses = [...(profile.licenses || [])];
-    renderLicenseList();
-    clearLicenseForm();
-    toggleMembershipPanels();
-    byId('archive-user-btn').classList.toggle('hidden', !user);
-    byId('user-modal').classList.remove('hidden');
-}
-
-function closeUserModal() {
-    byId('user-modal').classList.add('hidden');
-}
-
-function toggleMembershipPanels() {
-    byId('strong8k-membership-panel').classList.toggle('hidden', !byId('member-strong8k-enabled').checked);
-    byId('playoff-membership-panel').classList.toggle('hidden', !byId('member-playoff-enabled').checked);
-}
-
-function renderLicenseList() {
-    const tbody = byId('license-table-body');
-    tbody.innerHTML = '';
-
-    if (!state.currentLicenses.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-sm italic text-slate-400">No Strong8K licenses added yet.</td></tr>';
-        return;
-    }
-
-    state.currentLicenses.forEach((license, index) => {
-        const row = document.createElement('tr');
-        row.className = 'border-b border-slate-100 text-sm';
-        row.innerHTML = `
-            <td class="px-4 py-4 font-semibold text-slate-950">${escapeHtml(license.label || `Line ${index + 1}`)}</td>
-            <td class="px-4 py-4 text-slate-500">${escapeHtml(license.username_8k || '')}</td>
-            <td class="px-4 py-4 text-slate-500">${formatDate(license.expiry_date)}</td>
-            <td class="px-4 py-4 text-slate-500">${escapeHtml(license.status || 'Active')}</td>
-            <td class="px-4 py-4 text-right">
-                <div class="inline-flex gap-2">
-                    <button type="button" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950" data-license-copy="${index}">Copy</button>
-                    <button type="button" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950" data-license-edit="${index}">Edit</button>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-
-    tbody.querySelectorAll('[data-license-edit]').forEach(button => {
-        button.addEventListener('click', () => loadLicenseIntoForm(Number(button.dataset.licenseEdit)));
-    });
-    tbody.querySelectorAll('[data-license-copy]').forEach(button => {
-        button.addEventListener('click', () => copyLicenseBlock(Number(button.dataset.licenseCopy)));
-    });
-}
-
-function copyLicenseBlock(index) {
-    const license = state.currentLicenses[index];
-    if (!license) return;
-    const lines = [
-        license.label ? `Label: ${license.label}` : null,
-        license.username_8k ? `Username: ${license.username_8k}` : null,
-        license.password_8k ? `Password: ${license.password_8k}` : null,
-        license.m3u_url_8k ? `M3U: ${license.m3u_url_8k}` : null,
-        license.epg_url_8k ? `EPG: ${license.epg_url_8k}` : null,
-        license.expiry_date ? `Expiry: ${license.expiry_date}` : null,
-    ].filter(Boolean);
-    copyTextToClipboard(lines.join('\n'))
-        .then(() => showToast('Credentials copied!'))
-        .catch(error => {
-            console.error('Unable to copy credentials', error);
-            showToast('Copy failed. Select the credentials and copy them manually.', 'error');
-        });
-}
-
-function loadLicenseIntoForm(index = -1) {
-    const license = index >= 0 ? state.currentLicenses[index] : null;
-    byId('license-edit-index').value = String(index);
-    byId('license-label').value = license?.label || '';
-    byId('license-status').value = license?.status || 'Active';
-    byId('license-username').value = license?.username_8k || '';
-    byId('license-password').value = license?.password_8k || '';
-    byId('license-expiry').value = license?.expiry_date || '';
-    byId('license-credits').value = license?.credits || 0;
-    byId('license-package').value = license?.package_name || '';
-    byId('license-price').value = license?.price_paid || '';
-    byId('license-date-paid').value = license?.date_paid || '';
-    byId('license-m3u').value = license?.m3u_url_8k || '';
-    byId('license-epg').value = license?.epg_url_8k || '';
-    byId('license-epgenius-key').value = license?.epgenius_key || '';
-    byId('license-epgenius-url').value = license?.epgenius_url || '';
-}
-
-function clearLicenseForm() {
-    byId('license-edit-index').value = '-1';
-    [
-        'license-label',
-        'license-username',
-        'license-password',
-        'license-expiry',
-        'license-credits',
-        'license-package',
-        'license-price',
-        'license-date-paid',
-        'license-m3u',
-        'license-epg',
-        'license-epgenius-key',
-        'license-epgenius-url'
-    ].forEach(id => {
-        byId(id).value = '';
-    });
-    byId('license-status').value = 'Active';
-}
-
-function saveLicenseLine() {
-    const editIndex = Number(byId('license-edit-index').value);
-    const license = {
-        id: editIndex >= 0 ? state.currentLicenses[editIndex].id : crypto.randomUUID(),
-        label: byId('license-label').value,
-        status: byId('license-status').value,
-        username_8k: byId('license-username').value,
-        password_8k: byId('license-password').value,
-        expiry_date: byId('license-expiry').value,
-        credits: Number(byId('license-credits').value || 0),
-        package_name: byId('license-package').value,
-        price_paid: byId('license-price').value,
-        date_paid: byId('license-date-paid').value,
-        m3u_url_8k: byId('license-m3u').value,
-        epg_url_8k: byId('license-epg').value,
-        epgenius_key: byId('license-epgenius-key').value,
-        epgenius_url: byId('license-epgenius-url').value,
-        history: editIndex >= 0 ? (state.currentLicenses[editIndex].history || []) : []
-    };
-
-    if (!license.username_8k || !license.password_8k || !license.expiry_date) {
-        showToast('License username, password, and expiry are required', 'error');
-        return;
-    }
-
-    if (editIndex >= 0) {
-        state.currentLicenses[editIndex] = license;
-    } else {
-        state.currentLicenses.push(license);
-    }
-
-    renderLicenseList();
-    clearLicenseForm();
-}
-
-async function saveUser(event) {
-    event.preventDefault();
-
-    const existingId = byId('user-id').value;
-    const sharedUser = {
-        full_name: byId('user-full-name').value,
-        email: byId('user-email').value,
-        default_app_id: byId('user-default-app').value || ''
-    };
-
-    let userRef;
-    if (existingId) {
-        userRef = doc(db, 'users', existingId);
-        await setDoc(userRef, sharedUser, { merge: true });
-    } else {
-        userRef = await addDoc(collection(db, 'users'), {
-            ...defaultSharedUser(sharedUser.email),
-            ...sharedUser
-        });
-    }
-
-    const userId = userRef.id;
-    const previousMemberships = state.membershipsByUser[userId] || {};
-
-    await syncMembership(userId, APP_IDS.STRONG8K, byId('member-strong8k-enabled').checked, {
-        app_id: APP_IDS.STRONG8K,
-        role: byId('member-strong8k-role').value,
-        status: byId('member-strong8k-status').value,
-        pool_ids: [],
-        invite_code_used: previousMemberships[APP_IDS.STRONG8K]?.invite_code_used || '',
-        created_at: previousMemberships[APP_IDS.STRONG8K]?.created_at || new Date().toISOString()
-    });
-
-    const playoffPoolIds = byId('member-playoff-enabled').checked ? resolveSinglePoolIds() : [];
-    await syncMembership(userId, APP_IDS.PLAYOFF, byId('member-playoff-enabled').checked, {
-        app_id: APP_IDS.PLAYOFF,
-        role: byId('member-playoff-role').value,
-        status: byId('member-playoff-status').value,
-        pool_ids: playoffPoolIds,
-        invite_code_used: previousMemberships[APP_IDS.PLAYOFF]?.invite_code_used || '',
-        created_at: previousMemberships[APP_IDS.PLAYOFF]?.created_at || new Date().toISOString()
-    });
-
-    const shouldPersistStrong8k = byId('member-strong8k-enabled').checked
-        || state.currentLicenses.length > 0
-        || Boolean(
-            byId('strong8k-domain').value
-            || byId('strong8k-backup-domain').value
-            || byId('strong8k-live').value
-            || byId('strong8k-vod').value
-            || byId('strong8k-custom-request').value
-            || byId('strong8k-setup-notes').value
-            || byId('strong8k-internal-notes').value
-        );
-
-    if (shouldPersistStrong8k) {
-        await setDoc(doc(db, 'strong8k_profiles', userId), {
-            status: byId('member-strong8k-status').value,
-            domain_8k: byId('strong8k-domain').value,
-            domain_8k_backup: byId('strong8k-backup-domain').value,
-            credits_allocated: Number(byId('strong8k-credits').value || 0),
-            live_preferences: parseDelimitedList(byId('strong8k-live').value),
-            vod_preferences: parseDelimitedList(byId('strong8k-vod').value),
-            custom_request: byId('strong8k-custom-request').value,
-            setup_notes: byId('strong8k-setup-notes').value,
-            internal_notes: byId('strong8k-internal-notes').value,
-            licenses: state.currentLicenses
-        }, { merge: true });
-    }
-
-    await syncPoolMembers(userId, sharedUser, previousMemberships[APP_IDS.PLAYOFF]?.pool_ids || [], playoffPoolIds);
-
-    closeUserModal();
-    showToast('User saved');
-    await loadAdminData();
-}
 
 async function syncMembership(userId, appId, enabled, membershipData) {
     const membershipRef = doc(db, 'users', userId, 'memberships', appId);
@@ -1183,14 +935,6 @@ async function syncPoolMembers(userId, sharedUser, previousPoolIds, nextPoolIds)
     }
 }
 
-async function archiveUser() {
-    const userId = byId('user-id').value;
-    if (!userId) return;
-    await updateDoc(doc(db, 'users', userId), { deleted: true });
-    closeUserModal();
-    showToast('User archived');
-    await loadAdminData();
-}
 
 const mergeState = { sourceId: '', targetId: '', conflicts: [], conflictChoices: {} };
 

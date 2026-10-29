@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20261027-room-rail';
+import { CONFIG } from './config.js?v=20261027-user-workspace';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -9,7 +9,7 @@ import {
     getSetupNotesValue,
     normalizeStrong8kProfile,
     sortByPrice
-} from './app-model.js?v=20261027-room-rail';
+} from './app-model.js?v=20261027-user-workspace';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -30,7 +30,7 @@ import {
     scorePickDocument,
     sortStandings,
     suggestPayouts
-} from './playoff-logic.js?v=20261027-room-rail';
+} from './playoff-logic.js?v=20261027-user-workspace';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     createUserWithEmailAndPassword,
@@ -48,8 +48,8 @@ import {
     getFirestore,
     orderBy,
     query,
-    runTransaction,
     setDoc,
+    updateDoc,
     where
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
@@ -68,6 +68,7 @@ const VIEW_IDS = [
 
 const state = {
     authUser: null,
+    accountId: '',
     sharedUser: null,
     isPlatformAdmin: false,
     memberships: {},
@@ -76,7 +77,8 @@ const state = {
     strong8k: {
         profile: null,
         products: [],
-        contentOptions: { live_list: [], vod_list: [] }
+        contentOptions: { live_list: [], vod_list: [] },
+        supportEvents: []
     },
     playoff: {
         membership: null,
@@ -140,6 +142,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function byId(id) {
     return document.getElementById(id);
+}
+
+function activeAccountId() {
+    return state.accountId || state.authUser?.uid || '';
 }
 
 function showToast(message, tone = 'default') {
@@ -343,6 +349,7 @@ function resolveInviteCode(code) {
 
 
 function resetSessionState() {
+    state.accountId = '';
     state.sharedUser = null;
     state.isPlatformAdmin = false;
     state.memberships = {};
@@ -351,7 +358,8 @@ function resetSessionState() {
     state.strong8k = {
         profile: null,
         products: [],
-        contentOptions: { live_list: [], vod_list: [] }
+        contentOptions: { live_list: [], vod_list: [] },
+        supportEvents: []
     };
     state.playoff = {
         membership: null,
@@ -404,7 +412,7 @@ async function handleAuthStateChange(user) {
 
 async function hydrateSession(user) {
     state.sharedUser = await loadSharedUser(user);
-    state.memberships = await loadMemberships(user.uid);
+    state.memberships = await loadSessionMemberships(user.uid, state.accountId || user.uid);
     state.accessibleApps = deriveAccessibleApps(state.memberships, state.sharedUser);
     state.isPlatformAdmin = await resolvePlatformAdmin(user);
     byId('switcher-email').textContent = user.email;
@@ -510,23 +518,68 @@ async function openApp(appId) {
 }
 
 async function loadSharedUser(user) {
-    const userRef = doc(db, 'users', user.uid);
-    const userSnap = await getDoc(userRef);
+    const linkRef = doc(db, 'account_links', user.uid);
+    const linkSnap = await getDoc(linkRef);
+    let accountId = linkSnap.exists() ? String(linkSnap.data().account_id || '') : '';
 
-    if (!userSnap.exists()) {
+    if (!accountId) {
+        const directUserRef = doc(db, 'users', user.uid);
+        const directUserSnap = await getDoc(directUserRef);
+        if (directUserSnap.exists()) {
+            accountId = user.uid;
+        } else {
+            const claimableAccount = await findClaimableAccount(user.email, user.uid);
+            accountId = claimableAccount?.id || user.uid;
+            if (claimableAccount) {
+                await setDoc(linkRef, {
+                    account_id: accountId,
+                    email: user.email,
+                    created_at: new Date().toISOString()
+                });
+                await updateDoc(doc(db, 'users', accountId), {
+                    auth_uid: user.uid,
+                    claimed_at: new Date().toISOString()
+                });
+            }
+        }
+    }
+
+    state.accountId = accountId;
+    const accountRef = doc(db, 'users', accountId);
+    const accountSnap = await getDoc(accountRef);
+    if (!accountSnap.exists()) {
         const newUser = {
             ...defaultSharedUser(user.email),
-            email: user.email
+            email: user.email,
+            auth_uid: user.uid
         };
-        await setDoc(userRef, newUser, { merge: true });
-        return newUser;
+        await setDoc(accountRef, newUser, { merge: true });
+        return { id: accountId, ...newUser };
     }
 
     return {
+        id: accountId,
         ...defaultSharedUser(user.email),
-        ...userSnap.data(),
+        ...accountSnap.data(),
         email: user.email
     };
+}
+
+async function findClaimableAccount(email, uid) {
+    if (!email) return null;
+    try {
+        const accountQuery = query(collection(db, 'users'), where('email', '==', email));
+        const results = await getDocs(accountQuery);
+        const match = results.docs.find(item => {
+            if (item.id === uid) return false;
+            const data = item.data();
+            return data.deleted !== true && (!data.auth_uid || data.auth_uid === uid);
+        });
+        return match ? { id: match.id, ...match.data() } : null;
+    } catch (error) {
+        console.warn('Pre-created profile lookup was skipped.', error);
+        return null;
+    }
 }
 
 async function loadMemberships(uid) {
@@ -540,6 +593,18 @@ async function loadMemberships(uid) {
         };
     });
     return memberships;
+}
+
+async function loadSessionMemberships(authUid, accountId) {
+    const directMemberships = await loadMemberships(authUid);
+    if (!accountId || accountId === authUid) return directMemberships;
+    const linkedMemberships = await loadMemberships(accountId);
+    return {
+        ...directMemberships,
+        ...(linkedMemberships[APP_IDS.STRONG8K]
+            ? { [APP_IDS.STRONG8K]: linkedMemberships[APP_IDS.STRONG8K] }
+            : {})
+    };
 }
 
 function bindAuthForms() {
@@ -597,15 +662,38 @@ function renderInviteCodePrompt() {
 }
 
 async function selfActivateApp(appId, inviteCode) {
-    const uid = state.authUser.uid;
-    const membershipRef = doc(db, 'users', uid, 'memberships', appId);
-    await setDoc(membershipRef, {
+    const membershipOwnerId = appId === APP_IDS.STRONG8K ? activeAccountId() : state.authUser.uid;
+    const membershipRef = doc(db, 'users', membershipOwnerId, 'memberships', appId);
+    const membership = {
         ...defaultMembership(appId, inviteCode),
         app_id: appId
+    };
+    if (appId === APP_IDS.PLAYOFF) {
+        const pool = await findSelfServePlayoffPool();
+        membership.pool_ids = pool ? [pool.id] : [];
+    }
+    await setDoc(membershipRef, {
+        ...membership
     }, { merge: true });
     if (appId === APP_IDS.STRONG8K) {
-        await setDoc(doc(db, 'strong8k_profiles', uid), normalizeStrong8kProfile({}, {}), { merge: true });
+        const profileRef = doc(db, 'strong8k_profiles', membershipOwnerId);
+        const profileSnap = await getDoc(profileRef);
+        if (!profileSnap.exists()) {
+            await setDoc(profileRef, customerStrong8kProfileDefaults());
+        }
     }
+}
+
+function customerStrong8kProfileDefaults() {
+    const defaults = normalizeStrong8kProfile({}, {});
+    return {
+        live_preferences: defaults.live_preferences,
+        vod_preferences: defaults.vod_preferences,
+        custom_request: '',
+        setup_notes: '',
+        devices: [],
+        updated_at: new Date().toISOString()
+    };
 }
 
 function bindNoAccessEvents() {
@@ -634,102 +722,6 @@ function bindNoAccessEvents() {
     });
 }
 
-async function claimOrCreateAccount({ uid, email, appId, inviteCode }) {
-    let existingDoc = null;
-    try {
-        const q = query(collection(db, 'users'), where('email', '==', email));
-        const results = await getDocs(q);
-        existingDoc = results.docs.find(item => item.id !== uid) || null;
-    } catch (error) {
-        console.warn('Legacy account lookup skipped during registration bootstrap.', error);
-    }
-
-    if (existingDoc) {
-        await migrateLegacyAccount({
-            oldUserId: existingDoc.id,
-            newUserId: uid,
-            email,
-            appId,
-            inviteCode
-        });
-        return;
-    }
-
-    const userRef = doc(db, 'users', uid);
-    const membershipRef = doc(db, 'users', uid, 'memberships', appId);
-    await setDoc(userRef, {
-        ...defaultSharedUser(email),
-        email,
-        default_app_id: appId
-    }, { merge: true });
-
-    await setDoc(membershipRef, {
-        ...defaultMembership(appId, inviteCode),
-        app_id: appId
-    }, { merge: true });
-
-    if (appId === APP_IDS.STRONG8K) {
-        await setDoc(doc(db, 'strong8k_profiles', uid), normalizeStrong8kProfile({}, {}), { merge: true });
-        return;
-    }
-
-    if (appId === APP_IDS.PLAYOFF) {
-        await ensurePlayoffSelfServeAccess(uid, email);
-    }
-}
-
-async function migrateLegacyAccount({ oldUserId, newUserId, email, appId, inviteCode }) {
-    await runTransaction(db, async transaction => {
-        const oldUserRef = doc(db, 'users', oldUserId);
-        const newUserRef = doc(db, 'users', newUserId);
-        const oldUserSnap = await transaction.get(oldUserRef);
-        const newUserSnap = await transaction.get(newUserRef);
-
-        const oldUserData = oldUserSnap.exists() ? oldUserSnap.data() : {};
-        const newUserData = newUserSnap.exists() ? newUserSnap.data() : {};
-
-        transaction.set(newUserRef, {
-            ...defaultSharedUser(email),
-            ...oldUserData,
-            ...newUserData,
-            email,
-            default_app_id: oldUserData.default_app_id || appId
-        }, { merge: true });
-    });
-
-    const oldMembershipSnap = await getDocs(collection(db, 'users', oldUserId, 'memberships'));
-    for (const membershipDoc of oldMembershipSnap.docs) {
-        await setDoc(doc(db, 'users', newUserId, 'memberships', membershipDoc.id), {
-            ...membershipDoc.data(),
-            app_id: membershipDoc.id,
-            invite_code_used: membershipDoc.data().invite_code_used || CONFIG.INVITE_CODES[membershipDoc.id] || inviteCode
-        }, { merge: true });
-    }
-
-    await setDoc(doc(db, 'users', newUserId, 'memberships', appId), {
-        ...defaultMembership(appId, inviteCode),
-        app_id: appId
-    }, { merge: true });
-
-    const oldProfileRef = doc(db, 'strong8k_profiles', oldUserId);
-    const oldProfileSnap = await getDoc(oldProfileRef);
-    if (oldProfileSnap.exists()) {
-        await setDoc(doc(db, 'strong8k_profiles', newUserId), oldProfileSnap.data(), { merge: true });
-    } else {
-        const oldUserSnap = await getDoc(doc(db, 'users', oldUserId));
-        if (oldUserSnap.exists()) {
-            await setDoc(
-                doc(db, 'strong8k_profiles', newUserId),
-                normalizeStrong8kProfile({}, oldUserSnap.data()),
-                { merge: true }
-            );
-        }
-    }
-
-    if (appId === APP_IDS.PLAYOFF) {
-        await ensurePlayoffSelfServeAccess(newUserId, email);
-    }
-}
 
 function bindSharedActions() {
     byId('switcher-signout-btn').addEventListener('click', () => signOut(auth));
@@ -808,9 +800,11 @@ function renderAppSwitcher(activeMemberships) {
 
 async function loadStrong8kApp() {
     const user = state.authUser;
+    const accountId = state.accountId || user.uid;
     const sharedUser = state.sharedUser || {};
-    const profileSnap = await getDoc(doc(db, 'strong8k_profiles', user.uid));
+    const profileSnap = await getDoc(doc(db, 'strong8k_profiles', accountId));
     const profile = normalizeStrong8kProfile(profileSnap.exists() ? profileSnap.data() : {}, sharedUser);
+    const supportEvents = await loadSharedSupportEvents(accountId);
 
     let contentOptions = { live_list: [], vod_list: [] };
     const configSnap = await getDoc(doc(db, 'strong8k_config', 'content_options'));
@@ -841,7 +835,26 @@ async function loadStrong8kApp() {
     state.strong8k.profile = profile;
     state.strong8k.products = resolvedProducts;
     state.strong8k.contentOptions = contentOptions;
+    state.strong8k.supportEvents = supportEvents;
     renderStrong8k();
+}
+
+async function loadSharedSupportEvents(userId, legacyAccountId = '') {
+    const profileIds = [...new Set([userId, legacyAccountId].filter(Boolean))];
+    const events = [];
+    for (const profileId of profileIds) {
+        try {
+            const eventQuery = query(
+                collection(db, 'strong8k_profiles', profileId, 'support_events'),
+                where('visibility', '==', 'shared')
+            );
+            const snapshot = await getDocs(eventQuery);
+            snapshot.forEach(item => events.push({ id: item.id, profile_id: profileId, ...item.data() }));
+        } catch (error) {
+            console.warn(`Shared support history could not be loaded for ${profileId}.`, error);
+        }
+    }
+    return events.sort((left, right) => String(right.occurred_at || right.created_at || '').localeCompare(String(left.occurred_at || left.created_at || '')));
 }
 
 function renderStrong8k() {
@@ -860,6 +873,45 @@ function renderStrong8k() {
     renderStrong8kPreferenceTags('vod', profile.vod_preferences || [], contentOptions.vod_list || []);
     byId('custom-req').value = profile.custom_request || '';
     byId('setup-notes').value = getSetupNotesValue(profile);
+    renderSharedSupportHistory(state.strong8k.supportEvents || []);
+}
+
+function renderSharedSupportHistory(events) {
+    const container = byId('shared-support-history');
+    if (!container) return;
+    if (!events.length) {
+        container.innerHTML = `
+            <div class="customer-support-empty">
+                <strong>No shared support history yet.</strong>
+                <p>When Elliot records a setup or troubleshooting update for you, it will appear here.</p>
+            </div>`;
+        return;
+    }
+    container.innerHTML = events.map(event => `
+        <article class="customer-support-event">
+            <time datetime="${escapeAttribute(event.occurred_at || '')}">${escapeHtml(formatSupportEventDate(event.occurred_at || event.created_at))}</time>
+            <div>
+                <h3>${escapeHtml(event.summary || 'Support update')}</h3>
+                ${event.details ? `<p>${escapeHtml(event.details)}</p>` : ''}
+                <span>${escapeHtml(formatSupportKind(event.kind))}</span>
+            </div>
+        </article>`).join('');
+}
+
+function formatSupportKind(value) {
+    return {
+        setup: 'Setup',
+        troubleshooting: 'Troubleshooting',
+        renewal: 'Renewal',
+        communication: 'Communication',
+        other: 'Other'
+    }[value] || 'Support';
+}
+
+function formatSupportEventDate(value) {
+    const parsed = new Date(value || '');
+    if (Number.isNaN(parsed.getTime())) return 'Date not recorded';
+    return new Intl.DateTimeFormat('en-CA', { dateStyle: 'medium' }).format(parsed);
 }
 
 function renderStrong8kLicenses(profile) {
@@ -1048,12 +1100,15 @@ function toggleStrong8kPreference(type, value) {
 }
 
 async function saveStrong8kProfile() {
-    const profileRef = doc(db, 'strong8k_profiles', state.authUser.uid);
+    const profileRef = doc(db, 'strong8k_profiles', state.accountId || state.authUser.uid);
     state.strong8k.profile.custom_request = byId('custom-req').value;
     state.strong8k.profile.setup_notes = byId('setup-notes').value;
 
     await setDoc(profileRef, {
-        ...state.strong8k.profile,
+        custom_request: state.strong8k.profile.custom_request,
+        setup_notes: state.strong8k.profile.setup_notes,
+        live_preferences: state.strong8k.profile.live_preferences || [],
+        vod_preferences: state.strong8k.profile.vod_preferences || [],
         updated_at: new Date().toISOString()
     }, { merge: true });
 
@@ -1239,24 +1294,25 @@ async function ensurePlayoffSelfServeAccess(uid, email) {
     const existingMembership = membershipSnap.exists()
         ? { ...defaultMembership(APP_IDS.PLAYOFF), ...membershipSnap.data() }
         : defaultMembership(APP_IDS.PLAYOFF, 'self-serve');
-    const nextPoolIds = Array.from(new Set([...(existingMembership.pool_ids || []), pool.id]));
+
+    if ((existingMembership.status || '') === 'disabled') {
+        throw new Error('This playoff account is disabled. Contact Elliot to restore access.');
+    }
 
     await setDoc(doc(db, 'users', uid), {
         email,
         default_app_id: APP_IDS.PLAYOFF
     }, { merge: true });
 
-    await setDoc(membershipRef, {
-        ...existingMembership,
-        app_id: APP_IDS.PLAYOFF,
-        role: existingMembership.role || 'member',
-        status: existingMembership.status === 'disabled' ? 'disabled' : 'active',
-        invite_code_used: existingMembership.invite_code_used || 'self-serve',
-        pool_ids: nextPoolIds
-    }, { merge: true });
-
-    if ((existingMembership.status || '') === 'disabled') {
-        throw new Error('This playoff account is disabled. Contact Elliot to restore access.');
+    if (!membershipSnap.exists()) {
+        await setDoc(membershipRef, {
+            ...defaultMembership(APP_IDS.PLAYOFF, 'self-serve'),
+            app_id: APP_IDS.PLAYOFF,
+            role: 'member',
+            status: 'active',
+            invite_code_used: 'self-serve',
+            pool_ids: [pool.id]
+        });
     }
 
     const sharedUser = state.sharedUser || defaultSharedUser(email);

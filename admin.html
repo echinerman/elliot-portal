@@ -167,6 +167,134 @@
         .ops-empty strong { color: var(--ink); font-size: .95rem; }
         .ops-empty p { margin: .35rem auto 0; max-width: 54ch; color: #64748b; font-size: .78rem; line-height: 1.55; }
 
+        .user-profile-paper { border: 1px solid #dbe3ec; border-radius: 1rem; background: var(--paper); box-shadow: 0 20px 55px rgba(15, 23, 42, .07); }
+        .user-profile-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--line);
+            border-radius: 1rem 1rem 0 0;
+            background: rgba(255, 255, 255, .97);
+            padding: 1rem 1.25rem;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, .045);
+        }
+        .user-profile-back { display: inline-flex; min-height: 2.75rem; align-items: center; gap: .55rem; border: 1px solid #cbd5e1; border-radius: 999px; padding: .65rem .85rem; color: #334155; font-size: .76rem; font-weight: 850; }
+        .user-profile-back:hover { border-color: var(--ink); color: var(--ink); }
+        .user-profile-identity { min-width: 0; }
+        .user-profile-identity h1 { overflow: hidden; color: var(--ink); font-size: clamp(1.15rem, 2vw, 1.55rem); font-weight: 900; letter-spacing: -.025em; text-overflow: ellipsis; white-space: nowrap; }
+        .user-profile-identity p { margin-top: .2rem; overflow: hidden; color: #64748b; font-size: .74rem; text-overflow: ellipsis; white-space: nowrap; }
+        .user-profile-actions { display: flex; align-items: center; gap: .55rem; }
+        .user-save-state { display: inline-flex; min-height: 2.5rem; align-items: center; gap: .5rem; border-radius: 999px; background: #f1f5f9; padding: .55rem .75rem; color: #475569; font-size: .72rem; font-weight: 800; }
+        .user-save-state[data-state="saving"] { background: #ecfdf5; color: #047857; }
+        .user-save-state[data-state="error"] { background: #fff1f2; color: #be123c; }
+        .user-save-state button { text-decoration: underline; text-underline-offset: .2rem; }
+        .user-profile-menu { position: relative; }
+        .user-profile-menu > summary { display: grid; width: 2.75rem; height: 2.75rem; cursor: pointer; list-style: none; place-items: center; border: 1px solid #cbd5e1; border-radius: 999px; color: #475569; }
+        .user-profile-menu > summary::-webkit-details-marker { display: none; }
+        .user-profile-menu[open] > summary { border-color: var(--ink); color: var(--ink); }
+        .user-profile-menu-panel { position: absolute; top: calc(100% + .5rem); right: 0; width: 15rem; border: 1px solid #cbd5e1; border-radius: .8rem; background: #fff; padding: .4rem; box-shadow: 0 18px 40px rgba(15, 23, 42, .14); }
+        .user-profile-menu-panel button { display: flex; width: 100%; align-items: center; gap: .65rem; border-radius: .75rem; padding: .75rem; color: #be123c; font-size: .76rem; font-weight: 850; text-align: left; }
+        .user-profile-menu-panel button:hover { background: #fff1f2; }
+        .user-membership-strip { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .55rem; }
+        .user-membership-chip { border-radius: 999px; padding: .3rem .55rem; background: #f1f5f9; color: #475569; font-size: .72rem; font-weight: 850; }
+        .user-membership-chip.is-active { background: #d1fae5; color: #047857; }
+        .user-membership-chip.is-pending { background: #fef3c7; color: #92400e; }
+        .user-membership-chip.is-disabled { background: #ffe4e6; color: #be123c; }
+
+        .user-profile-section { padding: clamp(1.35rem, 3vw, 2.25rem); }
+        .user-profile-section + .user-profile-section { border-top: 1px solid var(--line); }
+        .user-profile-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.25rem; margin-bottom: 1.25rem; }
+        .user-profile-section-head h2 { color: var(--ink); font-size: clamp(1.25rem, 2vw, 1.7rem); font-weight: 900; letter-spacing: -.025em; }
+        .user-profile-section-head p { max-width: 68ch; margin-top: .4rem; color: var(--copy); font-size: .8rem; line-height: 1.55; }
+        .user-profile-button { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; gap: .55rem; border: 1px solid #cbd5e1; border-radius: .75rem; padding: .7rem .9rem; color: #334155; font-size: .76rem; font-weight: 850; }
+        .user-profile-button:hover { border-color: var(--ink); color: var(--ink); }
+        .user-profile-button.is-primary { border-color: var(--ink); background: var(--ink); color: #fff; }
+        .user-profile-button.is-primary:hover { background: #1e293b; }
+        .user-profile-button.is-danger { border-color: #fecdd3; color: #be123c; }
+        .user-profile-button:disabled { cursor: not-allowed; opacity: .45; }
+        .user-profile-field { width: 100%; border: 1px solid #cbd5e1; border-radius: .8rem; background: #f8fafc; padding: .8rem .9rem; color: var(--ink); font-size: .82rem; }
+        .user-profile-field:focus { border-color: var(--ink-soft); background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(16, 185, 129, .2); }
+        .user-profile-field-label { display: block; margin-bottom: .45rem; color: #475569; font-size: .72rem; font-weight: 850; }
+        .user-profile-hint { margin-top: .4rem; color: #64748b; font-size: .72rem; line-height: 1.45; }
+        .user-fact-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.15fr) minmax(8rem, .7fr); gap: .85rem; margin-bottom: 1.25rem; }
+
+        .user-license-list { border-top: 1px solid var(--line); }
+        .user-license-empty { padding: 2.5rem 1rem; text-align: center; }
+        .user-license-empty strong { color: var(--ink); font-size: .92rem; }
+        .user-license-empty p { max-width: 48ch; margin: .35rem auto 0; color: #64748b; font-size: .8rem; line-height: 1.55; }
+        .user-license { position: relative; border-bottom: 1px solid var(--line); padding: 1.25rem .25rem; }
+        .user-license:last-child { border-bottom: 0; }
+        .user-license::before { position: absolute; inset-block: 0; left: 0; width: 1px; background: var(--license-accent, var(--muted)); content: ""; }
+        .user-license.is-editing::before { background: var(--emerald); }
+        .user-license-summary { display: grid; grid-template-columns: minmax(9rem, .8fr) repeat(3, minmax(7rem, .65fr)) auto; align-items: center; gap: 1rem; padding-inline: .85rem; }
+        .user-license-name { color: var(--ink); font-size: .92rem; font-weight: 900; }
+        .user-license-meta { color: #64748b; font-size: .72rem; line-height: 1.45; }
+        .user-license-value { margin-top: .2rem; overflow-wrap: anywhere; color: var(--ink); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .76rem; }
+        .user-license-status { display: inline-flex; width: max-content; border-radius: 999px; padding: .35rem .6rem; font-size: .72rem; font-weight: 850; }
+        .user-license-actions { display: flex; justify-content: flex-end; gap: .4rem; }
+        .user-license-actions button { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 1px solid #cbd5e1; border-radius: 999px; color: #475569; }
+        .user-license-actions button:hover { border-color: var(--ink); color: var(--ink); }
+        .user-license-editor { display: none; margin: 1.1rem .85rem 0; border-top: 1px solid var(--line); padding-top: 1.1rem; }
+        .user-license.is-editing .user-license-editor { display: block; animation: profile-editor-in .35s var(--ease-out) both; }
+        .user-license-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; }
+        .user-license-grid .is-wide { grid-column: span 2; }
+        .user-license-grid .is-full { grid-column: 1 / -1; }
+        .user-license-validation { min-height: 1.2rem; margin-top: .8rem; color: #be123c; font-size: .72rem; font-weight: 750; }
+        @keyframes profile-editor-in { from { opacity: .35; transform: translateY(-.35rem); } to { opacity: 1; transform: translateY(0); } }
+
+        .user-new-license { margin-top: 1.25rem; scroll-margin-top: 8rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+        .user-new-license[hidden] { display: none; }
+        .user-new-license h3 { color: var(--ink); font-size: 1rem; font-weight: 900; }
+        .user-new-license p { margin-top: .3rem; color: #64748b; font-size: .8rem; line-height: 1.5; }
+        .user-new-license-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+
+        .user-support-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+        .user-private-note { border: 1px solid #cbd5e1; border-radius: .8rem; background: #f8fafc; padding: .85rem; }
+        .user-private-note textarea { min-height: 11rem; }
+        .user-timeline { margin-top: 1.5rem; border-top: 1px solid var(--line); }
+        .user-timeline-item { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 1rem; border-bottom: 1px solid var(--line); padding: 1.15rem .25rem; }
+        .user-timeline-item:last-child { border-bottom: 0; }
+        .user-timeline-date { color: #64748b; font-size: .72rem; font-weight: 800; line-height: 1.5; }
+        .user-timeline-title { color: var(--ink); font-size: .9rem; font-weight: 900; }
+        .user-timeline-copy { margin-top: .35rem; color: #475569; font-size: .8rem; line-height: 1.6; white-space: pre-wrap; }
+        .user-timeline-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .55rem; }
+        .user-timeline-tag { border-radius: 999px; background: #f1f5f9; padding: .28rem .5rem; color: #475569; font-size: .72rem; font-weight: 850; }
+        .user-timeline-tag.is-shared { background: #d1fae5; color: #047857; }
+        .user-timeline-empty { padding: 2rem .5rem; text-align: center; color: #64748b; font-size: .78rem; }
+        .user-event-composer { margin-top: 1rem; scroll-margin-top: 8rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+        .user-event-composer[hidden] { display: none; }
+        .user-event-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; }
+        .user-event-grid .is-full { grid-column: 1 / -1; }
+
+        .user-account-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 1.5rem; }
+        .user-account-column + .user-account-column { border-left: 1px solid var(--line); padding-left: 1.5rem; }
+        .user-account-column h3 { color: var(--ink); font-size: 1rem; font-weight: 900; }
+        .user-account-column > p { margin-top: .35rem; color: #64748b; font-size: .8rem; line-height: 1.5; }
+        .user-account-fields { display: grid; gap: .85rem; margin-top: 1rem; }
+        .user-access-block { padding-block: 1rem; }
+        .user-access-block + .user-access-block { border-top: 1px solid var(--line); }
+        .user-access-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .user-access-toggle { display: inline-flex; align-items: center; gap: .55rem; color: #334155; font-size: .75rem; font-weight: 850; }
+        .user-access-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-top: .85rem; }
+        .user-pool-list { display: grid; gap: .45rem; grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: .75rem; }
+        .user-pool-option { display: flex; align-items: center; gap: .55rem; color: #475569; font-size: .8rem; }
+        .user-access-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--line); margin-top: 1rem; padding-top: 1rem; }
+        .user-access-actions p { max-width: 48ch; color: #64748b; font-size: .8rem; line-height: 1.45; }
+
+        .user-shell-modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; overflow-y: auto; background: rgba(2, 6, 23, .62); padding: 1rem; }
+        .user-shell-modal[hidden] { display: none; }
+        .user-shell-dialog { width: min(100%, 31rem); border-radius: 1rem; background: #fff; box-shadow: 0 24px 80px rgba(15, 23, 42, .18); }
+        .user-shell-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--line); padding: 1.25rem; }
+        .user-shell-head h2 { color: var(--ink); font-size: 1.3rem; font-weight: 900; letter-spacing: -.025em; }
+        .user-shell-head p { margin-top: .35rem; color: #64748b; font-size: .8rem; line-height: 1.5; }
+        .user-shell-close { display: grid; width: 2.5rem; height: 2.5rem; flex: none; place-items: center; border: 1px solid #cbd5e1; border-radius: 999px; color: #475569; }
+        .user-shell-form { display: grid; gap: 1rem; padding: 1.25rem; }
+        .user-shell-actions { display: flex; justify-content: flex-end; gap: .6rem; }
+
         .admin-rail-backdrop { display: none; }
         .admin-workspace table { min-width: 42rem; }
         .admin-workspace .overflow-hidden { overflow-x: auto; }
@@ -180,6 +308,7 @@
             .admin-rail-backdrop { position: fixed; inset: 0; z-index: 35; display: block; visibility: hidden; background: rgba(2, 6, 23, .58); opacity: 0; transition: opacity .25s ease, visibility .25s ease; }
             .admin-rail-backdrop.is-open { visibility: visible; opacity: 1; }
             .admin-header-inner { align-items: flex-start; flex-direction: column; gap: 1.25rem; }
+            .user-profile-header { top: 4rem; }
         }
         @media (max-width: 720px) {
             .admin-header-inner { padding: 1.5rem 1rem 1.25rem; }
@@ -189,6 +318,25 @@
             .ops-action { justify-self: start; }
             .ops-detail { grid-column: 1; }
             .ops-row.is-open .ops-detail { align-items: flex-start; flex-direction: column; }
+            .user-profile-header { grid-template-columns: auto minmax(0, 1fr) auto; padding: .85rem; }
+            .user-new-license, .user-event-composer { scroll-margin-top: 12rem; }
+            .user-profile-back span { display: none; }
+            .user-profile-actions { gap: .35rem; }
+            .user-save-state { min-width: 2.5rem; justify-content: center; padding-inline: .65rem; }
+            .user-save-state > span { display: none; }
+            .user-fact-grid, .user-support-grid, .user-account-grid { grid-template-columns: 1fr; }
+            .user-account-column + .user-account-column { border-top: 1px solid var(--line); border-left: 0; padding-top: 1.5rem; padding-left: 0; }
+            .user-license-summary { grid-template-columns: minmax(0, 1fr) auto; }
+            .user-license-summary > :nth-child(2), .user-license-summary > :nth-child(3), .user-license-summary > :nth-child(4) { grid-column: 1; }
+            .user-license-actions { grid-row: 1 / span 2; grid-column: 2; }
+            .user-license-grid, .user-event-grid { grid-template-columns: 1fr; }
+            .user-license-grid .is-wide, .user-license-grid .is-full, .user-event-grid .is-full { grid-column: 1; }
+            .user-profile-section-head { align-items: flex-start; flex-direction: column; }
+            .user-profile-section-head .user-profile-button { width: 100%; }
+            .user-timeline-item { grid-template-columns: 1fr; gap: .35rem; }
+            .user-access-fields { grid-template-columns: 1fr; }
+            .user-access-actions { align-items: stretch; flex-direction: column; }
+            .user-access-actions .user-profile-button { width: 100%; }
         }
         @media (prefers-reduced-motion: reduce) {
             html { scroll-behavior: auto; }
@@ -236,7 +384,7 @@
                 <button id="admin-rail-open" type="button" aria-expanded="false"><i class="fa-solid fa-bars" aria-hidden="true"></i>Rooms</button>
                 <span>Operations</span>
             </div>
-            <header class="admin-header">
+            <header id="admin-page-header" class="admin-header">
                 <div class="admin-header-inner">
                     <div>
                         <h1>Operations</h1>
@@ -261,13 +409,195 @@
             </div>
         </section>
 
-        <section class="admin-tabs" role="tablist" aria-label="Operations workspaces">
+        <section id="user-workspace" class="hidden" aria-labelledby="user-workspace-title">
+            <div class="user-profile-paper">
+                <header class="user-profile-header">
+                    <button type="button" id="user-workspace-back" class="user-profile-back">
+                        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>People</span>
+                    </button>
+                    <div class="user-profile-identity">
+                        <h1 id="user-workspace-title">Customer profile</h1>
+                        <p id="user-workspace-email"></p>
+                        <div id="user-membership-strip" class="user-membership-strip" aria-label="Membership status"></div>
+                    </div>
+                    <div class="user-profile-actions">
+                        <div id="user-autosave-status" class="user-save-state" data-state="saved" aria-live="polite">
+                            <i id="user-autosave-icon" class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                            <span id="user-autosave-label">Saved</span>
+                            <button type="button" id="user-autosave-retry" class="hidden">Retry</button>
+                        </div>
+                        <details class="user-profile-menu">
+                            <summary aria-label="Profile actions"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i></summary>
+                            <div class="user-profile-menu-panel">
+                                <button type="button" id="archive-user-btn"><i class="fa-solid fa-box-archive" aria-hidden="true"></i>Archive profile</button>
+                            </div>
+                        </details>
+                    </div>
+                </header>
+
+                <section class="user-profile-section" aria-labelledby="user-licenses-title">
+                    <div class="user-profile-section-head">
+                        <div>
+                            <h2 id="user-licenses-title">Strong8K licenses</h2>
+                            <p>Credentials stay complete and visible here. Existing license edits save automatically; adding or removing a line always asks first.</p>
+                        </div>
+                        <button type="button" id="add-license-btn" class="user-profile-button"><i class="fa-solid fa-plus" aria-hidden="true"></i>Add license</button>
+                    </div>
+
+                    <div class="user-fact-grid">
+                        <label>
+                            <span class="user-profile-field-label">Primary domain</span>
+                            <input id="strong8k-domain" type="text" class="user-profile-field" placeholder="Provider domain" data-profile-field="domain_8k">
+                        </label>
+                        <label>
+                            <span class="user-profile-field-label">Backup domain</span>
+                            <input id="strong8k-backup-domain" type="text" class="user-profile-field" placeholder="Backup provider domain" data-profile-field="domain_8k_backup">
+                        </label>
+                        <label>
+                            <span class="user-profile-field-label">Credits allocated</span>
+                            <input id="strong8k-credits" type="number" min="0" class="user-profile-field" data-profile-field="credits_allocated">
+                        </label>
+                    </div>
+
+                    <div id="user-license-list" class="user-license-list"></div>
+
+                    <form id="new-license-form" class="user-new-license" hidden>
+                        <h3>Add a Strong8K license</h3>
+                        <p>Username, license password, and expiry are required before this line is created.</p>
+                        <div class="user-license-grid mt-4">
+                            <label><span class="user-profile-field-label">Label</span><input id="new-license-label" type="text" class="user-profile-field" placeholder="Living room"></label>
+                            <label><span class="user-profile-field-label">Status</span><select id="new-license-status" class="user-profile-field"><option value="Active">Active</option><option value="Trial">Trial</option><option value="Expired">Expired</option><option value="Banned">Banned</option></select></label>
+                            <label><span class="user-profile-field-label">Expiry</span><input id="new-license-expiry" type="date" class="user-profile-field" required></label>
+                            <label><span class="user-profile-field-label">Username</span><input id="new-license-username" type="text" class="user-profile-field" required></label>
+                            <label><span class="user-profile-field-label">License password</span><input id="new-license-password" type="text" class="user-profile-field" required></label>
+                            <label><span class="user-profile-field-label">Credits</span><input id="new-license-credits" type="number" min="0" class="user-profile-field" value="0"></label>
+                            <label><span class="user-profile-field-label">Package</span><input id="new-license-package" type="text" class="user-profile-field"></label>
+                            <label><span class="user-profile-field-label">Price paid</span><input id="new-license-price" type="text" class="user-profile-field"></label>
+                            <label><span class="user-profile-field-label">Date paid</span><input id="new-license-date-paid" type="date" class="user-profile-field"></label>
+                            <label class="is-wide"><span class="user-profile-field-label">M3U URL</span><input id="new-license-m3u" type="url" class="user-profile-field"></label>
+                            <label><span class="user-profile-field-label">EPG URL</span><input id="new-license-epg" type="url" class="user-profile-field"></label>
+                            <label><span class="user-profile-field-label">EPGenius key</span><input id="new-license-epgenius-key" type="text" class="user-profile-field"></label>
+                            <label class="is-wide"><span class="user-profile-field-label">EPGenius URL</span><input id="new-license-epgenius-url" type="url" class="user-profile-field"></label>
+                        </div>
+                        <p id="new-license-error" class="user-license-validation" role="alert"></p>
+                        <div class="user-new-license-actions">
+                            <button type="submit" class="user-profile-button is-primary">Create license</button>
+                            <button type="button" id="new-license-cancel" class="user-profile-button">Cancel</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="user-profile-section" aria-labelledby="user-support-title">
+                    <div class="user-profile-section-head">
+                        <div>
+                            <h2 id="user-support-title">Setup and support record</h2>
+                            <p>Keep the current setup concise, preserve private working notes, and add dated interactions without rewriting history.</p>
+                        </div>
+                        <button type="button" id="support-event-add-btn" class="user-profile-button"><i class="fa-solid fa-plus" aria-hidden="true"></i>Add interaction</button>
+                    </div>
+
+                    <div class="user-support-grid">
+                        <label>
+                            <span class="user-profile-field-label">Shared setup summary</span>
+                            <textarea id="strong8k-setup-notes" rows="9" class="user-profile-field leading-6" placeholder="Devices, apps, setup decisions, and current troubleshooting context." data-profile-field="setup_notes"></textarea>
+                            <span class="user-profile-hint">The customer can read and update this summary in their portal.</span>
+                        </label>
+                        <label class="user-private-note">
+                            <span class="user-profile-field-label"><i class="fa-solid fa-lock mr-1" aria-hidden="true"></i>Private admin notes</span>
+                            <textarea id="strong8k-internal-notes" rows="9" class="user-profile-field leading-6" placeholder="Interpretation, follow-up, or context that should stay private." data-private-field="internal_notes"></textarea>
+                            <span class="user-profile-hint">Stored separately from the customer-readable Strong8K profile.</span>
+                        </label>
+                    </div>
+
+                    <div class="mt-5 grid gap-4 md:grid-cols-3">
+                        <label><span class="user-profile-field-label">Live TV preferences</span><textarea id="strong8k-live" rows="4" class="user-profile-field" data-profile-field="live_preferences"></textarea></label>
+                        <label><span class="user-profile-field-label">Movies and series</span><textarea id="strong8k-vod" rows="4" class="user-profile-field" data-profile-field="vod_preferences"></textarea></label>
+                        <label><span class="user-profile-field-label">Customer request</span><textarea id="strong8k-custom-request" rows="4" class="user-profile-field" data-profile-field="custom_request"></textarea></label>
+                    </div>
+
+                    <form id="support-event-form" class="user-event-composer" hidden>
+                        <div class="user-event-grid">
+                            <label><span class="user-profile-field-label">When</span><input id="support-event-occurred" type="datetime-local" class="user-profile-field" required></label>
+                            <label><span class="user-profile-field-label">Kind</span><select id="support-event-kind" class="user-profile-field"><option value="setup">Setup</option><option value="troubleshooting">Troubleshooting</option><option value="renewal">Renewal</option><option value="communication">Communication</option><option value="other">Other</option></select></label>
+                            <label><span class="user-profile-field-label">Visibility</span><select id="support-event-visibility" class="user-profile-field"><option value="internal">Internal</option><option value="shared">Shared with customer</option></select></label>
+                            <label class="is-full"><span class="user-profile-field-label">Summary</span><input id="support-event-summary" type="text" class="user-profile-field" maxlength="180" required placeholder="What happened and what comes next"></label>
+                            <label class="is-full"><span class="user-profile-field-label">Details</span><textarea id="support-event-details" rows="4" class="user-profile-field" placeholder="Useful context, decisions, and follow-up."></textarea></label>
+                            <label class="is-full"><span class="user-profile-field-label">Source text or transcript</span><textarea id="support-event-source" rows="5" class="user-profile-field" placeholder="Optional raw notes kept for future consolidation."></textarea><span class="user-profile-hint">Raw source text is never shown in the customer portal.</span></label>
+                        </div>
+                        <p id="support-event-error" class="user-license-validation" role="alert"></p>
+                        <div class="user-new-license-actions">
+                            <button type="submit" class="user-profile-button is-primary">Add interaction</button>
+                            <button type="button" id="support-event-cancel" class="user-profile-button">Cancel</button>
+                        </div>
+                    </form>
+
+                    <div id="user-support-timeline" class="user-timeline" aria-live="polite"></div>
+                </section>
+
+                <section class="user-profile-section" aria-labelledby="user-account-title">
+                    <div class="user-profile-section-head">
+                        <div>
+                            <h2 id="user-account-title">Identity and access</h2>
+                            <p>Identity fields save automatically. App access, roles, status, and pool assignments only change after an explicit review.</p>
+                        </div>
+                    </div>
+
+                    <div class="user-account-grid">
+                        <div class="user-account-column">
+                            <h3>Clubhouse identity</h3>
+                            <p>This does not expose or change the customer’s Firebase account password.</p>
+                            <div class="user-account-fields">
+                                <input type="hidden" id="user-id">
+                                <label><span class="user-profile-field-label">Full name</span><input id="user-full-name" type="text" class="user-profile-field" data-user-field="full_name"></label>
+                                <label><span class="user-profile-field-label">Email</span><input id="user-email" type="email" class="user-profile-field" required data-user-field="email"></label>
+                                <label><span class="user-profile-field-label">Default room</span><select id="user-default-app" class="user-profile-field" data-user-field="default_app_id"><option value="">Choose automatically</option><option value="strong8k">Strong8K</option><option value="playoff-pool">Playoff Pool</option></select></label>
+                            </div>
+                        </div>
+
+                        <div class="user-account-column">
+                            <h3>App access</h3>
+                            <p>Review the complete change before applying it across memberships and playoff records.</p>
+
+                            <div class="user-access-block">
+                                <div class="user-access-head">
+                                    <strong class="text-sm text-slate-950">Strong8K</strong>
+                                    <label class="user-access-toggle"><input id="member-strong8k-enabled" type="checkbox">Enabled</label>
+                                </div>
+                                <div id="strong8k-membership-panel" class="user-access-fields">
+                                    <label><span class="user-profile-field-label">Role</span><select id="member-strong8k-role" class="user-profile-field"><option value="member">Member</option><option value="admin">Admin</option></select></label>
+                                    <label><span class="user-profile-field-label">Status</span><select id="member-strong8k-status" class="user-profile-field"><option value="active">Active</option><option value="pending">Pending</option><option value="disabled">Disabled</option></select></label>
+                                </div>
+                            </div>
+
+                            <div class="user-access-block">
+                                <div class="user-access-head">
+                                    <strong class="text-sm text-slate-950">Playoff Pool</strong>
+                                    <label class="user-access-toggle"><input id="member-playoff-enabled" type="checkbox">Enabled</label>
+                                </div>
+                                <div id="playoff-membership-panel" class="user-access-fields">
+                                    <label><span class="user-profile-field-label">Role</span><select id="member-playoff-role" class="user-profile-field"><option value="member">Member</option><option value="admin">Admin</option></select></label>
+                                    <label><span class="user-profile-field-label">Status</span><select id="member-playoff-status" class="user-profile-field"><option value="active">Active</option><option value="pending">Pending</option><option value="disabled">Disabled</option></select></label>
+                                    <div id="member-playoff-pools" class="user-pool-list"></div>
+                                </div>
+                            </div>
+
+                            <div class="user-access-actions">
+                                <p id="user-access-summary">No access changes waiting.</p>
+                                <button type="button" id="user-access-apply" class="user-profile-button is-primary" disabled>Review and apply</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section class="admin-tabs" role="tablist" aria-label="Operations workspaces" data-admin-dashboard>
             <button id="admin-tab-platform" type="button" role="tab" aria-controls="admin-panel-platform" aria-selected="true" data-tab="platform" class="is-active">Action inbox</button>
             <button id="admin-tab-strong8k" type="button" role="tab" aria-controls="admin-panel-strong8k" aria-selected="false" data-tab="strong8k">Strong8K tools</button>
             <button id="admin-tab-playoff" type="button" role="tab" aria-controls="admin-panel-playoff" aria-selected="false" data-tab="playoff">Playoff administration</button>
         </section>
 
-        <section id="admin-panel-platform" role="tabpanel" aria-labelledby="admin-tab-platform" data-panel="platform" class="space-y-6">
+        <section id="admin-panel-platform" role="tabpanel" aria-labelledby="admin-tab-platform" data-panel="platform" data-admin-dashboard class="space-y-6">
             <section class="admin-paper" aria-labelledby="operations-inbox-title">
                 <div class="admin-paper-head">
                     <div>
@@ -317,7 +647,7 @@
             </div>
         </section>
 
-        <section id="admin-panel-strong8k" role="tabpanel" aria-labelledby="admin-tab-strong8k" data-panel="strong8k" class="hidden space-y-6">
+        <section id="admin-panel-strong8k" role="tabpanel" aria-labelledby="admin-tab-strong8k" data-panel="strong8k" data-admin-dashboard class="hidden space-y-6">
             <div class="grid gap-6 xl:grid-cols-[1fr_1fr]">
                 <form id="strong8k-config-form" class="rounded-[1.75rem] bg-white p-6 shadow-sm">
                     <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Strong8K Config</p>
@@ -381,9 +711,17 @@
                 </div>
                 <p id="strong8k-sync-result" class="mt-4 text-sm leading-6 text-slate-500">No sync preview yet.</p>
             </section>
+            <section class="rounded-[1.75rem] bg-white p-6 shadow-sm">
+                <h2 class="text-2xl font-black text-slate-950">Private notes migration</h2>
+                <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-500">Move legacy internal notes out of customer-readable Strong8K profiles. The migration writes and verifies the private copy before removing the old field, and it is safe to retry.</p>
+                <div class="mt-5 flex flex-wrap items-center gap-3">
+                    <button type="button" id="private-notes-migration-btn" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Check and migrate notes</button>
+                    <span id="private-notes-migration-result" class="text-sm text-slate-500">Not checked yet.</span>
+                </div>
+            </section>
         </section>
 
-        <section id="admin-panel-playoff" role="tabpanel" aria-labelledby="admin-tab-playoff" data-panel="playoff" class="hidden space-y-6">
+        <section id="admin-panel-playoff" role="tabpanel" aria-labelledby="admin-tab-playoff" data-panel="playoff" data-admin-dashboard class="hidden space-y-6">
             <section class="rounded-[1.75rem] bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                     <div class="max-w-3xl">
@@ -839,164 +1177,22 @@
         </div>
     </div>
 
-    <div id="user-modal" class="fixed inset-0 hidden flex items-start justify-center overflow-y-auto bg-slate-950/60 p-4 py-10">
-        <div class="w-full max-w-6xl rounded-[2rem] bg-white shadow-float">
-            <div class="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+    <div id="new-user-modal" class="user-shell-modal" hidden>
+        <div class="user-shell-dialog" role="dialog" aria-modal="true" aria-labelledby="new-user-title">
+            <div class="user-shell-head">
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">User Editor</p>
-                    <h2 class="mt-2 text-2xl font-black text-slate-950">Shared identity plus app-specific access</h2>
+                    <h2 id="new-user-title">Create a customer profile</h2>
+                    <p>Start with the identity only. Licenses and access can be added from the full workspace, and later registration will claim this profile by email.</p>
                 </div>
-                <button id="user-modal-close" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Close</button>
+                <button type="button" id="new-user-close" class="user-shell-close" aria-label="Close new customer form"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
             </div>
-
-            <form id="user-form" class="space-y-8 px-6 py-6">
-                <input type="hidden" id="user-id">
-
-                <section class="grid gap-4 md:grid-cols-3">
-                    <input id="user-full-name" type="text" placeholder="Full name" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                    <input id="user-email" type="email" placeholder="Email" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900" required>
-                    <select id="user-default-app" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                        <option value="">Auto route</option>
-                        <option value="strong8k">Strong8K</option>
-                        <option value="playoff-pool">Playoff Pool</option>
-                    </select>
-                </section>
-                <section class="grid gap-6 xl:grid-cols-2">
-                    <article class="rounded-[1.5rem] border border-slate-200 p-5">
-                        <div class="flex items-center justify-between gap-4">
-                            <div>
-                                <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Strong8K Membership</p>
-                                <h3 class="mt-2 text-xl font-black text-slate-950">App access + profile</h3>
-                            </div>
-                            <label class="inline-flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <input id="member-strong8k-enabled" type="checkbox" class="h-4 w-4 rounded border-slate-300">
-                                Enabled
-                            </label>
-                        </div>
-                        <div id="strong8k-membership-panel" class="mt-5 space-y-5">
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <select id="member-strong8k-role" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <option value="member">Member</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                                <select id="member-strong8k-status" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <option value="active">Active</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="disabled">Disabled</option>
-                                </select>
-                            </div>
-                            <div class="grid gap-4 md:grid-cols-3">
-                                <input id="strong8k-domain" type="text" placeholder="Primary domain" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                <input id="strong8k-backup-domain" type="text" placeholder="Backup domain" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                <input id="strong8k-credits" type="number" placeholder="Credits allocated" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                            </div>
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <textarea id="strong8k-live" rows="3" placeholder="Live preferences (comma separated)" class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900"></textarea>
-                                <textarea id="strong8k-vod" rows="3" placeholder="VOD preferences (comma separated)" class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900"></textarea>
-                            </div>
-                            <textarea id="strong8k-custom-request" rows="3" placeholder="Custom request" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900"></textarea>
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <textarea id="strong8k-setup-notes" rows="5" placeholder="Shared setup notes" class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900"></textarea>
-                                <textarea id="strong8k-internal-notes" rows="5" placeholder="Internal admin notes" class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900"></textarea>
-                            </div>
-                            <div class="rounded-[1.5rem] border border-slate-100 bg-slate-50 p-4">
-                                <div class="flex items-start justify-between gap-4">
-                                    <div>
-                                        <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Licenses</p>
-                                        <h4 class="mt-2 text-lg font-black text-slate-950">Line-by-line credentials</h4>
-                                    </div>
-                                    <button type="button" id="add-license-btn" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Add License</button>
-                                </div>
-                                <div class="mt-5 overflow-hidden rounded-[1.25rem] border border-slate-200 bg-white">
-                                    <table class="w-full text-left">
-                                        <thead class="bg-slate-50 text-[11px] uppercase tracking-[0.22em] text-slate-400">
-                                            <tr>
-                                                <th class="px-4 py-3">Label</th>
-                                                <th class="px-4 py-3">Username</th>
-                                                <th class="px-4 py-3">Expiry</th>
-                                                <th class="px-4 py-3">Status</th>
-                                                <th class="px-4 py-3 text-right">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="license-table-body"></tbody>
-                                    </table>
-                                </div>
-                                <div class="mt-5 grid gap-3 md:grid-cols-3">
-                                    <input type="hidden" id="license-edit-index" value="-1">
-                                    <input id="license-label" type="text" placeholder="Label" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <select id="license-status" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                        <option value="Active">Active</option>
-                                        <option value="Trial">Trial</option>
-                                        <option value="Expired">Expired</option>
-                                        <option value="Banned">Banned</option>
-                                    </select>
-                                    <input id="license-expiry" type="date" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <input id="license-username" type="text" placeholder="Username" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <input id="license-password" type="text" placeholder="Password" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <input id="license-credits" type="number" placeholder="Credits" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <input id="license-package" type="text" placeholder="Package ID / name" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <input id="license-price" type="text" placeholder="Price paid" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <input id="license-date-paid" type="date" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <input id="license-m3u" type="text" placeholder="M3U URL" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900 md:col-span-2">
-                                    <input id="license-epg" type="text" placeholder="EPG URL" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <details class="group md:col-span-3">
-                                        <summary class="cursor-pointer list-none text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 hover:text-slate-700">
-                                            <span class="inline-flex items-center gap-2">
-                                                <i class="fa-solid fa-chevron-right text-[9px] transition-transform group-open:rotate-90"></i>
-                                                Advanced — EPGenius Integration
-                                            </span>
-                                        </summary>
-                                        <div class="mt-3 grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-3">
-                                            <input id="license-epgenius-key" type="text" placeholder="EPGenius key" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                            <input id="license-epgenius-url" type="text" placeholder="EPGenius URL" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900 md:col-span-2">
-                                        </div>
-                                    </details>
-                                </div>
-                                <div class="mt-4 flex gap-3">
-                                    <button type="button" id="license-form-save" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save License</button>
-                                    <button type="button" id="license-form-cancel" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Clear</button>
-                                </div>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article class="rounded-[1.5rem] border border-slate-200 p-5">
-                        <div class="flex items-center justify-between gap-4">
-                            <div>
-                                <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Playoff Membership</p>
-                                <h3 class="mt-2 text-xl font-black text-slate-950">Single pool access</h3>
-                            </div>
-                            <label class="inline-flex items-center gap-3 text-sm font-bold text-slate-700">
-                                <input id="member-playoff-enabled" type="checkbox" class="h-4 w-4 rounded border-slate-300">
-                                Enabled
-                            </label>
-                        </div>
-                        <div id="playoff-membership-panel" class="mt-5 space-y-5">
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <select id="member-playoff-role" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <option value="member">Member</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                                <select id="member-playoff-status" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                    <option value="active">Active</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="disabled">Disabled</option>
-                                </select>
-                            </div>
-                            <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4">
-                                <p class="text-xs font-bold uppercase tracking-[0.22em] text-slate-400">Pool Assignment</p>
-                                <p id="member-playoff-pool-note" class="mt-2 text-sm leading-6 text-slate-600">This user will be attached to the single active playoff pool automatically.</p>
-                            </div>
-                        </div>
-                    </article>
-                </section>
-
-                <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                    <button type="button" id="archive-user-btn" class="hidden rounded-full border border-rose-200 px-5 py-3 text-sm font-bold text-rose-600 transition hover:border-rose-500 hover:text-rose-700">Archive User</button>
-                    <div class="flex flex-wrap gap-3">
-                        <button type="button" id="user-modal-cancel" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Cancel</button>
-                        <button type="submit" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save User</button>
-                    </div>
+            <form id="new-user-form" class="user-shell-form">
+                <label><span class="user-profile-field-label">Full name</span><input id="new-user-name" type="text" class="user-profile-field" autocomplete="name" required></label>
+                <label><span class="user-profile-field-label">Email</span><input id="new-user-email" type="email" class="user-profile-field" autocomplete="email" required></label>
+                <p id="new-user-error" class="user-license-validation" role="alert"></p>
+                <div class="user-shell-actions">
+                    <button type="button" id="new-user-cancel" class="user-profile-button">Cancel</button>
+                    <button type="submit" id="new-user-submit" class="user-profile-button is-primary">Create profile</button>
                 </div>
             </form>
         </div>
@@ -1041,6 +1237,6 @@
         </div>
     </div>
 
-    <script type="module" src="./admin-app.js?v=20261027-room-rail"></script>
+    <script type="module" src="./admin-app.js?v=20261027-user-workspace"></script>
 </body>
 </html>
