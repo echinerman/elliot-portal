@@ -6,6 +6,14 @@ import {
     parseDelimitedList
 } from './app-model.js?v=20261027-user-workspace';
 import {
+    buildReconciliationDifferences,
+    buildStrong8kUrls,
+    canonicalizeReconciliationSnapshot,
+    normalizeProviderBaseUrl,
+    reconciliationBaselineMatches,
+    selectedFieldsWithDependencies
+} from './strong8k-reconciliation.mjs?v=20261029-provider-reconciliation';
+import {
     addDoc,
     collection,
     deleteField,
@@ -37,7 +45,8 @@ export function createUserEditor({
     reloadAdminData,
     syncMembership,
     syncPoolMembers,
-    appIds
+    appIds,
+    deviceInfoWebhookUrl
 }) {
     const local = {
         activeUserId: '',
@@ -46,6 +55,10 @@ export function createUserEditor({
         privateNotes: '',
         accessBaseline: '',
         pendingLicensePatches: {},
+        providerChecks: {},
+        profileDomainProposal: null,
+        checkAll: null,
+        reconciliationController: null,
         autosave: {
             queue: Promise.resolve(),
             timers: new Map(),
@@ -73,6 +86,8 @@ export function createUserEditor({
         byId('user-autosave-retry')?.addEventListener('click', retryFailedSave);
         byId('archive-user-btn')?.addEventListener('click', archiveActiveUser);
         byId('add-license-btn')?.addEventListener('click', openNewLicenseForm);
+        byId('check-all-licenses-btn')?.addEventListener('click', () => checkAllLicenses());
+        byId('strong8k-check-all-status')?.addEventListener('click', handleProfileCheckClick);
         byId('new-license-cancel')?.addEventListener('click', closeNewLicenseForm);
         byId('new-license-form')?.addEventListener('submit', createLicense);
         byId('user-license-list')?.addEventListener('click', handleLicenseClick);
@@ -164,8 +179,11 @@ export function createUserEditor({
     }
 
     function showDashboard() {
+        local.reconciliationController?.abort();
+        local.reconciliationController = null;
         local.activeUserId = '';
         local.expandedLicenseId = '';
+        resetReconciliationState();
         byId('user-workspace')?.classList.add('hidden');
         byId('admin-page-header')?.classList.remove('hidden');
         const activeTab = document.querySelector('[data-tab].is-active')?.dataset.tab || 'platform';
@@ -198,6 +216,9 @@ export function createUserEditor({
         local.activeUserId = userId;
         local.expandedLicenseId = '';
         local.pendingLicensePatches = {};
+        local.reconciliationController?.abort();
+        local.reconciliationController = null;
+        resetReconciliationState();
         resetAutosaveState();
 
         document.querySelectorAll('[data-admin-dashboard]').forEach(section => section.classList.add('hidden'));
@@ -518,6 +539,7 @@ export function createUserEditor({
     function renderLicenses() {
         const container = byId('user-license-list');
         const licenses = state.currentLicenses || [];
+        renderProfileCheckSummary();
         if (!licenses.length) {
             container.innerHTML = `
                 <div class="user-license-empty">
@@ -530,6 +552,8 @@ export function createUserEditor({
         container.innerHTML = licenses.map(license => {
             const presentation = licensePresentation(license);
             const isEditing = local.expandedLicenseId === license.id;
+            const check = local.providerChecks[license.id] || null;
+            const isChecking = ['checking', 'applying'].includes(check?.status);
             const paidSummary = [license.package_name, license.price_paid ? `Paid ${license.price_paid}` : '', license.date_paid ? formatDate(license.date_paid) : ''].filter(Boolean).join(' / ') || 'No package or payment details';
             return `
                 <article class="user-license ${isEditing ? 'is-editing' : ''}" data-license-id="${escapeAttribute(license.id)}" style="--license-accent:${presentation.accent}">
@@ -543,6 +567,7 @@ export function createUserEditor({
                         <div><div class="user-license-meta">License password</div><div class="user-license-value">${escapeHtml(license.password_8k || 'Missing')}</div></div>
                         <div><div class="user-license-meta">Expiry</div><div class="user-license-value">${escapeHtml(formatDate(license.expiry_date))}</div></div>
                         <div class="user-license-actions">
+                            <button type="button" class="user-license-check" data-license-check="${escapeAttribute(license.id)}" ${isChecking ? 'disabled' : ''}><i class="fa-solid ${isChecking ? 'fa-rotate fa-spin' : 'fa-arrows-rotate'}" aria-hidden="true"></i><span>${isChecking ? 'Checking' : 'Check Strong8K'}</span></button>
                             <button type="button" data-license-copy-all="${escapeAttribute(license.id)}" aria-label="Copy all credentials"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
                             <button type="button" data-license-edit="${escapeAttribute(license.id)}" aria-label="${isEditing ? 'Close' : 'Edit'} license"><i class="fa-solid ${isEditing ? 'fa-chevron-up' : 'fa-pen'}" aria-hidden="true"></i></button>
                             <button type="button" data-license-remove="${escapeAttribute(license.id)}" aria-label="Remove license"><i class="fa-regular fa-trash-can" aria-hidden="true"></i></button>
@@ -554,10 +579,11 @@ export function createUserEditor({
                         ${licenseCopyRow('EPGenius URL', license.epgenius_url)}
                         ${licenseCopyRow('EPGenius key', license.epgenius_key)}
                     </div>
+                    ${renderProviderCheck(license, check)}
                     <div class="user-license-editor">
                         <div class="user-license-grid">
                             ${licenseInput('Label', 'label', license.label)}
-                            ${licenseSelect('Status', 'status', license.status || 'Active', ['Active', 'Trial', 'Expired', 'Banned'])}
+                            ${licenseSelect('Status', 'status', license.status || 'Active', ['Active', 'Disabled', 'Trial', 'Expired', 'Banned'])}
                             ${licenseInput('Expiry', 'expiry_date', license.expiry_date, 'date')}
                             ${licenseInput('Username', 'username_8k', license.username_8k)}
                             ${licenseInput('License password', 'password_8k', license.password_8k)}
@@ -574,6 +600,161 @@ export function createUserEditor({
                     </div>
                 </article>`;
         }).join('');
+    }
+
+    function renderProviderCheck(license, check) {
+        if (!check) return '';
+        const checkedAt = check.checkedAt ? `<time class="user-provider-time" datetime="${escapeAttribute(check.checkedAt)}">${escapeHtml(formatDateTime(check.checkedAt))}</time>` : '';
+        if (check.status === 'checking') {
+            return `
+                <div class="user-provider-check" aria-live="polite">
+                    <div class="user-provider-head">
+                        <div><div class="user-provider-title"><i class="fa-solid fa-rotate fa-spin" aria-hidden="true"></i>Checking Strong8K</div><p class="user-provider-copy">Reading the saved license securely and asking the provider for its current details.</p></div>
+                    </div>
+                </div>`;
+        }
+        if (check.status === 'applying') {
+            return `
+                <div class="user-provider-check" aria-live="polite">
+                    <div class="user-provider-head">
+                        <div><div class="user-provider-title"><i class="fa-solid fa-rotate fa-spin" aria-hidden="true"></i>Applying selected changes</div><p class="user-provider-copy">Saving the reviewed fields, then checking Strong8K a second time.</p></div>
+                        ${checkedAt}
+                    </div>
+                </div>`;
+        }
+        if (check.status === 'error') {
+            const credentialHelp = check.code === 'INVALID_CREDENTIALS'
+                ? 'The saved username or license password was not accepted. The editor is open below so you can correct them and retry.'
+                : check.message;
+            return `
+                <div class="user-provider-check" aria-live="polite">
+                    <div class="user-provider-head">
+                        <div><div class="user-provider-title is-error"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>Strong8K check failed</div><p class="user-provider-copy">${escapeHtml(credentialHelp || 'The provider could not be checked. Retry in a moment.')}</p></div>
+                        ${checkedAt}
+                    </div>
+                    <div class="user-provider-actions">
+                        <button type="button" class="user-profile-button" data-license-check="${escapeAttribute(license.id)}"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>Retry check</button>
+                        <button type="button" class="user-profile-button" data-license-check-dismiss="${escapeAttribute(license.id)}">Dismiss</button>
+                    </div>
+                </div>`;
+        }
+        if (['clean', 'verified'].includes(check.status)) {
+            const title = check.status === 'verified' ? 'Update verified' : 'Profile matches Strong8K';
+            const copy = check.status === 'verified'
+                ? 'The selected fields were saved and a second provider check found no remaining differences.'
+                : 'The saved username, password, expiry, status, domain, and generated URLs are current.';
+            return `
+                <div class="user-provider-check" aria-live="polite">
+                    <div class="user-provider-head">
+                        <div><div class="user-provider-title is-positive"><i class="fa-solid fa-circle-check" aria-hidden="true"></i>${title}</div><p class="user-provider-copy">${copy}</p></div>
+                        ${checkedAt}
+                    </div>
+                    ${renderProviderMetadata(check.metadata)}
+                    <div class="user-provider-actions"><button type="button" class="user-profile-button" data-license-check="${escapeAttribute(license.id)}">Check again</button><button type="button" class="user-profile-button" data-license-check-dismiss="${escapeAttribute(license.id)}">Dismiss</button></div>
+                </div>`;
+        }
+        if (check.status === 'warning') {
+            return `
+                <div class="user-provider-check" aria-live="polite">
+                    <div class="user-provider-head">
+                        <div><div class="user-provider-title is-attention"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>Saved, verification pending</div><p class="user-provider-copy">${escapeHtml(check.message || 'The changes were saved, but the follow-up provider check was unavailable.')}</p></div>
+                        ${checkedAt}
+                    </div>
+                    <div class="user-provider-actions"><button type="button" class="user-profile-button" data-license-check="${escapeAttribute(license.id)}">Retry verification</button><button type="button" class="user-profile-button" data-license-check-dismiss="${escapeAttribute(license.id)}">Dismiss</button></div>
+                </div>`;
+        }
+
+        const selectedFields = new Set(check.selectedFields || []);
+        const sourceSelected = ['username_8k', 'password_8k', 'domain_8k'].some(field => selectedFields.has(field));
+        const selectableDifferences = check.differences.filter(difference => !difference.blocked);
+        const hasSelection = selectableDifferences.some(difference => selectedFields.has(difference.key));
+        return `
+            <div class="user-provider-check" aria-live="polite">
+                <div class="user-provider-head">
+                    <div><div class="user-provider-title is-attention"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>${check.differences.length} difference${check.differences.length === 1 ? '' : 's'} found</div><p class="user-provider-copy">Review the current and provider values. Checked fields are the only ones that will be applied.</p></div>
+                    ${checkedAt}
+                </div>
+                <div class="user-provider-diffs">
+                    ${check.differences.map(difference => {
+                        const locked = difference.derived && sourceSelected;
+                        const disabled = difference.blocked || locked;
+                        const note = difference.blocked
+                            ? 'Run Check all licenses before changing a shared domain.'
+                            : locked
+                                ? 'Included with the selected credential or domain change.'
+                                : '';
+                        return `
+                            <label class="user-provider-diff">
+                                <input type="checkbox" data-check-field="${escapeAttribute(difference.key)}" data-check-license="${escapeAttribute(license.id)}" ${selectedFields.has(difference.key) ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+                                <span class="user-provider-diff-label">${escapeHtml(difference.label)}${note ? `<span class="user-provider-diff-note">${escapeHtml(note)}</span>` : ''}</span>
+                                <span><span class="user-provider-value-label">Saved now</span><span class="user-provider-value">${escapeHtml(displayProviderValue(difference.current))}</span></span>
+                                <span><span class="user-provider-value-label">Strong8K reports</span><span class="user-provider-value">${escapeHtml(displayProviderValue(difference.provider))}</span></span>
+                            </label>`;
+                    }).join('')}
+                </div>
+                ${renderProviderMetadata(check.metadata)}
+                <div class="user-provider-actions">
+                    <button type="button" class="user-profile-button is-primary" data-license-check-apply="${escapeAttribute(license.id)}" ${hasSelection ? '' : 'disabled'}>Apply selected changes</button>
+                    <button type="button" class="user-profile-button" data-license-check="${escapeAttribute(license.id)}">Check again</button>
+                    <button type="button" class="user-profile-button" data-license-check-dismiss="${escapeAttribute(license.id)}">Cancel</button>
+                </div>
+            </div>`;
+    }
+
+    function renderProviderMetadata(metadata = {}) {
+        const entries = [
+            ['Provider user ID', metadata.provider_user_id],
+            ['Country', metadata.country],
+            ['Provider note', metadata.note],
+            ['Raw base URL', metadata.url]
+        ].filter(([, value]) => String(value || '').trim());
+        if (!entries.length) return '';
+        return `<div class="user-provider-metadata">${entries.map(([label, value]) => `<span><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</span>`).join('')}</div>`;
+    }
+
+    function displayProviderValue(value) {
+        return String(value ?? '').trim() || 'Not saved';
+    }
+
+    function renderProfileCheckSummary() {
+        const container = byId('strong8k-check-all-status');
+        const button = byId('check-all-licenses-btn');
+        if (!container || !button) return;
+        button.disabled = Boolean(local.checkAll?.running);
+        button.innerHTML = local.checkAll?.running
+            ? '<i class="fa-solid fa-rotate fa-spin" aria-hidden="true"></i>Checking licenses'
+            : '<i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>Check all licenses';
+        if (!local.checkAll && !local.profileDomainProposal) {
+            container.hidden = true;
+            container.innerHTML = '';
+            return;
+        }
+
+        container.hidden = false;
+        if (local.checkAll?.running) {
+            const activeNumber = Math.min(local.checkAll.completed + 1, local.checkAll.total);
+            container.innerHTML = `<div class="user-check-all-head"><div><div class="user-check-all-title"><i class="fa-solid fa-rotate fa-spin" aria-hidden="true"></i>Checking ${activeNumber} of ${local.checkAll.total}</div><p class="user-check-all-copy">Checks run one at a time so the provider is not flooded with requests.</p></div></div>`;
+            return;
+        }
+
+        const summary = local.checkAll || { clean: 0, changed: 0, failed: 0, total: 0 };
+        const proposal = local.profileDomainProposal;
+        const resultCopy = `${summary.clean} current, ${summary.changed} with differences, ${summary.failed} failed.`;
+        const proposalCopy = proposal?.status === 'ready'
+            ? `Every license reports ${proposal.domain}. Apply it as the shared primary domain and rebuild each saved M3U and EPG URL.`
+            : proposal?.reason || 'Shared domain changes stay locked unless every license completes and reports the same provider domain.';
+        container.innerHTML = `
+            <div class="user-check-all-head">
+                <div>
+                    <div class="user-check-all-title"><i class="fa-solid ${summary.failed ? 'fa-triangle-exclamation' : 'fa-circle-check'}" aria-hidden="true"></i>Profile check complete</div>
+                    <p class="user-check-all-copy">${escapeHtml(resultCopy)} ${escapeHtml(proposalCopy)}</p>
+                    ${proposal?.status === 'ready' ? `<div class="user-provider-value mt-2">${escapeHtml(proposal.domain)}</div>` : ''}
+                </div>
+                <div class="user-check-all-actions">
+                    ${proposal?.status === 'ready' ? '<button type="button" class="user-profile-button is-primary" data-profile-domain-apply>Apply shared domain</button>' : ''}
+                    <button type="button" class="user-profile-button" data-profile-check-dismiss>Dismiss summary</button>
+                </div>
+            </div>`;
     }
 
     function licenseCopyRow(label, value) {
@@ -603,6 +784,9 @@ export function createUserEditor({
         if (status === 'expired' || (daysRemaining !== null && daysRemaining < 0)) {
             return { label: 'Expired', className: 'bg-rose-100 text-rose-800', accent: '#e11d48' };
         }
+        if (status === 'disabled' || status === 'banned') {
+            return { label: status === 'banned' ? 'Banned' : 'Disabled', className: 'bg-rose-100 text-rose-800', accent: '#e11d48' };
+        }
         if (daysRemaining !== null && daysRemaining <= 30) {
             return { label: `${Math.max(daysRemaining, 0)} days left`, className: 'bg-amber-100 text-amber-900', accent: '#d97706' };
         }
@@ -613,6 +797,31 @@ export function createUserEditor({
     }
 
     async function handleLicenseClick(event) {
+        const selection = event.target.closest('[data-check-field]');
+        if (selection) {
+            updateProviderSelection(selection.dataset.checkLicense, selection.dataset.checkField, selection.checked);
+            return;
+        }
+
+        const checkButton = event.target.closest('[data-license-check]');
+        if (checkButton) {
+            await checkLicense(checkButton.dataset.licenseCheck);
+            return;
+        }
+
+        const applyButton = event.target.closest('[data-license-check-apply]');
+        if (applyButton) {
+            await applyProviderChanges(applyButton.dataset.licenseCheckApply);
+            return;
+        }
+
+        const dismissButton = event.target.closest('[data-license-check-dismiss]');
+        if (dismissButton) {
+            delete local.providerChecks[dismissButton.dataset.licenseCheckDismiss];
+            renderLicenses();
+            return;
+        }
+
         const copyButton = event.target.closest('[data-license-copy-value]');
         if (copyButton) {
             await copyValue(copyButton.dataset.licenseCopyValue);
@@ -645,6 +854,405 @@ export function createUserEditor({
 
         const removeButton = event.target.closest('[data-license-remove]');
         if (removeButton) await removeLicense(removeButton.dataset.licenseRemove);
+    }
+
+    function resetReconciliationState() {
+        local.providerChecks = {};
+        local.profileDomainProposal = null;
+        local.checkAll = null;
+        const summary = byId('strong8k-check-all-status');
+        if (summary) {
+            summary.hidden = true;
+            summary.innerHTML = '';
+        }
+    }
+
+    async function checkLicense(licenseId, options = {}) {
+        const license = state.currentLicenses.find(item => item.id === licenseId);
+        if (!license) return null;
+        if (!deviceInfoWebhookUrl) {
+            local.providerChecks[licenseId] = {
+                status: 'error',
+                code: 'SERVICE_NOT_CONFIGURED',
+                message: 'The Strong8K verification service is not configured yet.'
+            };
+            renderLicenses();
+            return local.providerChecks[licenseId];
+        }
+
+        if (!options.skipFlush) await flushAutosaves();
+        if (!options.batch) {
+            local.reconciliationController?.abort();
+            local.reconciliationController = new AbortController();
+            local.profileDomainProposal = null;
+            local.checkAll = null;
+        }
+        const signal = options.signal || local.reconciliationController?.signal;
+        local.providerChecks[licenseId] = { status: 'checking' };
+        renderLicenses();
+
+        try {
+            const payload = await requestDeviceInfo(licenseId, signal);
+            const baseline = {
+                id: licenseId,
+                ...canonicalizeReconciliationSnapshot(payload.baseline || {})
+            };
+            const providerDomain = normalizeProviderBaseUrl(payload.provider?.domain_8k || payload.metadata?.url);
+            if (!providerDomain) throw providerError('INVALID_PROVIDER_RESPONSE', 'Strong8K returned an invalid provider URL.');
+            const generatedUrls = buildStrong8kUrls(providerDomain, payload.provider?.username_8k, payload.provider?.password_8k);
+            const provider = canonicalizeReconciliationSnapshot({
+                ...payload.provider,
+                domain_8k: providerDomain,
+                ...generatedUrls
+            });
+            if (!provider.username_8k || !provider.password_8k || !provider.expiry_date || !provider.status) {
+                throw providerError('INVALID_PROVIDER_RESPONSE', 'Strong8K returned an incomplete license response.');
+            }
+
+            const differences = buildReconciliationDifferences(baseline, provider).map(difference => ({
+                ...difference,
+                blocked: difference.key === 'domain_8k' && state.currentLicenses.length > 1
+            }));
+            const selected = differences.filter(difference => !difference.blocked).map(difference => difference.key);
+            const selectedFields = selectedFieldsWithDependencies(selected, differences)
+                .filter(field => !differences.find(difference => difference.key === field)?.blocked);
+            const check = {
+                status: differences.length ? 'differences' : (options.postApply ? 'verified' : 'clean'),
+                checkedAt: payload.checkedAt || new Date().toISOString(),
+                baseline,
+                provider,
+                metadata: payload.metadata || {},
+                differences,
+                selectedFields
+            };
+            local.providerChecks[licenseId] = check;
+            renderLicenses();
+            return check;
+        } catch (error) {
+            if (error.name === 'AbortError') return null;
+            const check = {
+                status: options.postApply ? 'warning' : 'error',
+                code: error.code || 'PROVIDER_UNAVAILABLE',
+                message: options.postApply
+                    ? 'The changes were saved, but the final Strong8K verification was unavailable. Retry the check when the provider is reachable.'
+                    : error.message || 'The provider could not be checked. Retry in a moment.',
+                checkedAt: new Date().toISOString()
+            };
+            local.providerChecks[licenseId] = check;
+            if (check.code === 'INVALID_CREDENTIALS' && !options.postApply) {
+                local.expandedLicenseId = licenseId;
+            }
+            renderLicenses();
+            if (check.code === 'INVALID_CREDENTIALS' && !options.postApply) focusCredentialCorrection(licenseId);
+            return check;
+        }
+    }
+
+    async function requestDeviceInfo(licenseId, signal, forceRefresh = false) {
+        const currentUser = auth.currentUser;
+        if (!currentUser) throw providerError('UNAUTHORIZED', 'Sign in again before checking Strong8K.');
+        let response;
+        try {
+            response = await fetch(deviceInfoWebhookUrl, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'text/plain;charset=UTF-8'
+                },
+                body: JSON.stringify({
+                    idToken: await currentUser.getIdToken(forceRefresh),
+                    profileId: local.activeUserId,
+                    licenseId
+                }),
+                cache: 'no-store',
+                credentials: 'omit',
+                signal
+            });
+        } catch (error) {
+            if (error.name === 'AbortError') throw error;
+            throw providerError('PROVIDER_UNAVAILABLE', 'The Strong8K verification service could not be reached.');
+        }
+
+        let payload = {};
+        try {
+            payload = await response.json();
+        } catch {
+            throw providerError('INVALID_PROVIDER_RESPONSE', 'The verification service returned an unreadable response.');
+        }
+        if (response.status === 401 && !forceRefresh) {
+            return requestDeviceInfo(licenseId, signal, true);
+        }
+        if (!response.ok || payload.ok === false) {
+            throw providerError(payload.code || 'PROVIDER_UNAVAILABLE', payload.message || 'Strong8K could not be checked.');
+        }
+        if (payload.ok !== true || !payload.baseline || !payload.provider) {
+            throw providerError('INVALID_PROVIDER_RESPONSE', 'The verification service returned an incomplete response.');
+        }
+        return payload;
+    }
+
+    function providerError(code, message) {
+        const error = new Error(message);
+        error.code = code;
+        return error;
+    }
+
+    function focusCredentialCorrection(licenseId) {
+        window.requestAnimationFrame(() => {
+            const card = document.querySelector(`[data-license-id="${CSS.escape(licenseId)}"]`);
+            const username = card?.querySelector('[data-license-field="username_8k"]');
+            username?.focus({ preventScroll: true });
+            card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    }
+
+    function updateProviderSelection(licenseId, field, checked) {
+        const check = local.providerChecks[licenseId];
+        if (!check || check.status !== 'differences') return;
+        const selected = new Set(check.selectedFields || []);
+        if (checked) selected.add(field);
+        else selected.delete(field);
+        check.selectedFields = selectedFieldsWithDependencies([...selected], check.differences)
+            .filter(key => !check.differences.find(difference => difference.key === key)?.blocked);
+        renderLicenses();
+    }
+
+    async function checkAllLicenses({ skipFlush = false } = {}) {
+        const licenses = state.currentLicenses || [];
+        if (!licenses.length) {
+            showToast('Add a Strong8K license before running a provider check.', 'error');
+            return;
+        }
+        if (!skipFlush) await flushAutosaves();
+        local.reconciliationController?.abort();
+        const controller = new AbortController();
+        local.reconciliationController = controller;
+        local.profileDomainProposal = null;
+        local.checkAll = { running: true, total: licenses.length, completed: 0, clean: 0, changed: 0, failed: 0 };
+        renderLicenses();
+
+        const completedChecks = [];
+        for (const license of licenses) {
+            const check = await checkLicense(license.id, {
+                skipFlush: true,
+                batch: true,
+                signal: controller.signal
+            });
+            if (controller.signal.aborted) return;
+            local.checkAll.completed += 1;
+            if (!check || ['error', 'warning'].includes(check.status)) local.checkAll.failed += 1;
+            else if (check.status === 'differences') local.checkAll.changed += 1;
+            else local.checkAll.clean += 1;
+            if (check && !['error', 'warning'].includes(check.status)) completedChecks.push(check);
+            renderProfileCheckSummary();
+        }
+
+        local.checkAll.running = false;
+        buildProfileDomainProposal(completedChecks);
+        renderLicenses();
+    }
+
+    function buildProfileDomainProposal(completedChecks) {
+        if (state.currentLicenses.length < 2) {
+            local.profileDomainProposal = {
+                status: 'none',
+                reason: 'This profile has one license, so any domain difference can be reviewed on that license.'
+            };
+            return;
+        }
+        if (completedChecks.length !== state.currentLicenses.length) {
+            local.profileDomainProposal = {
+                status: 'blocked',
+                reason: 'The shared domain was not offered because every license must complete successfully first.'
+            };
+            return;
+        }
+        const domains = [...new Set(completedChecks.map(check => normalizeProviderBaseUrl(check.provider.domain_8k)).filter(Boolean))];
+        if (domains.length !== 1) {
+            local.profileDomainProposal = {
+                status: 'blocked',
+                reason: 'The shared domain was not offered because the licenses report different provider domains.'
+            };
+            return;
+        }
+        const profile = state.strong8kProfiles[local.activeUserId] || {};
+        const currentDomain = normalizeProviderBaseUrl(profile.domain_8k);
+        if (currentDomain === domains[0]) {
+            local.profileDomainProposal = {
+                status: 'none',
+                reason: 'Every license agrees with the saved primary domain.'
+            };
+            return;
+        }
+        local.profileDomainProposal = {
+            status: 'ready',
+            domain: domains[0],
+            currentDomain,
+            checkedAt: new Date().toISOString(),
+            baselines: completedChecks.map(check => check.baseline)
+        };
+    }
+
+    async function handleProfileCheckClick(event) {
+        if (event.target.closest('[data-profile-check-dismiss]')) {
+            local.checkAll = null;
+            local.profileDomainProposal = null;
+            renderLicenses();
+            return;
+        }
+        if (event.target.closest('[data-profile-domain-apply]')) await applySharedProviderDomain();
+    }
+
+    async function applyProviderChanges(licenseId) {
+        const check = local.providerChecks[licenseId];
+        if (!check || check.status !== 'differences') return;
+        await flushAutosaves();
+        const selected = new Set(selectedFieldsWithDependencies(check.selectedFields || [], check.differences));
+        check.differences.filter(difference => difference.blocked).forEach(difference => selected.delete(difference.key));
+        if (!selected.size) return;
+        check.status = 'applying';
+        renderLicenses();
+
+        try {
+            const result = await runTransaction(db, async transaction => {
+                const profileRef = doc(db, 'strong8k_profiles', local.activeUserId);
+                const snapshot = await transaction.get(profileRef);
+                if (!snapshot.exists()) throw new Error('The Strong8K profile no longer exists.');
+                const profile = snapshot.data();
+                const licenses = Array.isArray(profile.licenses) ? [...profile.licenses] : [];
+                const index = licenses.findIndex(item => item.id === licenseId);
+                if (index < 0) throw new Error('The license no longer exists. Reload the profile and try again.');
+                const current = { ...licenses[index], domain_8k: profile.domain_8k };
+                if (!reconciliationBaselineMatches(check.baseline, current)) {
+                    throw providerError('STALE_DATA', 'This profile changed after the provider check. Run Check Strong8K again before applying.');
+                }
+
+                const nextLicense = { ...licenses[index] };
+                ['username_8k', 'password_8k', 'expiry_date', 'status'].forEach(field => {
+                    if (selected.has(field)) nextLicense[field] = check.provider[field];
+                });
+                const nextDomain = selected.has('domain_8k') ? check.provider.domain_8k : profile.domain_8k;
+                const sourceChanged = ['username_8k', 'password_8k', 'domain_8k'].some(field => selected.has(field));
+                const generated = buildStrong8kUrls(nextDomain, nextLicense.username_8k, nextLicense.password_8k);
+                if (selected.has('m3u_url_8k') || sourceChanged) {
+                    nextLicense.m3u_url_8k = sourceChanged ? generated.m3u_url_8k : check.provider.m3u_url_8k;
+                }
+                if (selected.has('epg_url_8k') || sourceChanged) {
+                    nextLicense.epg_url_8k = sourceChanged ? generated.epg_url_8k : check.provider.epg_url_8k;
+                }
+                licenses[index] = nextLicense;
+                const update = { licenses, updated_at: new Date().toISOString() };
+                if (selected.has('domain_8k')) update.domain_8k = check.provider.domain_8k;
+                transaction.set(profileRef, update, { merge: true });
+                return { licenses, nextLicense, domain: update.domain_8k || profile.domain_8k };
+            });
+
+            state.currentLicenses = result.licenses.map(item => ({ ...item }));
+            state.strong8kProfiles[local.activeUserId] = {
+                ...(state.strong8kProfiles[local.activeUserId] || {}),
+                licenses: state.currentLicenses,
+                domain_8k: result.domain
+            };
+            byId('strong8k-domain').value = result.domain || '';
+            const changedLabels = check.differences
+                .filter(difference => selected.has(difference.key))
+                .map(difference => difference.label);
+            if (['username_8k', 'password_8k', 'domain_8k'].some(field => selected.has(field))) {
+                changedLabels.push('M3U URL', 'EPG URL');
+            }
+            await createReconciliationAudit(changedLabels, check.checkedAt, licenseId);
+            showToast('Selected Strong8K fields updated');
+            await checkLicense(licenseId, { skipFlush: true, postApply: true });
+        } catch (error) {
+            console.error('Unable to apply Strong8K reconciliation', error);
+            local.providerChecks[licenseId] = {
+                status: 'error',
+                code: error.code || 'SAVE_FAILED',
+                message: error.message || 'The selected changes could not be saved.',
+                checkedAt: check.checkedAt
+            };
+            renderLicenses();
+        }
+    }
+
+    async function applySharedProviderDomain() {
+        const proposal = local.profileDomainProposal;
+        if (!proposal || proposal.status !== 'ready') return;
+        if (!window.confirm(`Use ${proposal.domain} as the shared domain and rebuild URLs for every license on this profile?`)) return;
+        await flushAutosaves();
+        try {
+            const result = await runTransaction(db, async transaction => {
+                const profileRef = doc(db, 'strong8k_profiles', local.activeUserId);
+                const snapshot = await transaction.get(profileRef);
+                if (!snapshot.exists()) throw new Error('The Strong8K profile no longer exists.');
+                const profile = snapshot.data();
+                if (normalizeProviderBaseUrl(profile.domain_8k) !== proposal.currentDomain) {
+                    throw providerError('STALE_DATA', 'The primary domain changed after the profile check. Run Check all licenses again.');
+                }
+                const licenses = Array.isArray(profile.licenses) ? profile.licenses.map(item => ({ ...item })) : [];
+                if (licenses.length !== proposal.baselines.length) {
+                    throw providerError('STALE_DATA', 'The license list changed after the profile check. Run Check all licenses again.');
+                }
+                proposal.baselines.forEach(baseline => {
+                    const current = licenses.find(item => item.id === baseline.id || item.username_8k === baseline.username_8k);
+                    if (!current || !reconciliationBaselineMatches(baseline, { ...current, domain_8k: profile.domain_8k })) {
+                        throw providerError('STALE_DATA', 'A license changed after the profile check. Run Check all licenses again.');
+                    }
+                });
+                licenses.forEach(license => Object.assign(license, buildStrong8kUrls(proposal.domain, license.username_8k, license.password_8k)));
+                transaction.set(profileRef, {
+                    domain_8k: proposal.domain,
+                    licenses,
+                    updated_at: new Date().toISOString()
+                }, { merge: true });
+                return licenses;
+            });
+            state.currentLicenses = result.map(item => ({ ...item }));
+            state.strong8kProfiles[local.activeUserId] = {
+                ...(state.strong8kProfiles[local.activeUserId] || {}),
+                domain_8k: proposal.domain,
+                licenses: state.currentLicenses
+            };
+            byId('strong8k-domain').value = proposal.domain;
+            await createReconciliationAudit(['Primary domain', 'M3U URL', 'EPG URL'], proposal.checkedAt);
+            showToast('Shared Strong8K domain updated');
+            await checkAllLicenses({ skipFlush: true });
+        } catch (error) {
+            console.error('Unable to apply shared Strong8K domain', error);
+            showToast(error.message || 'The shared domain could not be applied.', 'error');
+            local.profileDomainProposal = {
+                status: 'blocked',
+                reason: error.message || 'The shared domain could not be applied.'
+            };
+            renderLicenses();
+        }
+    }
+
+    async function createReconciliationAudit(changedLabels, providerCheckedAt, licenseId = '') {
+        const uniqueLabels = [...new Set(changedLabels)];
+        if (!uniqueLabels.length) return;
+        const license = state.currentLicenses.find(item => item.id === licenseId);
+        const occurredAt = new Date().toISOString();
+        const record = {
+            occurred_at: occurredAt,
+            created_at: occurredAt,
+            created_by: auth.currentUser?.uid || '',
+            kind: 'other',
+            visibility: 'internal',
+            summary: license
+                ? `Strong8K profile reconciled for ${license.label || license.username_8k || 'license'}`
+                : 'Strong8K shared domain reconciled',
+            details: `Updated fields: ${uniqueLabels.join(', ')}. Provider checked: ${providerCheckedAt || occurredAt}.`,
+            source_text: ''
+        };
+        try {
+            const reference = await addDoc(collection(db, 'strong8k_profiles', local.activeUserId, 'support_events'), record);
+            local.supportEvents.unshift({ id: reference.id, profile_id: local.activeUserId, ...record });
+            renderSupportTimeline();
+        } catch (error) {
+            console.error('Unable to save Strong8K reconciliation audit event', error);
+            showToast('Profile updated, but its audit note could not be saved.', 'error');
+        }
     }
 
     async function copyValue(value) {

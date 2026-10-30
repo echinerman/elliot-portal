@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20261027-user-workspace';
+import { CONFIG } from './config.js?v=20261029-provider-reconciliation';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -984,6 +984,9 @@ function getLicensePresentation(license = {}) {
 
     if (status === 'expired' || (daysRemaining !== null && daysRemaining < 0)) {
         return { label: 'Expired', className: 'bg-rose-100 text-rose-800', accent: '#e11d48' };
+    }
+    if (status === 'disabled' || status === 'banned') {
+        return { label: status === 'banned' ? 'Banned' : 'Disabled', className: 'bg-rose-100 text-rose-800', accent: '#e11d48' };
     }
     if (daysRemaining !== null && daysRemaining <= 30) {
         return { label: `${Math.max(daysRemaining, 0)} days left`, className: 'bg-amber-100 text-amber-900', accent: '#d97706' };
