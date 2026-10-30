@@ -35,7 +35,7 @@ import {
     sortStandings,
     suggestPayouts
 } from './playoff-logic.js?v=20261027-user-workspace';
-import { createUserEditor } from './user-editor.js?v=20261029-provider-reconciliation';
+import { createUserEditor } from './user-editor.js?v=20261030-provider-reconciliation';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {

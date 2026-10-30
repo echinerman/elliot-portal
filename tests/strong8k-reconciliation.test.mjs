@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+    buildProviderReconciliationSnapshot,
     buildReconciliationDifferences,
     buildStrong8kUrls,
     normalizeProviderBaseUrl,
@@ -12,7 +13,26 @@ import {
 test('normalizes provider URLs and dates', () => {
     assert.equal(normalizeProviderBaseUrl(' HTTPS://Example.COM/path/// '), 'https://example.com/path');
     assert.equal(normalizeProviderBaseUrl('ftp://example.com'), '');
+    assert.equal(normalizeProviderBaseUrl('http:///get.php?username=elliot'), '');
     assert.equal(normalizeStrong8kDate('2027-05-22T12:00:00Z'), '2027-05-22');
+});
+
+test('preserves saved URLs when the provider omits a usable domain', () => {
+    const result = buildProviderReconciliationSnapshot({
+        domain_8k: '',
+        m3u_url_8k: 'https://saved.example.com/get.php?username=old',
+        epg_url_8k: 'https://saved.example.com/xmltv.php?username=old'
+    }, {
+        username_8k: 'elliot',
+        password_8k: 'secret',
+        expiry_date: '2027-05-22',
+        status: 'Active',
+        domain_8k: ''
+    });
+
+    assert.equal(result.domain_8k, '');
+    assert.equal(result.m3u_url_8k, 'https://saved.example.com/get.php?username=old');
+    assert.equal(result.epg_url_8k, 'https://saved.example.com/xmltv.php?username=old');
 });
 
 test('builds encoded M3U and EPG URLs', () => {

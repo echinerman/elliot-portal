@@ -97,7 +97,7 @@ return [{ json: {
 const normalizeProviderCode = `
 const prepared = $('Prepare license').item.json;
 if ($json?.error) {
-  return [{ json: { ok: false, httpStatus: 502, code: 'PROVIDER_UNAVAILABLE', message: 'Strong8K could not be reached. Retry in a moment.' } }];
+  return [{ json: { ok: false, httpStatus: 424, code: 'PROVIDER_UNAVAILABLE', message: 'Strong8K could not be reached. Retry in a moment.' } }];
 }
 const record = Array.isArray($json) ? $json[0] : $json;
 const success = String(record?.status || '').toLowerCase() === 'true';
@@ -107,22 +107,28 @@ if (!success) {
 const username = String(record.username || '');
 const password = String(record.password || '');
 const expiryMatch = String(record.expire || '').match(/^(\\d{4}-\\d{2}-\\d{2})/);
-const enabled = String(record.enabled ?? '');
-let domain = '';
-try {
-  const parsed = new URL(String(record.url || '').trim());
-  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Unsupported URL');
-  parsed.username = '';
-  parsed.password = '';
-  parsed.search = '';
-  parsed.hash = '';
-  domain = parsed.toString().replace(/\\/+$/, '');
-} catch {}
-if (!username || !password || !expiryMatch || !domain || !['0', '1'].includes(enabled)) {
-  return [{ json: { ok: false, httpStatus: 502, code: 'INVALID_PROVIDER_RESPONSE', message: 'Strong8K returned an incomplete device response.' } }];
+const enabled = String(record.enabled ?? '').trim().toLowerCase();
+const rawUrl = String(record.url || '').trim();
+const providerDomain = /^https?:\\/\\/[^/]/i.test(rawUrl)
+  ? (rawUrl.match(/^https?:\\/\\/[^/?#]+/i) || [])[0] || ''
+  : '';
+const domain = providerDomain || String(prepared.baseline.domain_8k || '').trim().replace(/\\/+$/, '');
+const status = ['1', 'true', 'active', 'enabled'].includes(enabled)
+  ? 'Active'
+  : ['0', 'false', 'disabled', 'banned', 'expired'].includes(enabled)
+    ? 'Disabled'
+    : String(prepared.baseline.status || 'Active');
+if (!username || !password || !expiryMatch) {
+  return [{ json: { ok: false, httpStatus: 424, code: 'INVALID_PROVIDER_RESPONSE', message: 'Strong8K returned an incomplete device response.' } }];
 }
 const encodedUsername = encodeURIComponent(username);
 const encodedPassword = encodeURIComponent(password);
+const m3uUrl = domain
+  ? domain + '/get.php?username=' + encodedUsername + '&password=' + encodedPassword + '&type=m3u_plus&output=ts'
+  : String(prepared.baseline.m3u_url_8k || '');
+const epgUrl = domain
+  ? domain + '/xmltv.php?username=' + encodedUsername + '&password=' + encodedPassword
+  : String(prepared.baseline.epg_url_8k || '');
 return [{ json: {
   ok: true,
   checkedAt: new Date().toISOString(),
@@ -133,10 +139,10 @@ return [{ json: {
     username_8k: username,
     password_8k: password,
     expiry_date: expiryMatch[1],
-    status: enabled === '1' ? 'Active' : 'Disabled',
+    status,
     domain_8k: domain,
-    m3u_url_8k: domain + '/get.php?username=' + encodedUsername + '&password=' + encodedPassword + '&type=m3u_plus&output=ts',
-    epg_url_8k: domain + '/xmltv.php?username=' + encodedUsername + '&password=' + encodedPassword
+    m3u_url_8k: m3uUrl,
+    epg_url_8k: epgUrl
   },
   metadata: {
     provider_user_id: String(record.user_id || ''),

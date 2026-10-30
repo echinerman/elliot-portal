@@ -13,6 +13,7 @@ const GENERATED_URL_SOURCES = new Set(['username_8k', 'password_8k', 'domain_8k'
 export function normalizeProviderBaseUrl(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
+    if (!/^https?:\/\/[^/]/i.test(raw)) return '';
     let parsed;
     try {
         parsed = new URL(raw);
@@ -25,6 +26,25 @@ export function normalizeProviderBaseUrl(value) {
     parsed.search = '';
     parsed.hash = '';
     return parsed.toString().replace(/\/+$/, '');
+}
+
+export function buildProviderReconciliationSnapshot(baseline = {}, provider = {}) {
+    const current = canonicalizeReconciliationSnapshot(baseline);
+    const incoming = canonicalizeReconciliationSnapshot(provider);
+    const providerDomain = normalizeProviderBaseUrl(provider.domain_8k);
+    const domain = providerDomain || current.domain_8k;
+    const generatedUrls = domain
+        ? buildStrong8kUrls(domain, incoming.username_8k, incoming.password_8k)
+        : {
+            m3u_url_8k: current.m3u_url_8k,
+            epg_url_8k: current.epg_url_8k
+        };
+
+    return canonicalizeReconciliationSnapshot({
+        ...provider,
+        domain_8k: domain,
+        ...generatedUrls
+    });
 }
 
 export function normalizeStrong8kDate(value) {

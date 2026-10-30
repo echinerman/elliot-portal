@@ -6,13 +6,14 @@ import {
     parseDelimitedList
 } from './app-model.js?v=20261027-user-workspace';
 import {
+    buildProviderReconciliationSnapshot,
     buildReconciliationDifferences,
     buildStrong8kUrls,
     canonicalizeReconciliationSnapshot,
     normalizeProviderBaseUrl,
     reconciliationBaselineMatches,
     selectedFieldsWithDependencies
-} from './strong8k-reconciliation.mjs?v=20261029-provider-reconciliation';
+} from './strong8k-reconciliation.mjs?v=20261030-provider-reconciliation';
 import {
     addDoc,
     collection,
@@ -897,14 +898,7 @@ export function createUserEditor({
                 id: licenseId,
                 ...canonicalizeReconciliationSnapshot(payload.baseline || {})
             };
-            const providerDomain = normalizeProviderBaseUrl(payload.provider?.domain_8k || payload.metadata?.url);
-            if (!providerDomain) throw providerError('INVALID_PROVIDER_RESPONSE', 'Strong8K returned an invalid provider URL.');
-            const generatedUrls = buildStrong8kUrls(providerDomain, payload.provider?.username_8k, payload.provider?.password_8k);
-            const provider = canonicalizeReconciliationSnapshot({
-                ...payload.provider,
-                domain_8k: providerDomain,
-                ...generatedUrls
-            });
+            const provider = buildProviderReconciliationSnapshot(baseline, payload.provider || {});
             if (!provider.username_8k || !provider.password_8k || !provider.expiry_date || !provider.status) {
                 throw providerError('INVALID_PROVIDER_RESPONSE', 'Strong8K returned an incomplete license response.');
             }
