@@ -229,6 +229,52 @@
         .portal-primary:hover { background: #1e293b; transform: translateY(-1px); }
         .portal-secondary { border: 1px solid #cbd5e1; border-radius: 999px; padding: .7rem 1rem; color: #334155; font-size: .78rem; font-weight: 800; }
         .portal-secondary:hover { border-color: #334155; color: var(--ink); }
+        .purchase-modal {
+            width: min(42rem, calc(100vw - 2rem));
+            max-height: calc(100vh - 2rem);
+            overflow: auto;
+            border: 0;
+            border-radius: 1rem;
+            background: #fff;
+            padding: 0;
+            color: var(--ink);
+            box-shadow: 0 32px 90px rgba(2, 6, 23, .34);
+        }
+        .purchase-modal::backdrop { background: rgba(2, 6, 23, .72); backdrop-filter: blur(4px); }
+        .purchase-dialog-head { position: relative; background: var(--ink); padding: 1.8rem 4.5rem 1.7rem 2rem; color: #fff; }
+        .purchase-dialog-head p:first-child { color: #94a3b8; font-size: .72rem; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
+        .purchase-dialog-head h3 { margin-top: .6rem; font-size: clamp(1.35rem, 2.2vw, 1.85rem); font-weight: 900; letter-spacing: -.03em; }
+        .purchase-dialog-price { margin-top: .65rem; color: #6ee7b7; font-size: 1.5rem; font-weight: 900; }
+        .purchase-dialog-duration { margin-top: .35rem; color: #cbd5e1; font-size: .78rem; line-height: 1.5; }
+        .purchase-close { position: absolute; top: 1.25rem; right: 1.25rem; display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 1px solid rgba(255, 255, 255, .16); border-radius: 999px; color: #cbd5e1; }
+        .purchase-close:hover { border-color: #fff; color: #fff; }
+        .purchase-dialog-body { display: grid; gap: 1.25rem; padding: 1.65rem 2rem 2rem; }
+        #renewal-form-content:not([hidden]) { display: grid; gap: 1.25rem; }
+        .purchase-payment { border: 1px solid #dbe3ec; border-radius: .8rem; background: #f8fafc; padding: 1rem 1.1rem; }
+        .purchase-payment span { display: block; color: #64748b; font-size: .72rem; font-weight: 750; }
+        .purchase-payment strong { display: block; margin-top: .25rem; overflow-wrap: anywhere; font-size: 1rem; }
+        .renewal-license-list { display: grid; gap: .6rem; }
+        .renewal-license-option { display: grid; grid-template-columns: 1rem minmax(0, 1fr); align-items: start; gap: .8rem; border: 1px solid var(--line); border-radius: .8rem; padding: .9rem 1rem; cursor: pointer; transition: border-color .2s ease, background-color .2s ease; }
+        .renewal-license-option:hover, .renewal-license-option:has(input:checked) { border-color: var(--emerald); background: var(--mist); }
+        .renewal-license-option input { margin-top: .2rem; accent-color: #059669; }
+        .renewal-license-option strong { display: block; font-size: .86rem; }
+        .renewal-license-option small { display: block; margin-top: .28rem; color: #64748b; font-size: .72rem; line-height: 1.5; }
+        .renewal-blocked { border: 1px solid var(--rose); border-radius: .8rem; background: var(--mist); padding: 1rem; color: var(--rose); }
+        .renewal-blocked strong { font-size: .84rem; }
+        .renewal-blocked p { margin-top: .25rem; font-size: .75rem; line-height: 1.55; }
+        .purchase-summary { border-left: 2px solid var(--emerald); padding-left: .9rem; color: #475569; font-size: .8rem; line-height: 1.6; }
+        .purchase-status { min-height: 1.3rem; color: #475569; font-size: .76rem; font-weight: 750; line-height: 1.5; }
+        .purchase-status[data-tone="error"] { color: var(--rose); }
+        .purchase-status[data-tone="attention"] { color: var(--amber); }
+        .purchase-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .75rem; }
+        .purchase-actions button { min-height: 3rem; }
+        .purchase-actions button:disabled { cursor: not-allowed; opacity: .48; transform: none; }
+        .purchase-success { padding: 2.25rem 2rem; text-align: center; }
+        .purchase-success i { color: #059669; font-size: 2rem; }
+        .purchase-success h3 { margin-top: 1rem; font-size: 1.35rem; font-weight: 900; }
+        .purchase-success p { max-width: 48ch; margin: .65rem auto 0; color: #475569; font-size: .82rem; line-height: 1.7; }
+        .purchase-success button { margin-top: 1.4rem; }
+        .donation-note { color: #475569; font-size: .82rem; line-height: 1.65; }
         .customer-support-history { margin-top: 1.5rem; border-top: 1px solid var(--line); }
         .customer-support-event { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 1rem; border-bottom: 1px solid var(--line); padding: 1.1rem .15rem; }
         .customer-support-event:last-child { border-bottom: 0; }
@@ -284,6 +330,11 @@
             .room-ledger-row { grid-template-columns: 2.55rem minmax(0, 1fr); }
             .room-ledger-action { width: 100%; grid-column: 1 / -1; justify-self: stretch; border-radius: .75rem; }
             .customer-support-event { grid-template-columns: 1fr; gap: .35rem; }
+            .purchase-modal { width: calc(100vw - 1rem); max-height: calc(100vh - 1rem); border-radius: .85rem; }
+            .purchase-dialog-head { padding: 1.4rem 4rem 1.35rem 1.25rem; }
+            .purchase-dialog-body { padding: 1.25rem; }
+            .purchase-actions { grid-template-columns: 1fr; }
+            .purchase-actions .portal-primary { grid-row: 1; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -775,29 +826,55 @@
         </section>
     </main>
 
-    <div id="purchase-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-product-name">
-        <div class="w-full max-w-md rounded-[2rem] bg-white shadow-float">
-            <div class="rounded-t-[2rem] bg-slate-950 p-6 text-center text-white">
-                <p class="text-xs font-bold uppercase tracking-[0.35em] text-slate-300">Strong8K Purchase</p>
-                <h3 id="modal-product-name" class="mt-3 text-2xl font-black"></h3>
-                <p id="modal-product-price" class="mt-3 text-4xl font-black"></p>
-            </div>
-            <div class="space-y-6 p-8">
-                <div class="rounded-3xl bg-slate-50 p-5 text-center">
-                    <p class="text-sm text-slate-500">Send an e-transfer to</p>
-                    <p class="mt-3 text-xl font-black text-slate-950">e.chinerman@gmail.com</p>
-                </div>
-                <div class="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-                    Elliot will process the order and activate your license after payment is received.
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <button id="purchase-close-btn" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Cancel</button>
-                    <a id="notify-link" href="#" class="rounded-2xl bg-slate-950 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-slate-800">I've Sent Payment</a>
-                </div>
-            </div>
+    <dialog id="purchase-modal" class="purchase-modal" aria-labelledby="modal-product-name">
+        <div class="purchase-dialog-head">
+            <p>Strong8K renewal review</p>
+            <h3 id="modal-product-name"></h3>
+            <p id="modal-product-price" class="purchase-dialog-price"></p>
+            <p id="modal-product-duration" class="purchase-dialog-duration"></p>
+            <button id="purchase-close-btn" type="button" class="purchase-close" aria-label="Close renewal review"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
         </div>
-    </div>
 
-    <script type="module" src="./portal-app.js?v=20261029-provider-reconciliation"></script>
+        <form id="purchase-form" class="purchase-dialog-body">
+            <div id="renewal-form-content">
+                <div>
+                    <p class="mb-3 text-sm font-black text-slate-950">Which license should be renewed?</p>
+                    <div id="purchase-license-list" class="renewal-license-list"></div>
+                </div>
+                <div class="purchase-payment">
+                    <span>Send the e-transfer to</span>
+                    <strong>e.chinerman@gmail.com</strong>
+                </div>
+                <p id="purchase-summary" class="purchase-summary"></p>
+                <p class="text-xs leading-5 text-slate-500">Submitting records that you sent payment. It does not renew the license until Elliot confirms the payment and approves the request.</p>
+                <p id="purchase-status" class="purchase-status" aria-live="polite"></p>
+                <div class="purchase-actions">
+                    <button id="purchase-cancel-btn" type="button" class="portal-secondary">Cancel</button>
+                    <button id="renewal-submit-btn" type="submit" class="portal-primary">I’ve sent payment · Submit request</button>
+                </div>
+            </div>
+
+            <div id="donation-form-content" hidden>
+                <p class="donation-note">EPGenius donations are handled separately and never consume Strong8K renewal credits. Use the email below to let Elliot know you would like to make a donation.</p>
+                <div class="purchase-payment mt-5">
+                    <span>Donation coordination</span>
+                    <strong>e.chinerman@gmail.com</strong>
+                </div>
+                <div class="purchase-actions mt-5">
+                    <button id="donation-cancel-btn" type="button" class="portal-secondary">Cancel</button>
+                    <a id="donation-notify-link" href="#" class="portal-primary inline-flex items-center justify-center">Email Elliot</a>
+                </div>
+            </div>
+        </form>
+
+        <div id="purchase-success" class="purchase-success" hidden>
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            <h3 id="purchase-success-title">Request received</h3>
+            <p id="purchase-success-copy"></p>
+            <button id="purchase-success-close-btn" type="button" class="portal-primary">Close</button>
+        </div>
+    </dialog>
+
+    <script type="module" src="./portal-app.js?v=20261101-renewal-requests"></script>
 </body>
 </html>

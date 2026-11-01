@@ -5,4 +5,7 @@ ingress:
   - hostname: automation.goelliot.vip
     path: ^/webhook/strong8k-device-info$
     service: http://127.0.0.1:5678
+  - hostname: automation.goelliot.vip
+    path: ^/webhook/strong8k-renewal-request$
+    service: http://127.0.0.1:5678
   - service: http_status:404

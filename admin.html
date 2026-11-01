@@ -167,6 +167,47 @@
         .ops-empty strong { color: var(--ink); font-size: .95rem; }
         .ops-empty p { margin: .35rem auto 0; max-width: 54ch; color: #64748b; font-size: .78rem; line-height: 1.55; }
 
+        .catalog-section { padding: clamp(1.35rem, 3vw, 2.25rem); }
+        .catalog-section + .catalog-section { border-top: 1px solid var(--line); }
+        .catalog-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.25rem; }
+        .catalog-head h2 { color: var(--ink); font-size: clamp(1.3rem, 2vw, 1.7rem); font-weight: 900; letter-spacing: -.025em; }
+        .catalog-head p { max-width: 68ch; margin-top: .4rem; color: var(--copy); font-size: .8rem; line-height: 1.55; }
+        .catalog-head-actions { display: flex; flex: none; gap: .55rem; }
+        .catalog-button { display: inline-flex; min-height: 2.65rem; align-items: center; justify-content: center; gap: .5rem; border: 1px solid #cbd5e1; border-radius: .75rem; padding: .65rem .85rem; color: #334155; font-size: .74rem; font-weight: 850; }
+        .catalog-button:hover { border-color: var(--ink); color: var(--ink); }
+        .catalog-button.is-primary { border-color: var(--ink); background: var(--ink); color: #fff; }
+        .catalog-button:disabled { cursor: not-allowed; opacity: .5; }
+        .catalog-migration { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.25rem; border-block: 1px solid #fde68a; background: #fffbeb; padding: .9rem 1rem; }
+        .catalog-migration[hidden] { display: none; }
+        .catalog-migration strong { color: #78350f; font-size: .78rem; }
+        .catalog-migration p { margin-top: .2rem; color: #92400e; font-size: .72rem; line-height: 1.5; }
+        .catalog-composer { margin-top: 1.25rem; border-block: 1px solid var(--line); background: #f8fafc; padding: 1rem; }
+        .catalog-composer[hidden] { display: none; }
+        .catalog-composer-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .85rem; }
+        .catalog-composer-head h3 { color: var(--ink); font-size: .86rem; font-weight: 900; }
+        .catalog-form-grid { display: grid; grid-template-columns: minmax(12rem, 1.6fr) minmax(8rem, .7fr) minmax(7rem, .6fr) minmax(7rem, .6fr); gap: .75rem; }
+        .catalog-field span { display: block; margin-bottom: .4rem; color: #475569; font-size: .72rem; font-weight: 850; }
+        .catalog-field input, .catalog-field select { width: 100%; min-height: 2.8rem; border: 1px solid #cbd5e1; border-radius: .8rem; background: #fff; padding: .7rem .8rem; color: var(--ink); font-size: .8rem; }
+        .catalog-field input:read-only { background: #e2e8f0; color: #475569; }
+        .catalog-toggle { display: inline-flex; min-height: 2.8rem; align-items: center; gap: .55rem; color: #334155; font-size: .76rem; font-weight: 800; }
+        .catalog-toggle input { width: 1rem; height: 1rem; accent-color: var(--emerald); }
+        .catalog-composer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .55rem; margin-top: .85rem; }
+        .catalog-list { margin-top: 1.25rem; border-top: 1px solid var(--line); }
+        .catalog-row { display: grid; grid-template-columns: minmax(0, 1fr) 7rem 7rem auto; align-items: center; gap: 1rem; border-bottom: 1px solid var(--line); padding: 1rem .25rem; transition: background-color .2s ease, padding .35s var(--ease-out); }
+        .catalog-row:last-child { border-bottom: 0; }
+        .catalog-row:hover { background: #f8fafc; padding-inline: .8rem; }
+        .catalog-row.is-inactive { opacity: .68; }
+        .catalog-title { color: var(--ink); font-size: .88rem; font-weight: 900; }
+        .catalog-meta { margin-top: .25rem; color: #64748b; font-size: .72rem; line-height: 1.45; }
+        .catalog-price { color: var(--ink); font-size: .86rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+        .catalog-status { width: max-content; border-radius: 999px; background: #e2e8f0; padding: .35rem .55rem; color: #475569; font-size: .7rem; font-weight: 850; }
+        .catalog-status.is-active { background: #d1fae5; color: #047857; }
+        .catalog-edit { border: 1px solid #cbd5e1; border-radius: 999px; padding: .55rem .75rem; color: #334155; font-size: .72rem; font-weight: 850; }
+        .catalog-edit:hover { border-color: var(--ink); color: var(--ink); }
+        .catalog-empty { padding: 2rem .5rem; text-align: center; }
+        .catalog-empty strong { color: var(--ink); font-size: .88rem; }
+        .catalog-empty p { margin-top: .3rem; color: #64748b; font-size: .76rem; }
+
         .user-profile-paper { border: 1px solid #dbe3ec; border-radius: 1rem; background: var(--paper); box-shadow: 0 20px 55px rgba(15, 23, 42, .07); }
         .user-profile-header {
             position: sticky;
@@ -348,6 +389,13 @@
             .ops-action { justify-self: start; }
             .ops-detail { grid-column: 1; }
             .ops-row.is-open .ops-detail { align-items: flex-start; flex-direction: column; }
+            .catalog-head, .catalog-migration { align-items: stretch; flex-direction: column; }
+            .catalog-head-actions, .catalog-head-actions .catalog-button, .catalog-migration .catalog-button { width: 100%; }
+            .catalog-form-grid { grid-template-columns: 1fr; }
+            .catalog-row { grid-template-columns: minmax(0, 1fr) auto; gap: .7rem; }
+            .catalog-price { grid-row: 1; grid-column: 2; }
+            .catalog-status { grid-column: 1; }
+            .catalog-edit { grid-column: 2; grid-row: 2; }
             .user-profile-header { grid-template-columns: auto minmax(0, 1fr) auto; padding: .85rem; }
             .user-new-license, .user-event-composer { scroll-margin-top: 12rem; }
             .user-profile-back span { display: none; }
@@ -658,7 +706,7 @@
                     <button type="button" class="ops-filter" data-ops-filter="automation">Automation <span class="ops-filter-count" data-ops-count="automation">0</span></button>
                 </div>
                 <div id="operations-inbox-list"></div>
-                <p class="border-t border-slate-100 px-5 py-3 text-xs leading-5 text-slate-500">Source status: no Strong8K payment collection and no n8n review-state collection are connected. Those filters intentionally show empty states; this screen never infers a payment or workflow failure.</p>
+                <p class="border-t border-slate-100 px-5 py-3 text-xs leading-5 text-slate-500">Source status: customer-reported Strong8K renewal requests are connected. Automation failures remain empty until a renewal-processing workflow writes a verified review state.</p>
             </section>
 
             <div class="admin-paper">
@@ -690,11 +738,15 @@
         </section>
 
         <section id="admin-panel-strong8k" role="tabpanel" aria-labelledby="admin-tab-strong8k" data-panel="strong8k" data-admin-dashboard class="hidden space-y-6">
-            <div class="grid gap-6 xl:grid-cols-[1fr_1fr]">
-                <form id="strong8k-config-form" class="rounded-[1.75rem] bg-white p-6 shadow-sm">
-                    <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Strong8K Config</p>
-                    <h2 class="mt-2 text-2xl font-black text-slate-950">Content options</h2>
-                    <div class="mt-6 grid gap-5">
+            <div class="admin-paper">
+                <form id="strong8k-config-form" class="catalog-section">
+                    <div class="catalog-head">
+                        <div>
+                            <h2>Content options</h2>
+                            <p>Maintain the category choices customers can add to their shared setup preferences.</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 grid gap-5 md:grid-cols-2">
                         <label class="block">
                             <span class="mb-2 block text-xs font-bold uppercase tracking-[0.22em] text-slate-400">Live Categories</span>
                             <textarea id="strong8k-live-list" rows="8" class="w-full rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4 text-sm outline-none transition focus:border-slate-900"></textarea>
@@ -710,37 +762,40 @@
                     </div>
                 </form>
 
-                <div class="rounded-[1.75rem] bg-white p-6 shadow-sm">
-                    <div class="flex items-start justify-between gap-4">
+                <section class="catalog-section" aria-labelledby="packages-admin-title">
+                    <div class="catalog-head">
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Strong8K Products</p>
-                            <h2 class="mt-2 text-2xl font-black text-slate-950">Packages and credits</h2>
+                            <h2 id="packages-admin-title">Packages and credits</h2>
+                            <p>Set the customer price and renewal duration once. Credits always match the number of months.</p>
                         </div>
-                        <button id="new-product-btn" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">New Product</button>
+                        <div class="catalog-head-actions">
+                            <button id="new-product-btn" type="button" class="catalog-button is-primary"><i class="fa-solid fa-plus" aria-hidden="true"></i>New package</button>
+                        </div>
                     </div>
-                    <form id="product-form" class="mt-6 grid gap-4 md:grid-cols-4">
+
+                    <div id="product-migration-notice" class="catalog-migration" hidden>
+                        <div><strong>Legacy packages need import</strong><p id="product-migration-copy"></p></div>
+                        <button id="product-migration-btn" type="button" class="catalog-button">Import missing packages</button>
+                    </div>
+
+                    <form id="product-form" class="catalog-composer" hidden>
                         <input type="hidden" id="product-id">
-                        <input id="product-name" type="text" placeholder="Product name" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900 md:col-span-2" required>
-                        <input id="product-price" type="number" step="0.01" placeholder="Price" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900" required>
-                        <div class="flex gap-3">
-                            <input id="product-credits" type="number" placeholder="Credits" class="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900" required>
-                            <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save</button>
+                        <div class="catalog-composer-head"><h3 id="product-form-title">New renewal package</h3></div>
+                        <div class="catalog-form-grid">
+                            <label class="catalog-field"><span>Customer-facing name</span><input id="product-name" type="text" placeholder="1 Year VIP" required></label>
+                            <label class="catalog-field"><span>Customer price</span><input id="product-price" type="number" min="0" step="0.01" placeholder="70.00" required></label>
+                            <label class="catalog-field"><span>Renewal duration</span><select id="product-duration" required><option value="">Choose…</option><option value="1">1 month</option><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option></select></label>
+                            <label class="catalog-field"><span>Credits used</span><input id="product-credits" type="number" value="0" readonly aria-describedby="product-credit-hint"><small id="product-credit-hint" class="mt-1 block text-[11px] leading-4 text-slate-500">Linked to duration.</small></label>
+                        </div>
+                        <label class="catalog-toggle"><input id="product-active" type="checkbox" checked>Available in the customer portal</label>
+                        <div class="catalog-composer-actions">
+                            <button id="product-cancel-btn" type="button" class="catalog-button">Cancel</button>
+                            <button id="product-save-btn" type="submit" class="catalog-button is-primary">Save package</button>
                         </div>
                     </form>
-                    <div class="mt-6 overflow-hidden rounded-[1.5rem] border border-slate-100">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50 text-[11px] uppercase tracking-[0.22em] text-slate-400">
-                                <tr>
-                                    <th class="px-4 py-3">Product</th>
-                                    <th class="px-4 py-3">Price</th>
-                                    <th class="px-4 py-3">Credits</th>
-                                    <th class="px-4 py-3 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="product-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
+
+                    <div id="product-table-body" class="catalog-list" aria-live="polite"></div>
+                </section>
             </div>
             <section class="rounded-[1.75rem] bg-white p-6 shadow-sm">
                 <h2 class="text-2xl font-black text-slate-950">Private notes migration</h2>
@@ -1268,6 +1323,6 @@
         </div>
     </div>
 
-    <script type="module" src="./admin-app.js?v=20261030-provider-reconciliation"></script>
+    <script type="module" src="./admin-app.js?v=20261101-renewal-requests"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20261029-provider-reconciliation';
+import { CONFIG } from './config.js?v=20261101-renewal-requests';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -7,9 +7,13 @@ import {
     deriveAccessibleApps,
     formatDate,
     getSetupNotesValue,
-    normalizeStrong8kProfile,
-    sortByPrice
+    normalizeStrong8kProfile
 } from './app-model.js?v=20261027-user-workspace';
+import {
+    formatStrong8kDuration,
+    isSelectableStrong8kRenewal,
+    mergeStrong8kProducts
+} from './strong8k-products.mjs?v=20261101-renewal-requests';
 import {
     buildCompactPickLabel,
     buildDraftFromEntries,
@@ -78,7 +82,10 @@ const state = {
         profile: null,
         products: [],
         contentOptions: { live_list: [], vod_list: [] },
-        supportEvents: []
+        supportEvents: [],
+        renewalRequests: [],
+        selectedProductId: '',
+        selectedLicenseId: ''
     },
     playoff: {
         membership: null,
@@ -359,7 +366,10 @@ function resetSessionState() {
         profile: null,
         products: [],
         contentOptions: { live_list: [], vod_list: [] },
-        supportEvents: []
+        supportEvents: [],
+        renewalRequests: [],
+        selectedProductId: '',
+        selectedLicenseId: ''
     };
     state.playoff = {
         membership: null,
@@ -817,25 +827,30 @@ async function loadStrong8kApp() {
         }
     }
 
-    const products = [];
-    const productsSnap = await getDocs(collection(db, 'strong8k_products'));
-    if (!productsSnap.empty) {
-        productsSnap.forEach(item => products.push({ id: item.id, ...item.data() }));
-    } else {
-        const legacyProductsSnap = await getDocs(collection(db, 'products'));
-        legacyProductsSnap.forEach(item => products.push({ id: item.id, ...item.data() }));
-    }
+    const [productsSnap, legacyProductsSnap, renewalRequestsSnap] = await Promise.all([
+        getDocs(collection(db, 'strong8k_products')),
+        getDocs(collection(db, 'products')),
+        getDocs(query(
+            collection(db, 'strong8k_renewal_requests'),
+            where('account_id', '==', accountId)
+        ))
+    ]);
+    const products = mergeStrong8kProducts(
+        productsSnap.docs.map(item => ({ id: item.id, ...item.data() })),
+        legacyProductsSnap.docs.map(item => ({ id: item.id, ...item.data() }))
+    ).filter(isSelectableStrong8kRenewal);
 
     const hasEPGenius = profile.licenses.some(license => license.epgenius_url && String(license.epgenius_url).trim() !== '');
-    const resolvedProducts = sortByPrice(products);
+    const resolvedProducts = [...products];
     if (hasEPGenius) {
-        resolvedProducts.push({ id: 'donation_epgenius', name: 'Donate to EPGenius Curator', price: 20 });
+        resolvedProducts.push({ id: 'donation_epgenius', name: 'Donate to EPGenius Curator', price: 20, kind: 'donation' });
     }
 
     state.strong8k.profile = profile;
     state.strong8k.products = resolvedProducts;
     state.strong8k.contentOptions = contentOptions;
     state.strong8k.supportEvents = supportEvents;
+    state.strong8k.renewalRequests = renewalRequestsSnap.docs.map(item => ({ id: item.id, ...item.data() }));
     renderStrong8k();
 }
 
@@ -1036,24 +1051,32 @@ function renderStrong8kProducts(products) {
     }
 
     products.forEach(product => {
+        const isDonation = product.kind === 'donation';
+        const pendingCount = isDonation ? 0 : state.strong8k.renewalRequests.filter(request => (
+            request.product_id === product.id && isOpenRenewalRequest(request)
+        )).length;
         const row = document.createElement('div');
         row.className = 'room-ledger-row';
         row.innerHTML = `
-            <span class="room-ledger-icon"><i class="fa-solid fa-rotate" aria-hidden="true"></i></span>
+            <span class="room-ledger-icon"><i class="fa-solid ${isDonation ? 'fa-heart' : 'fa-rotate'}" aria-hidden="true"></i></span>
             <span>
                 <span class="room-ledger-title">${escapeHtml(product.name)}</span>
-                <span class="room-ledger-copy block">${CONFIG.CURRENCY_SYMBOL}${escapeHtml(product.price)}${product.credits ? ` · ${escapeHtml(product.credits)} credits` : ''}</span>
+                <span class="room-ledger-copy block">${CONFIG.CURRENCY_SYMBOL}${Number(product.price || 0).toFixed(2)}${isDonation ? ' · Manual donation' : ` · Adds ${escapeHtml(formatStrong8kDuration(product.duration_months))}`}${pendingCount ? ` · ${pendingCount} pending` : ''}</span>
             </span>
-            <button type="button" class="portal-secondary room-ledger-action" data-product-name="${escapeAttribute(product.name)}" data-product-price="${escapeAttribute(product.price)}">Choose package</button>
+            <button type="button" class="portal-secondary room-ledger-action" data-choose-product="${escapeAttribute(product.id)}">${isDonation ? 'Donation details' : 'Choose package'}</button>
         `;
         list.appendChild(row);
     });
 
-    list.querySelectorAll('[data-product-name]').forEach(button => {
+    list.querySelectorAll('[data-choose-product]').forEach(button => {
         button.addEventListener('click', () => {
-            openPurchaseModal(button.dataset.productName, button.dataset.productPrice);
+            openPurchaseModal(button.dataset.chooseProduct);
         });
     });
+}
+
+function isOpenRenewalRequest(request = {}) {
+    return ['payment_reported', 'approved', 'processing', 'manual_review'].includes(String(request.status || ''));
 }
 
 function renderStrong8kPreferenceTags(type, selectedValues, allOptions) {
@@ -1090,7 +1113,20 @@ function bindStrong8kEvents() {
         event.target.value = '';
     });
     byId('save-config-btn').addEventListener('click', saveStrong8kProfile);
-    byId('purchase-close-btn').addEventListener('click', () => byId('purchase-modal').classList.add('hidden'));
+    byId('purchase-close-btn').addEventListener('click', closePurchaseModal);
+    byId('purchase-cancel-btn').addEventListener('click', closePurchaseModal);
+    byId('donation-cancel-btn').addEventListener('click', closePurchaseModal);
+    byId('purchase-success-close-btn').addEventListener('click', closePurchaseModal);
+    byId('purchase-form').addEventListener('submit', submitRenewalRequest);
+    byId('purchase-license-list').addEventListener('change', event => {
+        if (event.target.matches('[name="renewal-license"]')) {
+            state.strong8k.selectedLicenseId = event.target.value;
+            syncRenewalRequestSummary();
+        }
+    });
+    byId('purchase-modal').addEventListener('click', event => {
+        if (event.target === byId('purchase-modal')) closePurchaseModal();
+    });
 }
 
 function toggleStrong8kPreference(type, value) {
@@ -1118,13 +1154,153 @@ async function saveStrong8kProfile() {
     showToast('Strong8K preferences saved');
 }
 
-function openPurchaseModal(name, price) {
-    byId('modal-product-name').textContent = name;
-    byId('modal-product-price').textContent = `${CONFIG.CURRENCY_SYMBOL}${price}`;
-    const subject = encodeURIComponent(`Payment Sent: ${name} (${state.authUser.email})`);
-    const body = encodeURIComponent(`Hi Elliot,\n\nI have sent an e-transfer of $${price} for the ${name} package.\n\nAccount Email: ${state.authUser.email}\n\nThanks!`);
-    byId('notify-link').href = `mailto:${CONFIG.PAYMENT_EMAIL}?subject=${subject}&body=${body}`;
-    byId('purchase-modal').classList.remove('hidden');
+function openPurchaseModal(productId) {
+    const product = state.strong8k.products.find(item => item.id === productId);
+    if (!product) {
+        showToast('That package is no longer available. Refresh and try again.', 'error');
+        return;
+    }
+
+    const dialog = byId('purchase-modal');
+    const isDonation = product.kind === 'donation';
+    state.strong8k.selectedProductId = product.id;
+    state.strong8k.selectedLicenseId = '';
+    byId('modal-product-name').textContent = product.name;
+    byId('modal-product-price').textContent = `${CONFIG.CURRENCY_SYMBOL}${Number(product.price || 0).toFixed(2)}`;
+    byId('modal-product-duration').textContent = isDonation
+        ? 'Handled separately from Strong8K renewals'
+        : `Adds ${formatStrong8kDuration(product.duration_months)} to one license`;
+    byId('renewal-form-content').hidden = isDonation;
+    byId('donation-form-content').hidden = !isDonation;
+    byId('purchase-success').hidden = true;
+    byId('purchase-form').hidden = false;
+    setPurchaseStatus('');
+
+    if (isDonation) {
+        const subject = encodeURIComponent(`EPGenius donation (${state.authUser.email})`);
+        const body = encodeURIComponent(`Hi Elliot,\n\nI would like to send a ${CONFIG.CURRENCY_SYMBOL}${Number(product.price || 0).toFixed(2)} donation to the EPGenius curator.\n\nAccount Email: ${state.authUser.email}\n\nThanks!`);
+        byId('donation-notify-link').href = `mailto:${CONFIG.PAYMENT_EMAIL}?subject=${subject}&body=${body}`;
+    } else {
+        renderRenewalLicenseChoices();
+    }
+
+    if (!dialog.open) dialog.showModal();
+}
+
+function renderRenewalLicenseChoices() {
+    const container = byId('purchase-license-list');
+    const licenses = (state.strong8k.profile?.licenses || []).filter(license => String(license.id || '').trim());
+    container.innerHTML = '';
+
+    if (!licenses.length) {
+        container.innerHTML = `
+            <div class="renewal-blocked">
+                <strong>No selectable license found.</strong>
+                <p>Ask Elliot to finish the license record before submitting a renewal.</p>
+            </div>`;
+        byId('renewal-submit-btn').disabled = true;
+        setPurchaseStatus('Your saved license needs an ID before it can be renewed.', 'error');
+        return;
+    }
+
+    const autoSelect = licenses.length === 1;
+    state.strong8k.selectedLicenseId = autoSelect ? licenses[0].id : '';
+    container.innerHTML = licenses.map((license, index) => `
+        <label class="renewal-license-option">
+            <input type="radio" name="renewal-license" value="${escapeAttribute(license.id)}" ${autoSelect && index === 0 ? 'checked' : ''} required>
+            <span>
+                <strong>${escapeHtml(license.label || `License ${index + 1}`)}</strong>
+                <small>${escapeHtml(license.username_8k || 'Username not saved')} · Expires ${escapeHtml(formatDate(license.expiry_date))}</small>
+            </span>
+        </label>
+    `).join('');
+    syncRenewalRequestSummary();
+}
+
+function syncRenewalRequestSummary() {
+    const product = state.strong8k.products.find(item => item.id === state.strong8k.selectedProductId);
+    const licenseId = state.strong8k.selectedLicenseId;
+    const submitButton = byId('renewal-submit-btn');
+    const summary = byId('purchase-summary');
+    const existing = state.strong8k.renewalRequests.find(request => (
+        request.license_id === licenseId && isOpenRenewalRequest(request)
+    ));
+
+    if (!licenseId) {
+        summary.textContent = 'Choose the license that should receive the added time.';
+        submitButton.disabled = true;
+        setPurchaseStatus('');
+        return;
+    }
+    if (existing) {
+        summary.textContent = `${existing.product_name || 'A renewal'} is already waiting for Elliot’s review for this license.`;
+        submitButton.disabled = true;
+        setPurchaseStatus('You do not need to submit this payment again.', 'attention');
+        return;
+    }
+
+    summary.textContent = `${product.name} will add ${formatStrong8kDuration(product.duration_months)} after Elliot verifies payment.`;
+    submitButton.disabled = false;
+    setPurchaseStatus('');
+}
+
+async function submitRenewalRequest(event) {
+    event.preventDefault();
+    const product = state.strong8k.products.find(item => item.id === state.strong8k.selectedProductId);
+    const licenseId = state.strong8k.selectedLicenseId;
+    if (!product || product.kind !== 'renewal' || !licenseId) {
+        setPurchaseStatus('Choose a package and license before submitting.', 'error');
+        return;
+    }
+
+    const submitButton = byId('renewal-submit-btn');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Submitting…';
+    setPurchaseStatus('Securely recording your request…');
+    try {
+        const idToken = await state.authUser.getIdToken();
+        const response = await fetch(CONFIG.STRONG8K_RENEWAL_REQUEST_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken, productId: product.id, licenseId })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok && payload.code !== 'DUPLICATE_REQUEST') {
+            throw new Error(payload.message || 'The request could not be recorded.');
+        }
+        if (payload.code === 'DUPLICATE_REQUEST') {
+            setPurchaseStatus('A renewal request is already waiting for this license.', 'attention');
+            submitButton.textContent = 'Already submitted';
+            return;
+        }
+
+        state.strong8k.renewalRequests.push(payload.request);
+        byId('purchase-form').hidden = true;
+        byId('purchase-success').hidden = false;
+        byId('purchase-success-title').textContent = 'Request received';
+        byId('purchase-success-copy').textContent = 'Elliot will verify the payment before processing the renewal. You’ll receive a final confirmation after the provider expiry has been checked again.';
+        renderStrong8kProducts(state.strong8k.products);
+    } catch (error) {
+        console.error('Renewal request could not be submitted', error);
+        setPurchaseStatus(error.message || 'The request could not be recorded.', 'error');
+        submitButton.disabled = false;
+        submitButton.textContent = 'I’ve sent payment · Submit request';
+    }
+}
+
+function setPurchaseStatus(message, tone = '') {
+    const status = byId('purchase-status');
+    status.textContent = message;
+    status.dataset.tone = tone;
+}
+
+function closePurchaseModal() {
+    const dialog = byId('purchase-modal');
+    if (dialog.open) dialog.close();
+    state.strong8k.selectedProductId = '';
+    state.strong8k.selectedLicenseId = '';
+    byId('renewal-submit-btn').disabled = false;
+    byId('renewal-submit-btn').textContent = 'I’ve sent payment · Submit request';
 }
 
 async function loadPlayoffApp() {

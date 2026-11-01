@@ -24,6 +24,7 @@ export const CONFIG = {
     PAYMENT_EMAIL: "e.chinerman@gmail.com",
     CONTACT_LINK: "mailto:info@goelliot.vip",
     STRONG8K_DEVICE_INFO_WEBHOOK: "https://automation.goelliot.vip/webhook/strong8k-device-info",
+    STRONG8K_RENEWAL_REQUEST_WEBHOOK: "https://automation.goelliot.vip/webhook/strong8k-renewal-request",
 
     // UI Constants
     CURRENCY_SYMBOL: "$",

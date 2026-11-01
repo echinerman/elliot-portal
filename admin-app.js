@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20261029-provider-reconciliation';
+import { CONFIG } from './config.js?v=20261101-renewal-requests';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -36,6 +36,12 @@ import {
     suggestPayouts
 } from './playoff-logic.js?v=20261027-user-workspace';
 import { createUserEditor } from './user-editor.js?v=20261030-provider-reconciliation';
+import {
+    formatStrong8kDuration,
+    getLegacyProductMigrationCandidates,
+    mergeStrong8kProducts,
+    strong8kProductPayload
+} from './strong8k-products.mjs?v=20261101-renewal-requests';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -62,6 +68,9 @@ const state = {
     membershipsByUser: {},
     strong8kProfiles: {},
     strong8kProducts: [],
+    strong8kLegacyProducts: [],
+    strong8kProductMigrationCandidates: [],
+    renewalRequests: [],
     strong8kConfig: { live_list: [], vod_list: [] },
     pools: [],
     selectedPoolId: '',
@@ -319,15 +328,17 @@ async function loadAdminData() {
         state.strong8kConfig = legacyConfigSnap.exists() ? legacyConfigSnap.data() : { live_list: [], vod_list: [] };
     }
 
-    const products = [];
-    const productSnap = await getDocs(collection(db, 'strong8k_products'));
-    if (!productSnap.empty) {
-        productSnap.forEach(item => products.push({ id: item.id, ...item.data() }));
-    } else {
-        const legacyProductSnap = await getDocs(collection(db, 'products'));
-        legacyProductSnap.forEach(item => products.push({ id: item.id, ...item.data() }));
-    }
-    state.strong8kProducts = products.sort((left, right) => Number(left.price || 0) - Number(right.price || 0));
+    const [productSnap, legacyProductSnap, renewalRequestSnap] = await Promise.all([
+        getDocs(collection(db, 'strong8k_products')),
+        getDocs(collection(db, 'products')),
+        getDocs(collection(db, 'strong8k_renewal_requests'))
+    ]);
+    const canonicalProducts = productSnap.docs.map(item => ({ id: item.id, ...item.data() }));
+    const legacyProducts = legacyProductSnap.docs.map(item => ({ id: item.id, ...item.data() }));
+    state.strong8kLegacyProducts = legacyProducts;
+    state.strong8kProducts = mergeStrong8kProducts(canonicalProducts, legacyProducts);
+    state.strong8kProductMigrationCandidates = getLegacyProductMigrationCandidates(canonicalProducts, legacyProducts);
+    state.renewalRequests = renewalRequestSnap.docs.map(item => ({ id: item.id, ...item.data() }));
 
     const poolSnap = await getDocs(collection(db, 'playoff_pools'));
     state.pools = poolSnap.docs
@@ -465,8 +476,8 @@ function renderOperationsInbox() {
                 detail: 'The live queue is calculated from saved customer profiles, memberships, licenses, expiries, and requests.'
             },
             payment: {
-                title: 'Payment queue not connected yet.',
-                detail: 'There is no verified Strong8K payment record source in Firestore. Continue checking payment manually before any renewal.'
+                title: 'No customer-reported payments right now.',
+                detail: 'New durable renewal requests will appear here after a customer reports sending payment.'
             },
             automation: {
                 title: 'Automation queue not connected yet.',
@@ -633,6 +644,30 @@ function buildOperationsInboxItems() {
         }
     });
 
+    state.renewalRequests
+        .filter(request => ['payment_reported', 'manual_review', 'failed'].includes(String(request.status || '')))
+        .forEach(request => {
+            const user = state.users.find(item => item.id === request.account_id);
+            const profile = state.strong8kProfiles[request.account_id];
+            const license = (profile?.licenses || []).find(item => item.id === request.license_id);
+            const displayName = user?.full_name || user?.email || request.customer_email || 'Customer';
+            const licenseName = license?.label || 'selected license';
+            const failed = request.status === 'failed';
+            items.push({
+                category: failed ? 'automation' : 'payment',
+                priority: failed ? 4 : 3,
+                kind: failed ? 'Automation' : 'Payment',
+                icon: failed ? 'fa-triangle-exclamation' : 'fa-money-check-dollar',
+                accent: failed ? '#e11d48' : '#d97706',
+                title: failed ? `${displayName}'s renewal needs review` : `${displayName} reported payment`,
+                summary: `${request.product_name || 'Renewal package'} · ${licenseName} · ${CONFIG.CURRENCY_SYMBOL}${Number(request.price || 0).toFixed(2)}`,
+                detail: failed
+                    ? String(request.failure_message || 'The renewal request could not continue automatically. Review it before retrying.')
+                    : `Verify payment before approving the ${formatStrong8kDuration(request.duration_months)} renewal. The request reserves ${Number(request.credits || 0)} credits.`,
+                userId: request.account_id
+            });
+        });
+
     return items.sort((left, right) => right.priority - left.priority || left.title.localeCompare(right.title));
 }
 
@@ -692,21 +727,32 @@ function renderStrong8kSection() {
     byId('strong8k-live-list').value = (state.strong8kConfig.live_list || []).join('\n');
     byId('strong8k-vod-list').value = (state.strong8kConfig.vod_list || []).join('\n');
 
+    const migrationCount = state.strong8kProductMigrationCandidates.length;
+    byId('product-migration-notice')?.toggleAttribute('hidden', migrationCount === 0);
+    if (byId('product-migration-copy')) {
+        byId('product-migration-copy').textContent = migrationCount
+            ? `${migrationCount} legacy ${migrationCount === 1 ? 'package is' : 'packages are'} visible but not yet copied into the canonical catalog.`
+            : 'The package catalog is canonical.';
+    }
+
     const tbody = byId('product-table-body');
-    tbody.innerHTML = '';
-    state.strong8kProducts.forEach(product => {
-        const row = document.createElement('tr');
-        row.className = 'border-b border-slate-100 text-sm';
-        row.innerHTML = `
-            <td class="px-4 py-4 font-semibold text-slate-950">${escapeHtml(product.name)}</td>
-            <td class="px-4 py-4 text-slate-500">${CONFIG.CURRENCY_SYMBOL}${product.price}</td>
-            <td class="px-4 py-4 text-slate-500">${product.credits || 0}</td>
-            <td class="px-4 py-4 text-right">
-                <button type="button" class="rounded-full border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950" data-edit-product="${product.id}">Edit</button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
+    tbody.innerHTML = state.strong8kProducts.length
+        ? state.strong8kProducts.map(product => {
+            const isRenewal = product.kind === 'renewal' && product.duration_months;
+            const availability = isRenewal && product.active ? 'Available' : 'Not offered';
+            const source = product.source === 'legacy' ? 'Legacy source' : 'Canonical';
+            return `
+                <article class="catalog-row ${product.active ? '' : 'is-inactive'}">
+                    <div>
+                        <div class="catalog-title">${escapeHtml(product.name)}</div>
+                        <div class="catalog-meta">${isRenewal ? `${escapeHtml(formatStrong8kDuration(product.duration_months))} · ${escapeHtml(String(product.credits))} credits` : 'Manual product · no automated renewal'} · ${escapeHtml(source)}</div>
+                    </div>
+                    <div class="catalog-price">${CONFIG.CURRENCY_SYMBOL}${Number(product.price || 0).toFixed(2)}</div>
+                    <span class="catalog-status ${product.active ? 'is-active' : ''}">${availability}</span>
+                    <button type="button" class="catalog-edit" data-edit-product="${escapeAttribute(product.id)}">Edit</button>
+                </article>`;
+        }).join('')
+        : '<div class="catalog-empty"><strong>No packages yet.</strong><p>Add the first renewal duration and customer price.</p></div>';
 
     tbody.querySelectorAll('[data-edit-product]').forEach(button => {
         button.addEventListener('click', () => loadProductIntoForm(button.dataset.editProduct));
@@ -1086,7 +1132,10 @@ async function executeMerge() {
 function bindStrong8kForms() {
     byId('strong8k-config-form').addEventListener('submit', saveStrong8kConfig);
     byId('product-form').addEventListener('submit', saveStrong8kProduct);
-    byId('new-product-btn').addEventListener('click', clearProductForm);
+    byId('new-product-btn').addEventListener('click', openNewProductForm);
+    byId('product-cancel-btn').addEventListener('click', clearProductForm);
+    byId('product-duration').addEventListener('change', syncProductCredits);
+    byId('product-migration-btn').addEventListener('click', migrateLegacyProducts);
     byId('seed-strong8k-btn').addEventListener('click', seedStrong8kDefaults);
 }
 
@@ -1114,7 +1163,12 @@ function loadProductIntoForm(productId) {
     byId('product-id').value = product.id;
     byId('product-name').value = product.name || '';
     byId('product-price').value = product.price || 0;
-    byId('product-credits').value = product.credits || 0;
+    byId('product-duration').value = product.duration_months || '';
+    byId('product-credits').value = product.duration_months || 0;
+    byId('product-active').checked = product.active !== false;
+    byId('product-form-title').textContent = `Edit ${product.name || 'package'}`;
+    byId('product-form').hidden = false;
+    byId('product-name').focus();
 }
 
 function clearProductForm() {
@@ -1122,20 +1176,93 @@ function clearProductForm() {
     byId('product-id').value = '';
     byId('product-name').value = '';
     byId('product-price').value = '0';
+    byId('product-duration').value = '';
     byId('product-credits').value = '0';
+    byId('product-active').checked = true;
+    byId('product-form-title').textContent = 'New renewal package';
+    byId('product-form').hidden = true;
+}
+
+function openNewProductForm() {
+    clearProductForm();
+    byId('product-form').hidden = false;
+    byId('product-name').focus();
+}
+
+function syncProductCredits() {
+    byId('product-credits').value = String(Number(byId('product-duration').value || 0));
 }
 
 async function saveStrong8kProduct(event) {
     event.preventDefault();
-    const productId = byId('product-id').value || slugify(byId('product-name').value) || crypto.randomUUID();
-    await setDoc(doc(db, 'strong8k_products', productId), {
-        name: byId('product-name').value,
-        price: Number(byId('product-price').value || 0),
-        credits: Number(byId('product-credits').value || 0)
-    }, { merge: true });
-    clearProductForm();
-    showToast('Strong8K product saved');
-    await loadAdminData();
+    const duration = Number(byId('product-duration').value || 0);
+    const currentId = byId('product-id').value;
+    const duplicate = state.strong8kProducts.find(product => product.kind === 'renewal' && product.duration_months === duration && product.id !== currentId);
+    if (duplicate) {
+        showToast(`${formatStrong8kDuration(duration)} already uses ${duplicate.name}. Edit that row instead.`, 'error');
+        return;
+    }
+
+    const productId = currentId || `${duration}_month`;
+    let payload;
+    try {
+        payload = strong8kProductPayload({
+            id: productId,
+            name: byId('product-name').value,
+            price: Number(byId('product-price').value || 0),
+            duration_months: duration,
+            active: byId('product-active').checked
+        });
+    } catch (error) {
+        showToast(error.message, 'error');
+        return;
+    }
+
+    const saveButton = byId('product-save-btn');
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving';
+    try {
+        await setDoc(doc(db, 'strong8k_products', productId), {
+            ...payload,
+            updated_at: new Date().toISOString()
+        }, { merge: true });
+        clearProductForm();
+        showToast('Renewal package saved');
+        await loadAdminData();
+    } catch (error) {
+        showToast(`Package could not be saved: ${error.message}`, 'error');
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Save package';
+    }
+}
+
+async function migrateLegacyProducts() {
+    const candidates = state.strong8kProductMigrationCandidates;
+    if (!candidates.length) {
+        showToast('The package catalog is already canonical');
+        return;
+    }
+
+    const button = byId('product-migration-btn');
+    button.disabled = true;
+    button.textContent = 'Importing';
+    try {
+        for (const product of candidates) {
+            await setDoc(doc(db, 'strong8k_products', product.id || `${product.duration_months}_month`), {
+                ...strong8kProductPayload(product),
+                migrated_from: 'products',
+                migrated_at: new Date().toISOString()
+            }, { merge: true });
+        }
+        showToast(`${candidates.length} legacy ${candidates.length === 1 ? 'package' : 'packages'} imported`);
+        await loadAdminData();
+    } catch (error) {
+        showToast(`Legacy packages could not be imported: ${error.message}`, 'error');
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Import missing packages';
+    }
 }
 
 async function seedStrong8kDefaults() {
@@ -1160,15 +1287,17 @@ async function seedStrong8kDefaults() {
     }, { merge: true });
 
     const defaults = [
-        { id: 'demo_1day', name: 'Demo (1 Day)', price: 0, credits: 0 },
-        { id: '1_month', name: '1 Month Access', price: 10, credits: 1 },
-        { id: '3_month', name: '3 Months Bundle', price: 25, credits: 3 },
-        { id: '6_month', name: '6 Months Deal', price: 40, credits: 6 },
-        { id: '12_month', name: '1 Year VIP', price: 60, credits: 12 }
+        { id: '1_month', name: '1 Month Access', price: 10, duration_months: 1, active: true },
+        { id: '3_month', name: '3 Months Bundle', price: 25, duration_months: 3, active: true },
+        { id: '6_month', name: '6 Months Deal', price: 40, duration_months: 6, active: true },
+        { id: '12_month', name: '1 Year VIP', price: 60, duration_months: 12, active: true }
     ];
 
     for (const product of defaults) {
-        await setDoc(doc(db, 'strong8k_products', product.id), product, { merge: true });
+        await setDoc(doc(db, 'strong8k_products', product.id), {
+            ...strong8kProductPayload(product),
+            updated_at: new Date().toISOString()
+        }, { merge: true });
     }
 
     showToast('Strong8K defaults seeded');

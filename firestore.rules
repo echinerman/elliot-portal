@@ -165,6 +165,18 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
     }
 
+    match /strong8k_renewal_requests/{requestId} {
+      allow read: if isPlatformAdmin()
+        || (isSignedIn()
+          && resource.data.account_id is string
+          && canAccessOwnAccount(resource.data.account_id));
+      allow write: if isPlatformAdmin();
+    }
+
+    match /strong8k_renewal_request_locks/{lockId} {
+      allow read, write: if isPlatformAdmin();
+    }
+
     match /playoff_pools/{poolId} {
       allow read: if isPlatformAdmin() || isPoolMember(poolId) || (isSignedIn() && resource.data.status == 'active');
       allow write: if isPlatformAdmin();
