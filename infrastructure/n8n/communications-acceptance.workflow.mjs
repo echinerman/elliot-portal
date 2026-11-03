@@ -69,3 +69,16 @@ create('communication_outbox/${messageId}',{thread_id:${JSON.stringify(threadId)
     activate.edge(activateStart, configCheck); activate.edge(configCheck, sentCheck); activate.edge(sentCheck, inboundCheck); activate.edge(inboundCheck, activationGuard); activate.edge(activationGuard, activationWrite); activate.edge(activationWrite, activated);
     return [seed.finish(), outbox, inbound, stop.finish(), resume.finish(), activate.finish()];
 }
+
+export function buildCommunicationStatusCheck(threadId) {
+    if (!/^[a-zA-Z0-9_-]{16,80}$/.test(threadId)) throw new Error('A specific conversation ID is required.');
+    const w = makeWorkflow('goelliotCommStatus20261103', 'Communications - Read-only rollout status');
+    const base = 'https://firestore.googleapis.com/v1/projects/elliotvip/databases/(default)/documents';
+    const firebase = { googleApi: { id: 'wuOeUnl3NuRU8gYA', name: 'Firebase - Strong8K Renewals' } };
+    const start = w.node('Manual read-only status', 'manualTrigger', {});
+    const config = w.http('Read runtime flags only', base + '/communication_config/runtime', 'GET', null, firebase);
+    const thread = w.http('Read selected test conversation', base + '/communication_threads/' + threadId, 'GET', null, firebase);
+    const result = w.code('Rollout status result', `const runtime=$('Read runtime flags only').first().json; if(runtime.statusCode!==200||$json.statusCode!==200) throw new Error('Rollout status could not be read.'); const fields=$json.body.fields; return [{json:{enabled:runtime.body.fields.enabled.booleanValue,sending_enabled:runtime.body.fields.sending_enabled.booleanValue,notifications_enabled:runtime.body.fields.notifications_enabled.booleanValue,notification_status:fields.notification_status?.stringValue||'',notification_error:fields.notification_error?.stringValue||'',thread_status:fields.status?.stringValue||''}}];`);
+    w.edge(start, config); w.edge(config, thread); w.edge(thread, result);
+    return w.finish();
+}
