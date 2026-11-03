@@ -47,7 +47,9 @@ export function createUserEditor({
     syncMembership,
     syncPoolMembers,
     appIds,
-    deviceInfoWebhookUrl
+    deviceInfoWebhookUrl,
+    beforeRouteChange = async () => true,
+    onDashboardRoute = () => {}
 }) {
     const local = {
         activeUserId: '',
@@ -161,6 +163,7 @@ export function createUserEditor({
     }
 
     async function handleRouteChange() {
+        if (!await beforeRouteChange()) return;
         const match = window.location.hash.match(PROFILE_ROUTE);
         if (!match) {
             if (local.activeUserId) {
@@ -196,6 +199,7 @@ export function createUserEditor({
             }
         });
         document.title = "Operations | Elliot's Private Clubhouse";
+        onDashboardRoute();
     }
 
     async function showUserWorkspace(userId) {
@@ -223,6 +227,7 @@ export function createUserEditor({
         resetAutosaveState();
 
         document.querySelectorAll('[data-admin-dashboard]').forEach(section => section.classList.add('hidden'));
+        byId('communications-workspace')?.classList.add('hidden');
         byId('admin-page-header')?.classList.add('hidden');
         byId('user-workspace')?.classList.remove('hidden');
         document.title = `${user.full_name || user.email || 'Customer'} | Operations`;

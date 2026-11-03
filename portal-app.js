@@ -1,4 +1,5 @@
-import { CONFIG } from './config.js?v=20261101-renewal-requests';
+import { CONFIG } from './config.js?v=20261102-inbox';
+import { bindPortalSupport } from './portal-support.js?v=20261102-inbox';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -136,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bindAuthForms();
     bindNoAccessEvents();
     bindStrong8kEvents();
+    bindPortalSupport({ auth, state, config: CONFIG });
     bindPlayoffEvents();
     bindSharedActions();
     setView('auth-view');

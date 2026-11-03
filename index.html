@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./communications.css?v=20261102-inbox">
     <title>Elliot's Private Clubhouse</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -509,6 +510,18 @@
                                     </div>
                                     <a id="contact-link" href="#" class="portal-secondary inline-flex items-center gap-2"><i class="fa-regular fa-envelope" aria-hidden="true"></i>Contact Elliot</a>
                                 </div>
+                                <form id="portal-support-form" class="comm-support-form" hidden>
+                                    <p>Send Elliot a message. You will receive a reply by email from info@goelliot.vip. Please do not include passwords or payment-card details.</p>
+                                    <label for="portal-support-subject">Subject<input id="portal-support-subject" name="subject" class="portal-field" maxlength="160" required></label>
+                                    <div class="comm-form-row">
+                                        <label for="portal-support-category">Topic<select id="portal-support-category" name="category" class="portal-field"><option value="support">Help and troubleshooting</option><option value="setup">Getting set up</option><option value="renewal">Question about a renewal</option><option value="other">Something else</option></select></label>
+                                        <label for="portal-support-license">License (optional)<select id="portal-support-license" name="licenseId" class="portal-field"><option value="">Not about a particular license</option></select></label>
+                                    </div>
+                                    <label for="portal-support-body">Message<textarea id="portal-support-body" name="body" rows="6" class="portal-field" maxlength="12000" required></textarea></label>
+                                    <div class="comm-composer-actions"><button id="portal-support-cancel" type="button" class="portal-secondary">Close</button><button id="portal-support-send" type="submit" class="portal-primary">Send message</button></div>
+                                    <p id="portal-support-status" role="status" aria-live="polite"></p>
+                                    <p>You can also email <a href="mailto:info@goelliot.vip">info@goelliot.vip</a>. To report a renewal payment, use Choose package instead.</p>
+                                </form>
                                 <div class="portal-form-grid">
                                     <label class="block">
                                         <span class="mb-2 block text-sm font-black text-slate-950">Shared setup notes</span>
@@ -875,6 +888,6 @@
         </div>
     </dialog>
 
-    <script type="module" src="./portal-app.js?v=20261101-renewal-requests"></script>
+    <script type="module" src="./portal-app.js?v=20261102-inbox"></script>
 </body>
 </html>

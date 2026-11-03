@@ -173,6 +173,22 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
     }
 
+    // Customer messages are accepted only by the authenticated n8n endpoint.
+    // Email bodies, recipients, outbox leases, and private notes never reach customers.
+    match /communication_threads/{threadId} {
+      allow read, write: if isPlatformAdmin();
+      match /messages/{messageId} {
+        allow read, write: if isPlatformAdmin();
+      }
+    }
+
+    match /communication_outbox/{messageId} { allow read, write: if isPlatformAdmin(); }
+    match /communication_ingest/{messageId} { allow read, write: if isPlatformAdmin(); }
+    match /communication_notifications/{noticeId} { allow read, write: if isPlatformAdmin(); }
+    match /communication_mail_references/{referenceId} { allow read, write: if isPlatformAdmin(); }
+    match /communication_rate_limits/{bucketId} { allow read, write: if isPlatformAdmin(); }
+    match /communication_config/{configId} { allow read, write: if isPlatformAdmin(); }
+
     match /strong8k_renewal_request_locks/{lockId} {
       allow read, write: if isPlatformAdmin();
     }

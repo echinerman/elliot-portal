@@ -23,6 +23,9 @@ export const CONFIG = {
     SUPPORT_EMAIL: "info@goelliot.vip",
     PAYMENT_EMAIL: "e.chinerman@gmail.com",
     CONTACT_LINK: "mailto:info@goelliot.vip",
+    // Enable only after the communications rules and inactive workflows pass acceptance checks.
+    COMMUNICATIONS_ENABLED: false,
+    PORTAL_SUPPORT_WEBHOOK: "https://automation.goelliot.vip/webhook/portal-support-message",
     STRONG8K_DEVICE_INFO_WEBHOOK: "https://automation.goelliot.vip/webhook/strong8k-device-info",
     STRONG8K_RENEWAL_REQUEST_WEBHOOK: "https://automation.goelliot.vip/webhook/strong8k-renewal-request",
 

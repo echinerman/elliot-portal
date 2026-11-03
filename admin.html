@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Operations | Elliot's Private Clubhouse</title>
+    <link rel="stylesheet" href="./communications.css?v=20261102-inbox">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -681,6 +682,8 @@
             </div>
         </section>
 
+        <section id="communications-workspace" class="comm-workspace hidden" aria-label="Customer conversation"></section>
+
         <section class="admin-tabs" role="tablist" aria-label="Operations workspaces" data-admin-dashboard>
             <button id="admin-tab-platform" type="button" role="tab" aria-controls="admin-panel-platform" aria-selected="true" data-tab="platform" class="is-active">Action inbox</button>
             <button id="admin-tab-strong8k" type="button" role="tab" aria-controls="admin-panel-strong8k" aria-selected="false" data-tab="strong8k">Strong8K tools</button>
@@ -702,11 +705,18 @@
                     <button type="button" class="ops-filter" data-ops-filter="expiry">Expiring <span class="ops-filter-count" data-ops-count="expiry">0</span></button>
                     <button type="button" class="ops-filter" data-ops-filter="review">Manual review <span class="ops-filter-count" data-ops-count="review">0</span></button>
                     <button type="button" class="ops-filter" data-ops-filter="support">Support <span class="ops-filter-count" data-ops-count="support">0</span></button>
+                    <button id="communications-filter" type="button" class="ops-filter" data-ops-filter="message" data-communication-enabled hidden>Messages <span class="ops-filter-count" data-ops-count="message">0</span></button>
                     <button type="button" class="ops-filter" data-ops-filter="payment">Payments <span class="ops-filter-count" data-ops-count="payment">0</span></button>
                     <button type="button" class="ops-filter" data-ops-filter="automation">Automation <span class="ops-filter-count" data-ops-count="automation">0</span></button>
                 </div>
                 <div id="operations-inbox-list"></div>
                 <p class="border-t border-slate-100 px-5 py-3 text-xs leading-5 text-slate-500">Source status: customer-reported Strong8K renewal requests are connected. Automation failures remain empty until a renewal-processing workflow writes a verified review state.</p>
+            </section>
+
+            <section id="communications-directory" class="admin-paper" aria-labelledby="communications-directory-title" data-communication-enabled hidden>
+                <div class="admin-paper-head"><div><h2 id="communications-directory-title">Conversations <span id="communication-unread-count" class="comm-state">0</span></h2><p>Customer messages and email replies, together. Showing the latest 100 conversations.</p></div>
+                    <label class="comm-status-label" for="communication-list-filter">Show<select id="communication-list-filter" class="user-profile-field"><option value="active">Active conversations</option><option value="resolved">Resolved</option><option value="all">All conversations</option></select></label>
+                </div><div id="communication-directory-list" aria-live="polite"></div>
             </section>
 
             <div class="admin-paper">
@@ -1323,6 +1333,6 @@
         </div>
     </div>
 
-    <script type="module" src="./admin-app.js?v=20261101-renewal-requests"></script>
+    <script type="module" src="./admin-app.js?v=20261102-inbox"></script>
 </body>
 </html>

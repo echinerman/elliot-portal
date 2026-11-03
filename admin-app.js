@@ -1,4 +1,5 @@
-import { CONFIG } from './config.js?v=20261101-renewal-requests';
+import { CONFIG } from './config.js?v=20261102-inbox';
+import { createCommunicationsWorkspace } from './communications-ui.js?v=20261102-inbox';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -35,7 +36,7 @@ import {
     sortStandings,
     suggestPayouts
 } from './playoff-logic.js?v=20261027-user-workspace';
-import { createUserEditor } from './user-editor.js?v=20261030-provider-reconciliation';
+import { createUserEditor } from './user-editor.js?v=20261102-inbox';
 import {
     formatStrong8kDuration,
     getLegacyProductMigrationCandidates,
@@ -61,6 +62,7 @@ const firebaseApp = initializeApp(CONFIG.FIREBASE);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 let userEditor = null;
+let communications = null;
 
 const state = {
     currentUser: null,
@@ -96,6 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
     bindMergeModal();
     bindStrong8kForms();
     bindPlayoffForms();
+    communications = createCommunicationsWorkspace({ db, auth, state, enabled: CONFIG.COMMUNICATIONS_ENABLED,
+        showToast, refreshInbox: renderOperationsInbox });
+    communications.bind();
     userEditor = createUserEditor({
         db,
         auth,
@@ -106,7 +111,9 @@ document.addEventListener('DOMContentLoaded', () => {
         syncMembership,
         syncPoolMembers,
         appIds: APP_IDS,
-        deviceInfoWebhookUrl: CONFIG.STRONG8K_DEVICE_INFO_WEBHOOK
+        deviceInfoWebhookUrl: CONFIG.STRONG8K_DEVICE_INFO_WEBHOOK,
+        beforeRouteChange: () => communications.beforeRouteChange(),
+        onDashboardRoute: () => communications.route()
     });
     userEditor.bind();
     byId('admin-signout-btn').addEventListener('click', () => signOut(auth));
@@ -249,6 +256,8 @@ function isConfiguredAdminEmail(email) {
 }
 
 async function handleAdminAuth(user) {
+    communications?.stop();
+    state.currentUser = null;
     if (!user) {
         showAdminAccessState(
             'Sign-in Required',
@@ -281,6 +290,7 @@ async function handleAdminAuth(user) {
     hideAdminAccessState();
     try {
         await loadAdminData();
+        communications?.start();
     } catch (error) {
         console.error('Admin bootstrap failed', error);
         showAdminAccessState(
@@ -450,7 +460,7 @@ function renderOperationsInbox() {
         result.all += 1;
         result[item.category] = (result[item.category] || 0) + 1;
         return result;
-    }, { all: 0, renewal: 0, expiry: 0, review: 0, support: 0, payment: 0, automation: 0 });
+    }, { all: 0, renewal: 0, expiry: 0, review: 0, support: 0, payment: 0, automation: 0, message: 0 });
 
     document.querySelectorAll('[data-ops-count]').forEach(node => {
         node.textContent = String(counts[node.dataset.opsCount] || 0);
@@ -507,7 +517,9 @@ function renderOperationsInbox() {
             <button type="button" class="ops-action" data-ops-expand="${index}" aria-expanded="false">Review</button>
             <div class="ops-detail">
                 <p>${escapeHtml(item.detail)}</p>
-                <button type="button" data-ops-user="${escapeAttribute(item.userId)}">Open full profile</button>
+                ${item.threadId
+                    ? `<button type="button" data-ops-thread="${escapeAttribute(item.threadId)}">Open conversation</button>`
+                    : `<button type="button" data-ops-user="${escapeAttribute(item.userId)}">Open full profile</button>`}
             </div>
         </article>
     `).join('');
@@ -530,10 +542,13 @@ function renderOperationsInbox() {
     container.querySelectorAll('[data-ops-user]').forEach(button => {
         button.addEventListener('click', () => userEditor?.open(button.dataset.opsUser));
     });
+    container.querySelectorAll('[data-ops-thread]').forEach(button => {
+        button.addEventListener('click', () => { window.location.hash = `#inbox/${button.dataset.opsThread}`; });
+    });
 }
 
 function buildOperationsInboxItems() {
-    const items = [];
+    const items = communications?.items() || [];
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
