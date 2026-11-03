@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=20261102-inbox';
+import { CONFIG } from './config.js?v=20261103-inbox-live';
 import { createCommunicationsWorkspace } from './communications-ui.js?v=20261102-inbox';
 import {
     APP_DEFINITIONS,

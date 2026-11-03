@@ -62,7 +62,8 @@ export async function runCommunicationOperation(operation, args, io) {
                 return outcome.value;
             }
             try {
-                await call(':commit', 'POST', { transaction, writes: outcome.writes });
+                const acknowledgement = await call(':commit', 'POST', { transaction, writes: outcome.writes });
+                if (!acknowledgement?.commitTime || !Array.isArray(acknowledgement.writeResults) || acknowledgement.writeResults.length !== outcome.writes.length) fail('The storage write was not confirmed. Retry after checking the conversation.', 503);
                 return outcome.value;
             } catch (error) {
                 if (error.code !== 'ABORTED' && error.status !== 409) throw error;
@@ -74,7 +75,11 @@ export async function runCommunicationOperation(operation, args, io) {
     if (operation === 'initialize') {
         return transact(async read => {
             const [existing] = await read(['communication_config/runtime']);
-            if (existing) return { value: { ok: true, created: false, enabled: existing.enabled === true } };
+            if (existing) {
+                const defaults = { gmail_label: 'goelliot-inbox', gmail_processed_label: 'goelliot-processed', ha_url: 'http://100.70.117.124:8123', ha_notify_service: 'mobile_app_elliot_s_s24' };
+                const missing = Object.fromEntries(Object.entries(defaults).filter(([key]) => !(key in existing)));
+                return { writes: Object.keys(missing).length ? [write('communication_config/runtime', missing, true)] : [], value: { ok: true, created: false, enabled: existing.enabled === true, repaired_fields: Object.keys(missing) } };
+            }
             return { writes: [write('communication_config/runtime', {
                 enabled: false, sending_enabled: false, notifications_enabled: false,
                 gmail_label: 'goelliot-inbox', gmail_processed_label: 'goelliot-processed',

@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { normalizeEmail, safePreview, validateSupportInput, plainEmailText, replyEnvelope, correlationIds, classifySendResult, normalizeGmailMessage, mailReferenceKey, isUnread } from '../communications-model.mjs';
 import { runCommunicationOperation } from '../infrastructure/n8n/communications-db.mjs';
-import { buildCommunicationWorkflows } from '../infrastructure/n8n/communications.workflow.mjs';
+import { buildCommunicationWorkflows, buildCommunicationMailboxCheck } from '../infrastructure/n8n/communications.workflow.mjs';
+import { buildAcceptanceWorkflows } from '../infrastructure/n8n/communications-acceptance.workflow.mjs';
 
 const now = Date.parse('2026-11-02T15:00:00Z');
 const threadId = 'comm_fixture_thread_0001';
@@ -43,7 +44,7 @@ function memoryStore(extra = {}) {
                 const key = write.update.name.slice(root.length), value = decode(write.update.fields);
                 data.set(key, write.updateMask ? { ...data.get(key), ...value } : value);
             }
-            return { status: 200, body: {} };
+            return { status: 200, body: { commitTime: new Date(now).toISOString(), writeResults: req.body.writes.map(() => ({ updateTime: new Date(now).toISOString() })) } };
         }
         const key = path.slice(1);
         return data.has(key) ? { status: 200, body: raw(key, data.get(key)) } : { status: 404, body: {} };
@@ -57,6 +58,44 @@ test('validates bounded support inputs and rejects header injection', () => {
     for (const patch of [{ subject: 'hello\nBcc:x' }, { body: 'a'.repeat(12001) }, { clientRequestId: '../bad' }, { licenseId: '../other' }, { category: 'admin' }]) assert.throws(() => validateSupportInput({ ...valid, ...patch }));
     assert.equal(normalizeEmail('Friend <Friend@Example.com>'), 'friend@example.com');
     assert.equal(normalizeEmail('friend@example.com\nBcc: evil@example.com'), '');
+});
+
+test('mailbox readiness checks only identity and label names, never mail content', () => {
+    const workflow = buildCommunicationMailboxCheck();
+    assert.equal(workflow.active, false);
+    const urls = workflow.nodes.filter(node => node.type.endsWith('.httpRequest')).map(node => node.parameters.url);
+    assert.deepEqual(urls, ['https://gmail.googleapis.com/gmail/v1/users/me/profile', 'https://gmail.googleapis.com/gmail/v1/users/me/labels']);
+    for (const node of workflow.nodes.filter(node => node.type.endsWith('.code'))) assert.doesNotThrow(() => new Function(node.parameters.jsCode));
+});
+
+test('generated JSON requests explicitly declare their HTTP content type', () => {
+    for (const workflow of [...buildCommunicationWorkflows(), ...buildAcceptanceWorkflows('18abcde0123')]) {
+        for (const node of workflow.nodes.filter(node => node.type.endsWith('.httpRequest') && node.parameters.sendBody)) {
+            assert.equal(node.parameters.contentType, 'json', node.name);
+            assert.equal(node.parameters.specifyBody, 'json', node.name);
+            assert.equal(node.parameters.sendBody, true, node.name);
+        }
+    }
+});
+
+test('manual acceptance helpers refuse arbitrary messages and contain no scheduled triggers', () => {
+    assert.throws(() => buildAcceptanceWorkflows('../mail'));
+    const workflows = buildAcceptanceWorkflows('18abcde0123');
+    assert.equal(workflows.length, 6);
+    for (const workflow of workflows) {
+        assert.equal(workflow.active, false);
+        assert.ok(!workflow.nodes.some(node => node.type.endsWith('.scheduleTrigger')));
+        const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+        for (const node of workflow.nodes.filter(node => node.type.endsWith('.code'))) assert.doesNotThrow(() => new AsyncFunction(node.parameters.jsCode));
+    }
+    const guard = workflows[1].nodes.find(node => node.name === 'Claimed email').parameters.jsCode;
+    assert.match(guard, /e\.chinerman@gmail\.com/);
+    assert.match(guard, /acceptance_reply_20261103A/);
+    assert.match(workflows[2].nodes.find(node => node.name === 'Normalize email').parameters.jsCode, /Cloudflare delivery is not yet proven/);
+    const resetGuard = new Function('$json', workflows[3].nodes.find(node => node.name === 'Protect unrelated live activation').parameters.jsCode);
+    const reset = resetGuard({ statusCode: 404 })[0].json;
+    assert.ok(['enabled','sending_enabled','notifications_enabled'].every(key => reset.fields[key].booleanValue === false));
+    assert.throws(() => resetGuard({statusCode:200,body:{fields:{enabled:{booleanValue:true},acceptance_session:{stringValue:''}}}}), /Refusing to disable/);
 });
 
 test('setup is disabled by default and never overwrites an existing runtime', async () => {
@@ -74,6 +113,7 @@ test('readiness is read-only and a missing commit is a failure, not success', as
     assert.equal((await store.run('storage_check')).ok, true);
     assert.ok(store.calls.every(call => call.method === 'GET'));
     await assert.rejects(runCommunicationOperation('support', { input: valid, identity }, { now, id: threadId, request: async req => req.url.endsWith(':commit') ? { status: 404, body: { error: { status: 'NOT_FOUND' } } } : store.request(req) }), /storage is unavailable/);
+    await assert.rejects(runCommunicationOperation('support', { input: valid, identity }, { now, id: threadId, request: async req => req.url.endsWith(':commit') ? { status: 200, body: {} } : store.request(req) }), /write was not confirmed/);
 });
 
 test('redacts preview credentials and strips executable email HTML', () => {

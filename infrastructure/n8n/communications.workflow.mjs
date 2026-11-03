@@ -8,7 +8,7 @@ const gmail = { gmailOAuth2: { id: 'gfmywRSTE0Ksh33Z', name: 'Gmail account' } }
 const smtp = { smtp: { id: 'vGz06Qdv8jZrKhLc', name: 'Oracle Email Delivery - info@goelliot.vip' } };
 const settings = { executionOrder: 'v1', saveDataSuccessExecution: 'none', saveDataErrorExecution: 'none', saveManualExecutions: false, executionTimeout: 240, timezone: 'America/Toronto' };
 
-function makeWorkflow(id, name) {
+export function makeWorkflow(id, name) {
     const nodes = [], connections = {};
     const node = (name, type, parameters, extra = {}) => {
         nodes.push({ id: `${id}-${nodes.length}`, name, type: `n8n-nodes-base.${type}`, typeVersion: { code: 2, httpRequest: 4.2, merge: 3.2, if: 2.2, scheduleTrigger: 1.2, webhook: 2.1, respondToWebhook: 1.4, emailSend: 2.1 }[type] || 1,
@@ -22,7 +22,7 @@ function makeWorkflow(id, name) {
     const condition = (name, expression) => node(name, 'if', { conditions: { options: { typeValidation: 'strict', version: 2 }, conditions: [{ id: name, leftValue: expression, rightValue: true, operator: { type: 'boolean', operation: 'true', singleValue: true } }], combinator: 'and' } });
     const http = (name, url, method, body, credential, extra = {}) => node(name, 'httpRequest', {
         url, method, ...(credential ? { authentication: 'predefinedCredentialType', nodeCredentialType: Object.keys(credential)[0] } : {}),
-        ...(body ? { sendBody: true, specifyBody: 'json', jsonBody: body } : {}),
+        ...(body ? { sendBody: true, contentType: 'json', specifyBody: 'json', jsonBody: body } : {}),
         options: { timeout: 20000, response: { response: { fullResponse: true, neverError: true, responseFormat: 'json' } } }
     }, { ...(credential ? { credentials: credential } : {}), onError: 'continueRegularOutput', ...extra });
     const schedule = () => node('Every minute', 'scheduleTrigger', { rule: { interval: [{ field: 'minutes', minutesInterval: 1 }] } });
@@ -45,12 +45,16 @@ try {
  return [{json:{done:true,result:{ok:false,httpStatus:error.status>=400&&error.status<500?error.status:503,message:error.message||'Communication storage unavailable.'}}}];
 }`);
         const branch = condition(`${prefix} needs request`, '={{ $json.done === false }}');
-        const request = http(`${prefix} Firestore`, '={{ $json.request.url }}', '={{ $json.request.method }}', '={{ $json.request.body }}', firebase);
-        nodes.find(item => item.name === request).parameters.sendBody = '={{ $json.request.method === "POST" }}';
+        const readBranch = condition(`${prefix} read request`, '={{ $json.request.method === "GET" }}');
+        const readRequest = http(`${prefix} Firestore read`, '={{ $json.request.url }}', 'GET', null, firebase);
+        const writeRequest = http(`${prefix} Firestore write`, '={{ $json.request.url }}', 'POST', '={{ $json.request.body }}', firebase);
         const merge = node(`${prefix} state and response`, 'merge', { mode: 'combine', combineBy: 'combineByPosition', options: {} });
         const advance = code(`${prefix} record response`, `const {body,statusCode,error,...state}=$json; state.history.push({status:statusCode||503,body:body||{error:{status:'TRANSPORT_ERROR'}}}); delete state.headers; delete state.request; return [{json:state}];`);
         const end = code(`${prefix} result`, 'return [{json:$json.result}];');
-        edge(init, step); edge(step, branch); edge(branch, request); edge(branch, merge, 0, 0); edge(request, merge, 0, 1); edge(merge, advance); edge(advance, step); edge(branch, end, 1);
+        edge(init, step); edge(step, branch); edge(branch, readBranch); edge(branch, merge, 0, 0);
+        edge(readBranch, readRequest); edge(readBranch, writeRequest, 1);
+        edge(readRequest, merge, 0, 1); edge(writeRequest, merge, 0, 1);
+        edge(merge, advance); edge(advance, step); edge(branch, end, 1);
         return { start: init, end };
     };
     return { node, edge, code, condition, http, schedule, db,
@@ -117,11 +121,12 @@ return [{json:{claim:$('Claimed email').first().json,result}}];`); w.edge(send, 
         const trigger = w.schedule(); const claim = w.db('Claim', 'claim_notice'); w.edge(trigger, claim.start);
         const claimed = w.code('Claimed notification', `if(!$json.ok) throw new Error($json.message||'Notification claim failed.'); if(!$json.id) return []; return [{json:$json}];`); w.edge(claim.end, claimed);
         const valid = w.condition('HA destination configured', '={{ $json.ha_url === "http://100.70.117.124:8123" && /^mobile_app_[a-z0-9_]+$/.test($json.notify_service) }}'); w.edge(claimed, valid);
+        const payload = w.code('Prepare phone alert payload', `return [{json:{notify_service:$json.notify_service,payload:{title:'goelliot.vip: new message',message:$json.preview||'A customer message needs attention.',data:{url:'https://goelliot.vip/admin.html#inbox/'+$json.thread_id,clickAction:'https://goelliot.vip/admin.html#inbox/'+$json.thread_id,tag:'goelliot-'+$json.thread_id,visibility:'private'}}}}];`); w.edge(valid, payload);
         const send = w.node('Send Home Assistant alert', 'httpRequest', {
             method: 'POST', url: '=http://100.70.117.124:8123/api/services/notify/{{ $json.notify_service }}', authentication: 'genericCredentialType', genericAuthType: 'httpHeaderAuth',
-            sendBody: true, specifyBody: 'json', jsonBody: '={{ {title:"goelliot.vip: new message",message:$json.preview || "A customer message needs attention.",data:{url:"https://goelliot.vip/admin.html#inbox/"+$json.thread_id,clickAction:"https://goelliot.vip/admin.html#inbox/"+$json.thread_id,tag:"goelliot-"+$json.thread_id,visibility:"private"}} }}',
+            sendBody: true, contentType: 'json', specifyBody: 'json', jsonBody: '={{ $json.payload }}',
             options: { timeout: 15000, response: { response: { fullResponse: true, neverError: true, responseFormat: 'json' } } }
-        }, { onError: 'continueRegularOutput', credentials: { httpHeaderAuth: { id: 'goelliotHACommunications20261102', name: 'Home Assistant - Communications' } } }); w.edge(valid, send);
+        }, { onError: 'continueRegularOutput', credentials: { httpHeaderAuth: { id: 'goelliotHACommunications20261102', name: 'Home Assistant - Communications' } } }); w.edge(payload, send);
         const classify = w.code('Notification outcome', `return [{json:{claim:$('Claimed notification').first().json,result:{status:$json.statusCode>=200&&$json.statusCode<300?'sent':'failed',error_code:$json.statusCode>=200&&$json.statusCode<300?'':'HA_UNAVAILABLE'}}}];`); w.edge(send, classify);
         const unconfigured = w.code('Missing HA setup', `return [{json:{claim:$json,result:{status:'failed',error_code:'HA_NOT_CONFIGURED'}}}];`); w.edge(valid, unconfigured, 1);
         const finish = w.db('Finish', 'finish_notice'); w.edge(classify, finish.start); w.edge(unconfigured, finish.start);
@@ -148,4 +153,15 @@ export function buildCommunicationSetup() {
     return w.finish();
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) process.stdout.write(JSON.stringify([...buildCommunicationWorkflows(), buildCommunicationStorageCheck(), buildCommunicationSetup()]));
+export function buildCommunicationMailboxCheck() {
+    const w = makeWorkflow('goelliotCommMailboxCheck20261103', 'Communications - Gmail readiness (read only)');
+    const trigger = w.node('Manual mailbox check', 'manualTrigger', {});
+    const profile = w.http('Read Gmail account identity', 'https://gmail.googleapis.com/gmail/v1/users/me/profile', 'GET', null, gmail);
+    const verify = w.code('Verify intended mailbox', `if($json.statusCode!==200) throw new Error('Gmail identity check failed. Reauthorize the Gmail credential.'); const email=String($json.body?.emailAddress||'').toLowerCase(); if(email!=='e.chinerman@gmail.com') throw new Error('Gmail credential is for '+email+', not the intended mailbox.'); return [{json:{email}}];`);
+    const labels = w.http('Read mailbox labels', 'https://gmail.googleapis.com/gmail/v1/users/me/labels', 'GET', null, gmail);
+    const result = w.code('Mailbox readiness result', `if($json.statusCode!==200) throw new Error('Gmail labels could not be read.'); const names=($json.body.labels||[]).map(label=>label.name); return [{json:{ok:true,account_email:$('Verify intended mailbox').first().json.email,incoming_label_ready:names.includes('goelliot-inbox'),processed_label_ready:names.includes('goelliot-processed')}}];`);
+    w.edge(trigger, profile); w.edge(profile, verify); w.edge(verify, labels); w.edge(labels, result);
+    return w.finish();
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) process.stdout.write(JSON.stringify([...buildCommunicationWorkflows(), buildCommunicationStorageCheck(), buildCommunicationSetup(), buildCommunicationMailboxCheck()]));

@@ -23,7 +23,7 @@ try {
         await setDoc(doc(db, 'users/customer-fixture'), { email: 'customer@example.com', full_name: 'Synthetic customer' });
         await setDoc(doc(db, 'users/customer-fixture/memberships/strong8k'), { app_id: 'strong8k', role: 'member', status: 'active' });
         await setDoc(doc(db, 'strong8k_profiles/customer-fixture'), { licenses: [{ id: 'fixture', expiry_date: '2027-01-01' }], setup_notes: 'Synthetic setup' });
-        await setDoc(doc(db, 'strong8k_profiles/customer-fixture/private/admin'), { internal_notes: 'Internal synthetic note' });
+        await setDoc(doc(db, 'strong8k_private/customer-fixture'), { internal_notes: 'Internal synthetic note' });
         await setDoc(doc(db, 'strong8k_profiles/customer-fixture/support_events/internal'), { visibility: 'internal', summary: 'Private email' });
         await setDoc(doc(db, 'strong8k_profiles/customer-fixture/support_events/shared'), { visibility: 'shared', summary: 'Shared setup' });
         for (const path of protectedPaths) await setDoc(doc(db, path), { body: 'Synthetic private message', account_id: 'customer-fixture' });
@@ -42,7 +42,8 @@ try {
     }
     await assertFails(getDocs(collection(customer, 'communication_threads')));
     await assertFails(setDoc(doc(customer, 'roles/customer-fixture'), { platform_admin: true }));
-    await assertFails(getDoc(doc(customer, 'strong8k_profiles/customer-fixture/private/admin')));
+    await assertFails(getDoc(doc(customer, 'strong8k_private/customer-fixture')));
+    await assertSucceeds(getDoc(doc(admin, 'strong8k_private/customer-fixture')));
     await assertFails(getDoc(doc(customer, 'strong8k_profiles/customer-fixture/support_events/internal')));
     await assertSucceeds(getDoc(doc(customer, 'strong8k_profiles/customer-fixture/support_events/shared')));
     await assertFails(setDoc(doc(customer, 'strong8k_profiles/customer-fixture/support_events/forged'), { visibility: 'shared', summary: 'Forged note' }));

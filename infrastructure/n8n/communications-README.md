@@ -8,7 +8,7 @@ Verified on November 2, 2026:
 
 - Local UI and backend regression tests pass against synthetic data; no customer email was sent by those tests.
 - Seven communications/setup/readiness workflows are imported and verified inactive. Existing renewal-request and device-info workflows remain active and unchanged. The read-only readiness workflow completed on the VM, exercising two Firestore HTTP calls through the actual n8n replay loop.
-- The disabled runtime initializer completed a real Firestore transaction, creating only the previously absent configuration document with messaging, sending, and notifications all off. No customer record was changed.
+- The original initializer reported success, but November 3 read-back checks found the runtime document absent. This exposed an HTTP adapter configuration issue before customer activation. GET/POST paths now use separate fixed settings, every JSON request declares its content type, and transactions require Firestore's commit acknowledgement. The corrected adapter was verified with real configuration, claim, completion, and ingestion writes; no customer subscription was changed.
 - Gmail account identity is `e.chinerman@gmail.com`. Labels `goelliot-inbox` and `goelliot-processed` were created; no existing messages were labeled, moved, or imported.
 - The existing Home Assistant token was imported over SSH standard input into n8n's encrypted credential store. It was not printed or saved in this project. The available phone service is `mobile_app_elliot_s_s24`.
 - Home Assistant accepted one labeled setup notification to that phone service. Physical phone receipt still needs Elliot's confirmation; no customer details were included.
@@ -17,7 +17,19 @@ Verified on November 2, 2026:
 
 November 3, 2026 update: Elliot published the messaging security rules through the signed-in Chrome Firebase console. The published version was read back through the editor and its normalized SHA-256 matched the emulator-tested local rules (`025a4ea316dc41c4c56ad9888ca884fbe9b53db9aeae356530220f25a421a694`). The prior published rules matched the local baseline without the messaging additions; no unrelated access rule was replaced.
 
-Live activation is not implied by workflow import or rules publication. Keep all three runtime flags and `COMMUNICATIONS_ENABLED` off until the remaining checks below pass. Website publication, the local Cloudflare webhook allowlist change, Gmail filtering/subaddress routing, and controlled end-to-end acceptance remain outstanding. The source workspace currently has no `.git` checkout, so do not claim these files were pushed to GitHub.
+November 3 rollout verification:
+
+- Website implementation was pushed to `main` as `3654977` and served successfully by GitHub Pages with the feature initially off. The deployment checkout is `artifacts/deployment-repo`, separate from the source workspace.
+- The exact public support-webhook route is installed in Cloudflare's local tunnel config. The prior config is backed up at `/etc/cloudflared/config.yml.pre-inbox-20261103`. Existing webhook routes and the catch-all deny are preserved.
+- Public preflight returned 204 with `Access-Control-Allow-Origin: https://goelliot.vip`; an unsigned POST returned 400 with `Sign in again` and created no message.
+- n8n's own Gmail OAuth credential successfully identified `e.chinerman@gmail.com` and both dedicated labels, not merely the separate Gmail connector account.
+- With Elliot's confirmation, Cloudflare's active `info@goelliot.vip` destination was changed from `chinermanelliot@gmail.com` to verified `e.chinerman@gmail.com`. Subaddressing is on; catch-all is still off.
+- A Gmail filter now applies only `goelliot-inbox` to new mail matching `to:(@goelliot.vip)`. Existing routing accepts only the info address and its plus tags. Historical application, deletion, forwarding, archive, mark-as-read, and spam bypass were all left unchecked.
+- A controlled reply traversed the real outbox/Oracle path and reached Elliot's Gmail inbox. From was `info@goelliot.vip`, Reply-To was `info+comm_setup_20261103@goelliot.vip`, and Gmail reported SPF, DKIM, and DMARC passing.
+- A same-mailbox forwarded test exposed only its Sent copy, so it was not accepted as delivery evidence. Elliot then sent an external test from his other Gmail address. It arrived with Inbox and intake labels, was durably ingested, and received the processed label only afterward. A sender mismatch with the original test thread is isolated for review rather than silently merged.
+- The five core communications workflows are published. The guarded activation helper verified all three runtime flags true only after checking the sent reply, durable external test, and expected HA/Gmail destinations. Manual readiness/acceptance helpers remain inactive.
+
+The client flag is enabled for the final website release. Authenticated browser form smoke testing and ongoing delivery monitoring remain distinct from the completed mail acceptance checks. Communications never approves payments or purchases/renews licenses.
 
 ## Components
 
@@ -35,7 +47,7 @@ The bundle contains five inactive workers, a manual read-only readiness check, a
 
 ## Disabled Runtime
 
-Run `Communications - Initialize disabled settings` once to create `communication_config/runtime` only if absent. It never overwrites an existing document. Initial values are:
+Run `Communications - Initialize disabled settings` once to create `communication_config/runtime` only if absent. For an existing document it fills only missing Gmail/HA destination fields, preserving all existing values and runtime flags. Initial values are:
 
 ```json
 {
@@ -71,6 +83,7 @@ No credentials belong in this document. Native n8n credentials hold Firebase ser
 - Phone-alert failures remain independent of email delivery. The admin can retry only the alert; this never queues an email. An older notice cannot overwrite the newest notice's status.
 - Unknown senders remain unlinked. A correlation token from the wrong sender creates a separate review thread. Linking a profile never changes the stored reply recipient. Email sender matching is routing context, not proof that the sender authenticated as a portal user.
 - Original HTML is displayed as escaped plain text. Attachments are never downloaded into Firestore; only filenames/size metadata and a Gmail link are retained. No customer thread-reading endpoint exists in v1.
+- Every generated JSON HTTP request declares `contentType: json`. Firestore reads and POST writes use separate nodes with fixed body settings, and a transaction is successful only when its commit acknowledgement covers every intended write. A 200 response without that acknowledgement is an error, not a successful save.
 - Saving a message to support history requires explicit confirmation. It creates an idempotent internal-only support event; it does not publish private email to a customer's shared timeline.
 
 ## Rollback And Maintenance
@@ -92,4 +105,10 @@ firebase emulators:exec --only firestore --project demo-goelliot-inbox --config 
 
 The browser tests use synthetic Firebase data on loopback port 4327; the visible preview uses 4326. Both are independent of the production database. The test runtime needs Playwright and Microsoft Edge. The rules test requires Java 21+, Firebase CLI, `@firebase/rules-unit-testing`, and `firebase`; it refuses a non-loopback emulator and uses only `demo-goelliot-inbox`. During this run those dependencies were installed in the Windows temporary directory, not added to the production site. Use `NODE_PATH` if they are outside the project. See [Firebase's rules-testing documentation](https://firebase.google.com/docs/firestore/security/test-rules-emulator).
 
-The 40 unit tests, browser regression, and actual-rule emulator checks passed. Live mail/Cloudflare/phone acceptance is a separate gate; emulator tests cannot prove deliverability.
+The 43 unit tests and browser regression pass. The official emulator checks also pass; the private-note fixture uses the real `strong8k_private` collection. Live mail acceptance above separately proves inbound storage and authenticated Oracle delivery; emulator tests alone cannot prove deliverability.
+
+## Manual Acceptance Helpers
+
+`communications-acceptance.workflow.mjs` generates inactive, single-recipient setup helpers; it requires a specific Gmail test message ID. The test runner uses private temporary output files, prints only safe result/error summaries, and deletes raw execution output. Its cleanup is restricted to its acceptance-session marker and refuses to disable an unrelated live activation. Do not publish these helpers as scheduled workflows or rerun initial acceptance against a live runtime.
+
+The activation script publishes only the five communications workflows and requires a controlled sent reply and durably stored external test before enabling the runtime. These helpers never contain SMTP, Google, provider, or HA secrets. Some completed CLI executions can leave stale `running` metadata in n8n; inspect explicit workflow names/timestamps rather than serializing execution records or restarting during a real customer job.
