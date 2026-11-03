@@ -620,51 +620,97 @@ async function loadSessionMemberships(authUid, accountId) {
 }
 
 function bindAuthForms() {
+    let pending = false;
+    const feedback = (message = '', tone = 'error') => {
+        const status = byId('auth-status');
+        status.textContent = message;
+        status.dataset.tone = tone;
+        status.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+        status.classList.toggle('hidden', !message);
+    };
+    const switchForm = registering => {
+        if (pending) return;
+        byId('login-form').classList.toggle('hidden', registering);
+        byId('register-form').classList.toggle('hidden', !registering);
+        byId('auth-form-title').textContent = registering ? 'Make yourself at home' : 'Come on in';
+        byId('auth-helper-text').textContent = registering ? 'Create your account with an email and password.' : 'Sign in with your email and password.';
+        feedback();
+        byId(registering ? 'reg-email' : 'login-email').focus();
+    };
+    const friendlyError = error => {
+        const messages = {
+            'auth/invalid-credential': "That email and password didn't match. Check your details or reset your password.",
+            'auth/wrong-password': "That email and password didn't match. Check your details or reset your password.",
+            'auth/user-not-found': "That email and password didn't match. Check your details or reset your password.",
+            'auth/network-request-failed': "We couldn't connect. Check your internet connection and try again.",
+            'auth/too-many-requests': 'Too many attempts. Please wait a few minutes and try again.',
+            'auth/email-already-in-use': 'This email already has an account. Sign in instead, or reset your password.',
+            'auth/weak-password': 'Choose a stronger password, then try again.',
+            'auth/invalid-email': 'Enter a valid email address.',
+            'auth/user-disabled': 'This account is unavailable. Please contact Elliot for help.'
+        };
+        return messages[error.code] || "We couldn't complete that request. Please try again, or contact Elliot for help.";
+    };
+    const submit = async (form, label, action) => {
+        if (pending) return;
+        pending = true;
+        feedback();
+        const button = form.querySelector('button[type="submit"]');
+        const originalLabel = button.textContent;
+        form.setAttribute('aria-busy', 'true');
+        button.disabled = true;
+        button.textContent = label;
+        try {
+            await action();
+        } catch (error) {
+            feedback(friendlyError(error));
+        } finally {
+            pending = false;
+            form.removeAttribute('aria-busy');
+            button.disabled = false;
+            button.textContent = originalLabel;
+        }
+    };
     byId('show-register-link').addEventListener('click', event => {
         event.preventDefault();
-        byId('login-form').classList.add('hidden');
-        byId('register-form').classList.remove('hidden');
+        switchForm(true);
     });
 
     byId('show-login-link').addEventListener('click', event => {
         event.preventDefault();
-        byId('register-form').classList.add('hidden');
-        byId('login-form').classList.remove('hidden');
+        switchForm(false);
     });
 
     byId('login-form').addEventListener('submit', async event => {
         event.preventDefault();
-        try {
-            await signInWithEmailAndPassword(auth, byId('login-email').value, byId('login-pass').value);
-        } catch (error) {
-            showToast(error.message, 'error');
-        }
+        await submit(event.currentTarget, 'Signing in...', () => signInWithEmailAndPassword(auth, byId('login-email').value.trim(), byId('login-pass').value));
     });
 
     byId('register-form').addEventListener('submit', async event => {
         event.preventDefault();
         const email = byId('reg-email').value.trim();
         const password = byId('reg-pass').value;
-        try {
-            await createUserWithEmailAndPassword(auth, email, password);
-        } catch (error) {
-            showToast(error.message, 'error');
-        }
+        await submit(event.currentTarget, 'Creating account...', () => createUserWithEmailAndPassword(auth, email, password));
     });
 
     byId('forgot-password-link').addEventListener('click', async event => {
         event.preventDefault();
+        if (pending) return;
         const email = byId('login-email').value.trim();
         if (!email) {
-            showToast('Enter your email address above first', 'error');
+            feedback('Enter your email address above first, then choose Forgot password.');
+            byId('login-email').focus();
             return;
         }
-        try {
-            await sendPasswordResetEmail(auth, email);
-            showToast('Password reset email sent - check your inbox');
-        } catch (error) {
-            showToast(error.message || 'Failed to send reset email', 'error');
-        }
+        if (!byId('login-email').reportValidity()) return;
+        await submit(byId('login-form'), 'Requesting reset...', async () => {
+            try {
+                await sendPasswordResetEmail(auth, email);
+            } catch (error) {
+                if (error.code !== 'auth/user-not-found') throw error;
+            }
+            feedback('If this email has an account, a reset link is on its way. Check your inbox.', 'success');
+        });
     });
 }
 

@@ -25,13 +25,26 @@ function snapshot(ref) {
 const notify = () => queueMicrotask(() => { for (const listener of listeners) listener.fn(snapshot(listener.ref)); });
 export const initializeApp = () => ({});
 export const getFirestore = () => ({});
-const auth = { currentUser: user, onAuthStateChanged: fn => onAuthStateChanged(auth, fn) };
+const authListeners = new Set();
+const auth = { currentUser: window.authFixture ? null : user, onAuthStateChanged: fn => onAuthStateChanged(auth, fn) };
 export const getAuth = () => auth;
-export const onAuthStateChanged = (_, fn) => { queueMicrotask(() => fn(auth.currentUser)); return () => {}; };
+export const onAuthStateChanged = (_, fn) => { authListeners.add(fn); queueMicrotask(() => fn(auth.currentUser)); return () => authListeners.delete(fn); };
 export const signOut = async () => { auth.currentUser = null; location.reload(); };
-export const sendPasswordResetEmail = async () => {};
-export const signInWithEmailAndPassword = async () => ({ user });
-export const createUserWithEmailAndPassword = async () => ({ user });
+async function authAction(kind, email) {
+    if (window.authFixture) {
+        window.authFixture.calls.push({ kind, email });
+        await new Promise(resolve => setTimeout(resolve, window.authFixture.delay));
+        if (window.authFixture.error) throw { code: window.authFixture.error };
+        if (kind !== 'reset') {
+            auth.currentUser = user;
+            for (const fn of authListeners) fn(user);
+        }
+    }
+    return { user };
+}
+export const sendPasswordResetEmail = async (_, email) => authAction('reset', email);
+export const signInWithEmailAndPassword = async (_, email) => authAction('login', email);
+export const createUserWithEmailAndPassword = async (_, email) => authAction('register', email);
 export const doc = (_, ...parts) => ({ path: parts.join('/'), kind: 'doc' });
 export const collection = (_, ...parts) => ({ path: parts.join('/'), kind: 'collection' });
 export const orderBy = (key, direction = 'asc') => ({ type: 'order', key, direction });

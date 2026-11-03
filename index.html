@@ -287,11 +287,44 @@
         .customer-support-empty strong { color: var(--ink); font-size: .85rem; }
         .customer-support-empty p { max-width: 48ch; margin: .35rem auto 0; color: #64748b; font-size: .8rem; line-height: 1.55; }
 
-        .auth-room-list { margin-top: 2.5rem; border-top: 1px solid rgba(255, 255, 255, .14); }
-        .auth-room-row { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: .9rem; border-bottom: 1px solid rgba(255, 255, 255, .14); padding: 1rem 0; }
-        .auth-room-row i { margin-top: .18rem; color: #6ee7b7; }
-        .auth-room-row strong { display: block; font-size: .92rem; }
-        .auth-room-row span { display: block; margin-top: .25rem; color: #cbd5e1; font-size: .78rem; line-height: 1.5; }
+        #auth-view { min-height: 100svh; padding: clamp(1rem, 3vw, 3rem); background: var(--mist); }
+        #auth-view:not(.hidden) { display: grid; align-items: center; }
+        .auth-shell { display: grid; grid-template-columns: 1.15fr 1fr; width: min(100%, 70rem); margin: auto; overflow: hidden; border-radius: 1rem; background: var(--paper); box-shadow: 0 20px 55px rgba(15, 23, 42, .08); }
+        .auth-intro { position: relative; isolation: isolate; display: flex; min-height: 35rem; flex-direction: column; padding: clamp(1.5rem, 4vw, 3rem); overflow: hidden; color: var(--paper); background: linear-gradient(145deg, var(--ink), var(--ink-soft) 70%, var(--emerald-deep)); }
+        .auth-brand { position: relative; z-index: 1; display: flex; align-items: center; gap: .8rem; font-size: .875rem; font-weight: 600; }
+        .auth-brand-mark { display: grid; width: 2.5rem; height: 2.5rem; flex: none; place-items: center; border: 1px solid rgba(255, 255, 255, .4); border-radius: .75rem; color: var(--paper); font-weight: 800; }
+        .auth-story { position: relative; z-index: 1; margin: auto 0; padding: 3.5rem 0; }
+        .auth-story h1 { max-width: 17ch; font-size: clamp(2.15rem, 3.7vw, 3rem); font-weight: 800; line-height: 1.12; letter-spacing: -.035em; text-wrap: balance; }
+        .auth-story h1 span { display: block; }
+        .auth-story p { max-width: 38ch; margin-top: 1.5rem; color: #e2e8f0; font-size: 1rem; line-height: 1.8; }
+        .auth-doorway { position: absolute; right: -1.5rem; bottom: -6rem; z-index: 0; width: 11rem; height: 23rem; border: 1px solid rgba(255, 255, 255, .16); pointer-events: none; }
+        .auth-doorway::after { position: absolute; inset: .65rem; border: 1px solid rgba(255, 255, 255, .1); content: ''; transform: perspective(35rem) rotateY(-18deg); transform-origin: right; animation: auth-door-settle 900ms var(--ease-out); }
+        @keyframes auth-door-settle { from { transform: perspective(35rem) rotateY(-32deg); } to { transform: perspective(35rem) rotateY(-18deg); } }
+        .auth-entry { display: flex; flex-direction: column; justify-content: center; padding: clamp(1.5rem, 4vw, 3rem); }
+        .auth-entry h2 { font-size: clamp(1.35rem, 2.2vw, 1.85rem); font-weight: 800; letter-spacing: -.025em; color: var(--ink); }
+        .auth-helper { margin: .75rem 0 2rem; color: var(--copy); font-size: .875rem; line-height: 1.7; }
+        .auth-form:not(.hidden) { display: grid; gap: 1.25rem; }
+        .auth-field { display: grid; gap: .5rem; color: var(--ink); font-size: .875rem; font-weight: 600; }
+        .auth-field input { width: 100%; min-height: 3.1rem; padding: .85rem .9rem; border: 1px solid #cbd5e1; border-radius: .8rem; background: #f8fafc; color: var(--ink); font-size: 1rem; font-weight: 400; caret-color: var(--emerald-deep); }
+        .auth-field input:focus { border-color: var(--ink-soft); background: var(--paper); }
+        .auth-submit { min-height: 3.1rem; margin-top: .25rem; padding: .85rem 1rem; border-radius: .75rem; background: var(--ink); color: var(--paper); font-size: .875rem; font-weight: 600; transition: background 160ms ease; }
+        .auth-submit:hover { background: var(--ink-soft); }
+        .auth-submit:disabled { opacity: .6; cursor: wait; }
+        .auth-links { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; color: var(--copy); font-size: .875rem; line-height: 1.7; }
+        .auth-links a { color: var(--ink); text-decoration: underline; text-underline-offset: .22em; }
+        .auth-links a:hover { color: var(--emerald-deep); }
+        .auth-feedback { margin: 0 0 1.5rem; padding: .85rem 1rem; border-radius: .75rem; background: #fff1f2; color: #9f1239; font-size: .875rem; line-height: 1.65; overflow-wrap: anywhere; }
+        .auth-feedback[data-tone="success"] { background: #ecfdf5; color: var(--emerald-deep); }
+        @media (max-width: 760px) {
+            .auth-shell { grid-template-columns: minmax(0, 1fr); max-width: 34rem; }
+            .auth-intro { min-height: 0; }
+            .auth-story { padding: 1.75rem 0 .25rem; }
+            .auth-story h1 { font-size: 2.15rem; }
+            .auth-story p { margin-top: 1rem; font-size: .875rem; line-height: 1.7; }
+            .auth-doorway { right: -3rem; bottom: -9rem; height: 21rem; }
+            .auth-entry { padding-top: 1.75rem; padding-bottom: 1.75rem; }
+            .auth-helper { margin-bottom: 1.5rem; }
+        }
 
         .portal-shell--playoff { background: var(--ink); }
         .portal-shell--playoff .portal-main { background: var(--ink); }
@@ -360,57 +393,39 @@
             </div>
         </section>
 
-        <section id="auth-view" class="min-h-screen px-4 py-12">
-            <div class="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-                <div class="rounded-2xl bg-[radial-gradient(circle_at_top_right,_#065f46,_#0f172a_48%,_#020617_100%)] p-8 text-white shadow-float lg:p-12">
-                    <div class="max-w-xl">
-                        <div class="mb-7 flex items-center gap-3 text-sm font-black">
-                            <span class="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400 text-slate-950">E</span>
-                            <span>Elliot's private clubhouse</span>
-                        </div>
-                        <h1 class="max-w-[12ch] text-4xl font-black leading-[1.02] tracking-[-0.035em] lg:text-6xl">Everything we share, in one clear place.</h1>
-                        <p class="mt-6 text-base leading-7 text-slate-200 lg:text-lg">
-                            Open your Strong8K details, join the playoff pool, or get help from Elliot without hunting through old messages.
-                        </p>
+        <section id="auth-view" aria-labelledby="auth-welcome-title">
+            <div class="auth-shell">
+                <div class="auth-intro">
+                    <div class="auth-brand">
+                        <span class="auth-brand-mark" aria-hidden="true">E</span>
+                        <span>Elliot's clubhouse</span>
                     </div>
-                    <div class="auth-room-list">
-                        <div class="auth-room-row">
-                            <i class="fa-solid fa-tv" aria-hidden="true"></i>
-                            <div><strong>Strong8K</strong><span>Your licenses, sign-in details, renewal options, and shared setup notes.</span></div>
-                        </div>
-                        <div class="auth-room-row">
-                            <i class="fa-solid fa-hockey-puck" aria-hidden="true"></i>
-                            <div><strong>NHL Playoff Pool</strong><span>Your picks, live standings, pool rules, and what-if scenarios.</span></div>
-                        </div>
+                    <div class="auth-story">
+                        <h1 id="auth-welcome-title"><span>A familiar face.</span><span>A few hidden doors.</span></h1>
+                        <p>A private corner for friends and family, where Elliot's know-how makes the complicated a little simpler.</p>
                     </div>
+                    <div class="auth-doorway" aria-hidden="true"></div>
                 </div>
 
-                <div class="rounded-2xl bg-white p-8 shadow-float lg:p-10">
-                    <div class="mb-8">
-                        <h2 class="text-3xl font-black tracking-[-0.025em] text-slate-950">Come on in</h2>
-                        <p id="auth-helper-text" class="mt-3 text-sm leading-6 text-slate-500"></p>
-                    </div>
-
-                    <form id="login-form" class="space-y-4">
-                        <input type="email" id="login-email" placeholder="Email" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-900" required>
-                        <input type="password" id="login-pass" placeholder="Password" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-900" required>
-                        <button type="submit" class="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Sign In</button>
-                        <p class="text-center text-sm text-slate-500">
-                            Need an account?
-                            <a href="#" id="show-register-link" class="font-bold text-slate-950 hover:underline">Create one now</a>
-                            &nbsp;&middot;&nbsp;
-                            <a href="#" id="forgot-password-link" class="font-bold text-slate-950 hover:underline">Forgot password?</a>
-                        </p>
+                <div class="auth-entry">
+                    <h2 id="auth-form-title">Come on in</h2>
+                    <p id="auth-helper-text" class="auth-helper">Sign in with your email and password.</p>
+                    <p id="auth-status" class="auth-feedback hidden" role="alert" aria-atomic="true"></p>
+                    <form id="login-form" class="auth-form" aria-labelledby="auth-form-title">
+                        <label class="auth-field" for="login-email">Email<input type="email" id="login-email" name="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" required></label>
+                        <label class="auth-field" for="login-pass">Password<input type="password" id="login-pass" name="password" autocomplete="current-password" required></label>
+                        <button type="submit" class="auth-submit">Sign in</button>
+                        <div class="auth-links">
+                            <p>New here? <a href="#" id="show-register-link">Create an account</a></p>
+                            <a href="#" id="forgot-password-link">Forgot password?</a>
+                        </div>
                     </form>
 
-                    <form id="register-form" class="hidden space-y-4">
-                        <input type="email" id="reg-email" placeholder="Email" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-900" required>
-                        <input type="password" id="reg-pass" placeholder="Password" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-900" required>
-                        <button type="submit" class="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Create Account</button>
-                        <p class="text-center text-sm text-slate-500">
-                            Already have an account?
-                            <a href="#" id="show-login-link" class="font-bold text-slate-950 hover:underline">Sign in</a>
-                        </p>
+                    <form id="register-form" class="auth-form hidden" aria-labelledby="auth-form-title">
+                        <label class="auth-field" for="reg-email">Email<input type="email" id="reg-email" name="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" required></label>
+                        <label class="auth-field" for="reg-pass">Password<input type="password" id="reg-pass" name="password" autocomplete="new-password" required></label>
+                        <button type="submit" class="auth-submit">Create account</button>
+                        <div class="auth-links"><p>Already have an account? <a href="#" id="show-login-link">Sign in</a></p></div>
                     </form>
                 </div>
             </div>
@@ -888,6 +903,6 @@
         </div>
     </dialog>
 
-    <script type="module" src="./portal-app.js?v=20261103-inbox-live"></script>
+    <script type="module" src="./portal-app.js?v=20261103-clubhouse-entry"></script>
 </body>
 </html>
