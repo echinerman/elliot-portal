@@ -10,6 +10,17 @@ const data = new Map(Object.entries({
     [`communication_threads/${threadId}/messages/inbound-1`]: { body: 'Hi Elliot, the channels work, but the guide is empty after the update.\n\nI attached a picture of what I see. Should I refresh the EPG or change a setting?\n\nThanks!', direction: 'inbound', source: 'email', sender_email: 'friend@example.com', created_at: '2026-11-02T14:00:00Z', status: 'received', gmail_message_id: '18abcde01234', attachments: [{ filename: 'guide-screen.jpg', size: 5400 }] },
     'strong8k_renewal_requests/fixture-renewal': { account_id: 'fixture-admin', license_id: 'fixture-license', product_name: '1 Year', price: 70, status: 'payment_reported' }
 }));
+data.set('users/prospect-fixture-01', { full_name: 'Alex Example', email: 'alex@example.com' });
+data.set('users/prospect-fixture-01/memberships/strong8k', { app_id: 'strong8k', role: 'member', status: 'active' });
+data.set('strong8k_profiles/prospect-fixture-01', { licenses: [] });
+data.set('strong8k_private/prospect-fixture-01', { prospect_status: 'prospect', license_history_seen: false });
+data.set('users/prospect-fixture-02', { full_name: 'Jamie Example', email: 'jamie@example.com' });
+data.set('users/prospect-fixture-02/memberships/strong8k', { app_id: 'strong8k', role: 'member', status: 'active' });
+data.set('strong8k_profiles/prospect-fixture-02', { licenses: [] });
+data.set('users/customer-fixture-old', { full_name: 'Morgan Example', email: 'morgan@example.com' });
+data.set('users/customer-fixture-old/memberships/strong8k', { app_id: 'strong8k', role: 'member', status: 'active' });
+data.set('strong8k_profiles/customer-fixture-old', { licenses: [] });
+data.set('strong8k_private/customer-fixture-old', { license_history_seen: true, prospect_status: 'customer' });
 const listeners = new Set();
 const snap = ref => ({ id: ref.path.split('/').at(-1), exists: () => data.has(ref.path), data: () => structuredClone(data.get(ref.path)) });
 function snapshot(ref) {

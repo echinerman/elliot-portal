@@ -31,6 +31,10 @@
 .comm-composer textarea::placeholder { color: #64748b; }
 .comm-composer { padding: 1.5rem; }
 .comm-composer label { display: block; font-weight: 800; margin-bottom: .4rem; }
+.comm-composer input { width: 100%; margin-bottom: 1.25rem; }
+.comm-composer > .comm-meta { margin-bottom: 1.25rem; }
+.comm-composer [readonly] { background: var(--mist); }
+.comm-composer > [role="status"] { margin-top: 1rem; color: var(--copy); font-size: .875rem; line-height: 1.7; }
 .comm-composer textarea { width: 100%; margin-top: .8rem; resize: vertical; }
 .comm-composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
 .comm-composer-actions [role="status"] { font-size: .875rem; color: var(--copy); }
@@ -49,6 +53,13 @@
 .comm-support-form .portal-field { width: 100%; }
 @media (max-width: 1000px) { .comm-columns { grid-template-columns: 1fr; } .comm-context { border-left: 0; border-top: 1px solid var(--line); } }
 @media (max-width: 720px) {
+    #people-table, #people-table tbody { display: block; width: 100%; min-width: 0; }
+    #people-table thead { display: none; }
+    #people-table tr { display: grid; grid-template-columns: minmax(0, 1fr); padding: .75rem 0; }
+    #people-table td { display: block; min-width: 0; max-width: 100%; padding: .5rem 1rem; overflow-wrap: anywhere; text-align: left; }
+    #people-table td:nth-child(2) > div { display: flex; width: 100%; min-width: 0; flex-wrap: wrap; gap: .5rem; }
+    #people-table td:nth-child(3)::before { content: 'Default room: '; color: var(--copy); }
+    #people-table td:last-child { display: flex; flex-wrap: wrap; gap: .5rem; }
     .comm-header { align-items: stretch; }
     .comm-identity { flex-basis: 100%; }
     .comm-status-label { flex: 1; }
@@ -57,5 +68,5 @@
     .comm-thread-row > .comm-meta { grid-column: 1 / -1; }
     .comm-form-row { grid-template-columns: 1fr; gap: 0; }
     .comm-composer .user-profile-button { width: 100%; }
-    .comm-workspace textarea, .comm-workspace select, .comm-support-form input, .comm-support-form select, .comm-support-form textarea { font-size: 1rem; }
+    .comm-workspace input, .comm-workspace textarea, .comm-workspace select, .comm-support-form input, .comm-support-form select, .comm-support-form textarea { font-size: 1rem; }
 }

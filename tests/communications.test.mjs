@@ -212,6 +212,21 @@ test('outbox lease prevents duplicate sends and rejects stale completion', async
     assert.equal(store.data.get(`communication_threads/${threadId}`).status, 'waiting_on_customer');
 });
 
+test('a manually started prospect conversation uses the existing outbox and reply correlation', async () => {
+    const store = outgoingStore();
+    Object.assign(store.data.get(`communication_threads/${threadId}`), {
+        category: 'setup', source: 'admin_portal', last_inbound_id: '', last_read_inbound_id: '', subject: 'A hand getting set up'
+    });
+    const claim = await store.run('claim_send');
+    assert.equal(claim.envelope.from, 'goelliot.vip <info@goelliot.vip>');
+    assert.equal(claim.envelope.reply_to, `info+${threadId}@goelliot.vip`);
+    assert.match(claim.envelope.subject, /A hand getting set up/);
+    assert.equal((await store.run('claim_send', {}, 'second-attempt')).idle, true);
+    await store.run('finish_send', { claim, result: { status: 'sent' } });
+    assert.equal(store.data.get(`communication_threads/${threadId}`).status, 'waiting_on_customer');
+    assert.equal(store.data.has('strong8k_private/account-1'), false, 'sending never changes prospect or license state');
+});
+
 test('new inbound during SMTP send is not marked waiting or read', async () => {
     const store = outgoingStore(); const claim = await store.run('claim_send');
     store.data.get(`communication_threads/${threadId}`).last_inbound_id = 'new';

@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js?v=20261103-inbox-live';
-import { createCommunicationsWorkspace } from './communications-ui.js?v=20261102-inbox';
+import { createCommunicationsWorkspace } from './communications-ui.js?v=20261104-prospects';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -36,7 +36,8 @@ import {
     sortStandings,
     suggestPayouts
 } from './playoff-logic.js?v=20261027-user-workspace';
-import { createUserEditor } from './user-editor.js?v=20261102-inbox';
+import { createUserEditor } from './user-editor.js?v=20261104-prospects';
+import { deriveProspectState, hasCompleteLicense } from './prospect-model.mjs?v=20261104-prospects';
 import {
     formatStrong8kDuration,
     getLegacyProductMigrationCandidates,
@@ -69,6 +70,8 @@ const state = {
     users: [],
     membershipsByUser: {},
     strong8kProfiles: {},
+    strong8kPrivate: {},
+    peopleFilter: 'all',
     strong8kProducts: [],
     strong8kLegacyProducts: [],
     strong8kProductMigrationCandidates: [],
@@ -112,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         syncPoolMembers,
         appIds: APP_IDS,
         deviceInfoWebhookUrl: CONFIG.STRONG8K_DEVICE_INFO_WEBHOOK,
+        startProspectConversation: userId => communications.composeProspect(userId),
         beforeRouteChange: () => communications.beforeRouteChange(),
         onDashboardRoute: () => communications.route()
     });
@@ -330,6 +334,10 @@ async function loadAdminData() {
     });
     state.strong8kProfiles = profiles;
 
+    // Do not turn a failed private-history read into an empty prospect map.
+    const privateSnap = await getDocs(collection(db, 'strong8k_private'));
+    state.strong8kPrivate = Object.fromEntries(privateSnap.docs.map(item => [item.id, item.data()]));
+
     const configSnap = await getDoc(doc(db, 'strong8k_config', 'content_options'));
     if (configSnap.exists()) {
         state.strong8kConfig = configSnap.data();
@@ -426,6 +434,11 @@ function renderAdmin() {
 }
 
 function bindNavigation() {
+    byId('user-search')?.addEventListener('input', () => renderUsers());
+    byId('people-filter')?.addEventListener('change', event => {
+        state.peopleFilter = event.target.value;
+        renderUsers();
+    });
     document.querySelectorAll('[data-tab]').forEach(button => {
         button.addEventListener('click', () => {
             const tabId = button.dataset.tab;
@@ -471,8 +484,9 @@ function renderOperationsInbox() {
         button.setAttribute('aria-pressed', String(active));
     });
 
+    const attentionCount = items.filter(item => item.category !== 'prospect').length;
     byId('operations-inbox-summary').textContent = counts.all
-        ? `${counts.all} ${counts.all === 1 ? 'item needs' : 'items need'} attention`
+        ? `${attentionCount} ${attentionCount === 1 ? 'item needs' : 'items need'} attention${counts.prospect ? ` · ${counts.prospect} ${counts.prospect === 1 ? 'prospect' : 'prospects'}` : ''}`
         : 'Queue clear';
 
     const visibleItems = state.operationsFilter === 'all'
@@ -488,6 +502,10 @@ function renderOperationsInbox() {
             payment: {
                 title: 'No customer-reported payments right now.',
                 detail: 'New durable renewal requests will appear here after a customer reports sending payment.'
+            },
+            prospect: {
+                title: 'No confirmed prospects match this queue.',
+                detail: 'Review a person\'s license history in their profile before confirming a Prospect label.'
             },
             automation: {
                 title: 'Automation queue not connected yet.',
@@ -514,7 +532,7 @@ function renderOperationsInbox() {
                 <div class="ops-title">${escapeHtml(item.title)}</div>
                 <div class="ops-copy">${escapeHtml(item.summary)}</div>
             </div>
-            <button type="button" class="ops-action" data-ops-expand="${index}" aria-expanded="false">Review</button>
+            <div class="ops-row-actions">${item.category === 'prospect' ? `<button type="button" class="ops-action" data-start-prospect="${escapeAttribute(item.userId)}">Start conversation</button>` : ''}<button type="button" class="ops-action" data-ops-expand="${index}" aria-expanded="false">Review</button></div>
             <div class="ops-detail">
                 <p>${escapeHtml(item.detail)}</p>
                 ${item.threadId
@@ -545,6 +563,24 @@ function renderOperationsInbox() {
     container.querySelectorAll('[data-ops-thread]').forEach(button => {
         button.addEventListener('click', () => { window.location.hash = `#inbox/${button.dataset.opsThread}`; });
     });
+    bindProspectConversationActions(container);
+}
+
+function getProspectState(user) {
+    const legacyId = user.legacy_account_id;
+    return deriveProspectState(state.strong8kProfiles[user.id], state.strong8kPrivate[user.id],
+        legacyId ? [state.strong8kProfiles[legacyId]] : [],
+        legacyId ? [state.strong8kPrivate[legacyId]] : []);
+}
+
+function bindProspectConversationActions(container) {
+    container.querySelectorAll('[data-start-prospect]').forEach(button => {
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+            try { await userEditor?.startProspectConversation(button.dataset.startProspect); }
+            finally { button.disabled = false; }
+        });
+    });
 }
 
 function buildOperationsInboxItems() {
@@ -557,6 +593,15 @@ function buildOperationsInboxItems() {
         const memberships = state.membershipsByUser[user.id] || {};
         const strong8kMembership = memberships[APP_IDS.STRONG8K];
         const profile = state.strong8kProfiles[user.id];
+        const prospect = getProspectState(user);
+        if (prospect.status === 'prospect') {
+            items.push({
+                category: 'prospect', priority: 0, kind: 'Prospect', icon: 'fa-user', accent: '#94a3b8',
+                title: displayName, summary: 'No license yet. Ready for a personal hello.',
+                detail: 'Start a conversation manually. The Prospect label grants no access and does not purchase a license or send a message.',
+                userId: user.id
+            });
+        }
 
         Object.values(memberships).forEach(membership => {
             if (membership?.status !== 'pending') return;
@@ -576,7 +621,7 @@ function buildOperationsInboxItems() {
         if (!strong8kMembership || !profile) return;
 
         const licenses = Array.isArray(profile.licenses) ? profile.licenses : [];
-        if (!licenses.length) {
+        if (!licenses.length && prospect.status !== 'prospect') {
             items.push({
                 category: 'review',
                 priority: 3,
@@ -585,7 +630,9 @@ function buildOperationsInboxItems() {
                 accent: '#e11d48',
                 title: `${displayName} has no Strong8K license`,
                 summary: 'Strong8K access exists, but no license credentials are saved.',
-                detail: 'Add the purchased license or confirm that this account should remain active without one.',
+                detail: prospect.canClassify
+                    ? 'License history may be unknown. Review the full profile, then explicitly confirm a Prospect label only if appropriate. No access or license is granted by that label.'
+                    : 'Prior license history is recorded. Review the missing license; do not treat this person as a new prospect.',
                 userId: user.id
             });
         }
@@ -597,6 +644,7 @@ function buildOperationsInboxItems() {
                 !String(license.password_8k || '').trim() ? 'password' : '',
                 !String(license.expiry_date || '').trim() ? 'expiry date' : ''
             ].filter(Boolean);
+            if (!missing.length && !hasCompleteLicense(license)) missing.push('valid expiry date');
 
             if (missing.length) {
                 items.push({
@@ -686,17 +734,19 @@ function buildOperationsInboxItems() {
     return items.sort((left, right) => right.priority - left.priority || left.title.localeCompare(right.title));
 }
 
-function renderUsers(filter = '') {
+function renderUsers(filter = byId('user-search')?.value || '') {
     const tbody = byId('users-table-body');
     tbody.innerHTML = '';
     const queryValue = filter.trim().toLowerCase();
     const users = state.users.filter(user => {
+        if (state.peopleFilter === 'prospects' && getProspectState(user).status !== 'prospect') return false;
         if (!queryValue) return true;
         return [user.full_name, user.email].some(value => String(value || '').toLowerCase().includes(queryValue));
     });
 
     users.forEach(user => {
         const memberships = state.membershipsByUser[user.id] || {};
+        const prospect = getProspectState(user);
         const row = document.createElement('tr');
         row.className = 'border-b border-slate-100 text-sm';
         row.innerHTML = `
@@ -708,10 +758,12 @@ function renderUsers(filter = '') {
                 <div class="flex flex-wrap gap-2">
                     ${renderMembershipBadge(memberships[APP_IDS.STRONG8K], APP_DEFINITIONS[APP_IDS.STRONG8K].shortLabel)}
                     ${renderMembershipBadge(memberships[APP_IDS.PLAYOFF], APP_DEFINITIONS[APP_IDS.PLAYOFF].shortLabel)}
+                    ${['prospect', 'customer'].includes(prospect.status) ? `<span class="user-membership-chip">${prospect.status === 'prospect' ? 'Prospect' : 'Customer'}</span>` : ''}
                 </div>
             </td>
             <td class="px-4 py-4 text-slate-500">${escapeHtml(user.default_app_id || 'Auto')}</td>
             <td class="px-4 py-4 text-right">
+                ${prospect.status === 'prospect' ? `<button type="button" class="user-profile-button" data-start-prospect="${escapeAttribute(user.id)}">Start conversation</button>` : ''}
                 <button type="button" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950" data-edit-user="${user.id}">
                     Edit
                 </button>
@@ -723,6 +775,8 @@ function renderUsers(filter = '') {
     tbody.querySelectorAll('[data-edit-user]').forEach(button => {
         button.addEventListener('click', () => userEditor?.open(button.dataset.editUser));
     });
+    if (!users.length) tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-sm text-slate-600">No people match this filter.</td></tr>';
+    bindProspectConversationActions(tbody);
 }
 
 function renderMembershipBadge(membership, label) {

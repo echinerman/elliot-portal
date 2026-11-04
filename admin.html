@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Operations | Elliot's Private Clubhouse</title>
-    <link rel="stylesheet" href="./communications.css?v=20261102-inbox">
+    <link rel="stylesheet" href="./communications.css?v=20261104-prospects">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -144,6 +144,7 @@
         .ops-copy { margin-top: .2rem; color: #64748b; font-size: .76rem; line-height: 1.45; }
         .ops-action { border: 1px solid #cbd5e1; border-radius: 999px; padding: .55rem .75rem; color: #334155; font-size: .72rem; font-weight: 850; }
         .ops-action:hover { border-color: var(--ink); color: var(--ink); }
+        .ops-row-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
         .ops-row.is-open { background: #f8fafc; }
         .ops-row.is-open::before { background: var(--emerald); }
         .ops-detail {
@@ -259,6 +260,7 @@
         .user-profile-button.is-primary:hover { background: #1e293b; }
         .user-profile-button.is-danger { border-color: #fecdd3; color: #be123c; }
         .user-profile-button:disabled { cursor: not-allowed; opacity: .45; }
+        .prospect-classification .user-profile-section-head { margin-bottom: 0; }
         .user-profile-field { width: 100%; border: 1px solid #cbd5e1; border-radius: .8rem; background: #f8fafc; padding: .8rem .9rem; color: var(--ink); font-size: .82rem; }
         .user-profile-field:focus { border-color: var(--ink-soft); background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(16, 185, 129, .2); }
         .user-profile-field-label { display: block; margin-bottom: .45rem; color: #475569; font-size: .72rem; font-weight: 850; }
@@ -522,6 +524,19 @@
                     </div>
                 </header>
 
+                <section class="user-profile-section prospect-classification" aria-label="Admin-only prospect classification">
+                    <div class="user-profile-section-head">
+                        <div>
+                            <span id="user-prospect-label" class="user-membership-chip" aria-live="polite">License history unknown</span>
+                            <p>Admin-only label. No access, purchase, or message is triggered by classification.</p>
+                        </div>
+                        <div class="user-profile-section-actions">
+                            <button type="button" id="user-prospect-classify" class="user-profile-button" hidden>Confirm Prospect label</button>
+                            <button type="button" id="user-prospect-start" class="user-profile-button" hidden>Start conversation</button>
+                        </div>
+                    </div>
+                </section>
+
                 <section class="user-profile-section" aria-labelledby="user-licenses-title">
                     <div class="user-profile-section-head">
                         <div>
@@ -704,6 +719,7 @@
                     <button type="button" class="ops-filter" data-ops-filter="renewal">Renewals <span class="ops-filter-count" data-ops-count="renewal">0</span></button>
                     <button type="button" class="ops-filter" data-ops-filter="expiry">Expiring <span class="ops-filter-count" data-ops-count="expiry">0</span></button>
                     <button type="button" class="ops-filter" data-ops-filter="review">Manual review <span class="ops-filter-count" data-ops-count="review">0</span></button>
+                    <button type="button" class="ops-filter" data-ops-filter="prospect">Prospects <span class="ops-filter-count" data-ops-count="prospect">0</span></button>
                     <button type="button" class="ops-filter" data-ops-filter="support">Support <span class="ops-filter-count" data-ops-count="support">0</span></button>
                     <button id="communications-filter" type="button" class="ops-filter" data-ops-filter="message" data-communication-enabled hidden>Messages <span class="ops-filter-count" data-ops-count="message">0</span></button>
                     <button type="button" class="ops-filter" data-ops-filter="payment">Payments <span class="ops-filter-count" data-ops-count="payment">0</span></button>
@@ -727,12 +743,15 @@
                     </div>
                     <div class="flex flex-wrap gap-3 px-6 pt-6 lg:pl-0">
                         <input id="user-search" type="text" placeholder="Search name or email" class="rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-900">
+                        <label class="text-sm text-slate-600" for="people-filter">Show
+                            <select id="people-filter" class="user-profile-field"><option value="all">All people</option><option value="prospects">Prospects</option></select>
+                        </label>
                         <button id="merge-profiles-btn" type="button" class="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950">Merge Profiles</button>
                         <button id="new-user-btn" class="rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">+ New User</button>
                     </div>
                 </div>
                 <div class="mt-6 overflow-hidden border-t border-slate-100">
-                    <table class="w-full text-left">
+                    <table id="people-table" class="w-full text-left">
                         <thead class="bg-slate-50 text-[11px] uppercase tracking-[0.22em] text-slate-400">
                             <tr>
                                 <th class="px-4 py-3">User</th>
@@ -1333,6 +1352,6 @@
         </div>
     </div>
 
-    <script type="module" src="./admin-app.js?v=20261103-inbox-live"></script>
+    <script type="module" src="./admin-app.js?v=20261104-prospects"></script>
 </body>
 </html>

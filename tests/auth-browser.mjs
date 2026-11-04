@@ -5,14 +5,15 @@ import { createFixtureServer } from './communications-browser-server.mjs';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
 const server = createFixtureServer({ signedOut: true });
-await new Promise(resolve => server.listen(4328, '127.0.0.1', resolve));
+const port = Number(process.env.AUTH_TEST_PORT || 4331);
+await new Promise(resolve => server.listen(port, '127.0.0.1', resolve));
 const browser = await chromium.launch({ headless: true, channel: 'msedge' });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 await mkdir('.impeccable/review', { recursive: true });
 const open = async () => {
-    await page.goto('http://127.0.0.1:4328/index.html');
+    await page.goto(`http://127.0.0.1:${port}/index.html`);
     await page.locator('#login-email').waitFor({ state: 'visible' });
     await page.evaluate(() => document.fonts.ready);
     await page.emulateMedia({ reducedMotion: 'reduce' });

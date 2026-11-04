@@ -1,6 +1,7 @@
 import { escapeHtml, formatDate } from './app-model.js?v=20261027-user-workspace';
-import { isUnread, replyEnvelope, gmailMessageLink, THREAD_STATES } from './communications-model.mjs?v=20261102-inbox';
-import { collection, doc, onSnapshot, orderBy, query, limit, runTransaction, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { isUnread, replyEnvelope, gmailMessageLink, THREAD_STATES, prospectStarter, validateProspectDraft, normalizeEmail, safePreview } from './communications-model.mjs?v=20261104-prospects';
+import { deriveProspectState } from './prospect-model.mjs?v=20261104-prospects';
+import { collection, doc, getDoc, onSnapshot, orderBy, query, limit, runTransaction, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const e = value => escapeHtml(String(value ?? ''));
 const labels = { open: 'Open', waiting_on_customer: 'Waiting on customer', resolved: 'Resolved', needs_review: 'Needs review', queued: 'Queued', sending: 'Sending', sent: 'Sent to mail server', failed: 'Not sent', uncertain: 'Send outcome unknown', received: 'Received' };
@@ -11,18 +12,27 @@ export function createCommunicationsWorkspace({ db, auth, state, enabled, showTo
     const byId = id => document.getElementById(id);
     const current = () => local.threads.find(item => item.id === local.active);
     const root = byId('communications-workspace');
+    const outreachDrafts = new Map();
+    let composeId = '';
 
     function bind() {
         byId('communications-directory').hidden = !enabled;
         byId('communications-filter').hidden = !enabled;
         root.addEventListener('click', handleClick);
         root.addEventListener('submit', event => {
+            if (event.target.id === 'prospect-compose-form') {
+                event.preventDefault(); sendProspect().catch(report); return;
+            }
             if (event.target.id !== 'communication-reply-form') return;
             event.preventDefault();
             sendReply().catch(report);
         });
         root.addEventListener('input', event => {
             if (event.target.id === 'communication-reply') local.drafts.set(local.active, event.target.value);
+            if (composeId && ['prospect-subject', 'prospect-body'].includes(event.target.id)) {
+                const draft = outreachDrafts.get(composeId);
+                draft[event.target.id === 'prospect-subject' ? 'subject' : 'body'] = event.target.value;
+            }
         });
         byId('communications-directory').addEventListener('click', event => {
             const button = event.target.closest('[data-thread]');
@@ -30,7 +40,7 @@ export function createCommunicationsWorkspace({ db, auth, state, enabled, showTo
         });
         byId('communication-list-filter').addEventListener('change', event => { local.filter = event.target.value; renderDirectory(); });
         window.addEventListener('beforeunload', event => {
-            if (local.busy || [...local.drafts.values()].some(value => value.trim())) { event.preventDefault(); event.returnValue = ''; }
+            if (local.busy || [...local.drafts.values()].some(value => value.trim()) || outreachDrafts.size) { event.preventDefault(); event.returnValue = ''; }
         });
     }
 
@@ -39,6 +49,7 @@ export function createCommunicationsWorkspace({ db, auth, state, enabled, showTo
         local.unsubscribe = local.unsubscribeMessages = local.unsubscribeThread = null;
         local.authorized = false; local.active = ''; local.watchedThread = ''; local.threads = []; local.messages = []; local.drafts.clear(); local.pendingReplies.clear();
         local.loading = true; local.error = '';
+        composeId = ''; outreachDrafts.clear();
         root.classList.add('hidden'); root.replaceChildren();
         byId('communication-directory-list').replaceChildren();
     }
@@ -85,6 +96,11 @@ export function createCommunicationsWorkspace({ db, auth, state, enabled, showTo
     }
 
     async function beforeRouteChange() {
+        if (composeId && window.location.hash !== `#inbox/compose/${composeId}`) {
+            if (local.busy || !window.confirm('Leave this draft? It will stay here until you reload or sign out. Nothing is sent by leaving.')) {
+                history.replaceState(null, '', `#inbox/compose/${composeId}`); return false;
+            }
+        }
         const next = window.location.hash.match(/^#inbox\/([a-zA-Z0-9_-]{16,80})$/)?.[1] || '';
         if (local.active && next !== local.active && local.busy) {
             history.replaceState(null, '', `#inbox/${local.active}`);
@@ -99,6 +115,9 @@ export function createCommunicationsWorkspace({ db, auth, state, enabled, showTo
 
     function route() {
         if (!local.authorized) return;
+        const composeMatch = window.location.hash.match(/^#inbox\/compose\/([a-zA-Z0-9_-]{1,128})$/);
+        if (composeMatch) { renderProspectComposer(composeMatch[1]); return; }
+        composeId = '';
         const match = window.location.hash.match(/^#inbox\/([a-zA-Z0-9_-]{16,80})$/);
         if (!match) {
             root.classList.add('hidden'); local.active = ''; local.unsubscribeMessages?.(); local.unsubscribeMessages = null;
@@ -144,6 +163,115 @@ export function createCommunicationsWorkspace({ db, auth, state, enabled, showTo
             if (local.active !== id) return;
             local.messages = snapshot.docs.map(item => ({ ...item.data(), id: item.id })).reverse(); renderMessages(); markRead();
         }, () => { byId('communication-timeline').innerHTML = '<p class="comm-empty" role="alert">Messages could not load. Return to the inbox and reopen this conversation.</p>'; });
+    }
+
+    function composeProspect(userId) {
+        if (!enabled || !local.authorized) { showToast('The inbox is unavailable. Sign in as an administrator and try again.', 'error'); return; }
+        window.location.hash = `#inbox/compose/${encodeURIComponent(userId)}`;
+    }
+
+    function renderProspectComposer(userId) {
+        if (composeId === userId && byId('prospect-compose-form')) return;
+        local.unsubscribeMessages?.(); local.unsubscribeMessages = null;
+        local.unsubscribeThread?.(); local.unsubscribeThread = null; local.watchedThread = ''; local.active = '';
+        composeId = userId;
+        document.querySelectorAll('[data-admin-dashboard]').forEach(section => section.classList.add('hidden'));
+        byId('admin-page-header').classList.add('hidden'); byId('user-workspace').classList.add('hidden'); root.classList.remove('hidden');
+        const user = state.users.find(item => item.id === userId);
+        if (!user) { root.innerHTML = '<p class="comm-empty">Profile not found. <a href="#inbox">Back to inbox</a></p>'; return; }
+        const legacyId = user.legacy_account_id;
+        if (deriveProspectState(state.strong8kProfiles[userId], state.strong8kPrivate?.[userId],
+            legacyId ? [state.strong8kProfiles[legacyId]] : [], legacyId ? [state.strong8kPrivate?.[legacyId]] : []).status !== 'prospect') {
+            root.innerHTML = `<p class="comm-empty">This person is not a confirmed prospect. <a href="#people/${e(userId)}">Review their profile and classification</a> before starting a conversation.</p>`;
+            return;
+        }
+        if (!outreachDrafts.has(userId)) outreachDrafts.set(userId, { ...prospectStarter(user), email: normalizeEmail(user.email), attempt: null });
+        const draft = outreachDrafts.get(userId);
+        if (!draft.attempt) draft.email = normalizeEmail(user.email);
+        const existing = local.threads.filter(thread => thread.account_id === userId).sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))[0];
+        root.innerHTML = `<header class="comm-header"><a id="prospect-compose-back" class="user-profile-button" href="#people/${e(userId)}">Back to profile</a><div class="comm-identity"><h1>Start a conversation</h1><p>${e(user.full_name || user.email)} · Prospect</p></div></header>
+            <div class="comm-columns"><form id="prospect-compose-form" class="comm-composer">
+            <p class="comm-meta">From: info@goelliot.vip<br>To: ${e(draft.email || 'No valid email saved')}. Replies return to your inbox.</p>
+            ${existing ? `<p class="comm-warning">There is already a conversation with this person. <a class="user-profile-button" href="#inbox/${e(existing.id)}">Open existing conversation</a></p>` : ''}
+            <label for="prospect-subject">Subject</label><input id="prospect-subject" class="user-profile-field" maxlength="160" required>
+            <label for="prospect-body">Message</label><textarea id="prospect-body" class="user-profile-field" rows="9" maxlength="12000" required></textarea>
+            <p class="comm-meta">Review before sending. Copy for Messenger only copies the text; it does not send or record contact. Unsent drafts stay in this browser tab until reload or sign-out.</p>
+            <div class="comm-composer-actions"><button id="prospect-copy" type="button" class="user-profile-button">Copy for Messenger</button><button id="prospect-send" type="submit" class="user-profile-button is-primary">${draft.attempt ? 'Verify / retry queue' : 'Send email'}</button><button id="prospect-discard" type="button" class="user-profile-button">Discard draft</button></div>
+            <p id="communication-send-status" role="status" aria-live="polite"></p></form>
+            <aside class="comm-context"><section><h2>A personal hello</h2><p>Ask what they need and which device they use. This message does not grant access, confirm payment, or purchase a license.</p><a class="user-profile-button" href="#people/${e(userId)}">Review profile and email</a></section></aside></div>`;
+        byId('prospect-subject').value = draft.subject; byId('prospect-body').value = draft.body;
+        byId('prospect-subject').readOnly = Boolean(draft.attempt); byId('prospect-body').readOnly = Boolean(draft.attempt);
+        byId('prospect-send').disabled = !draft.email;
+        if (draft.attempt) byId('communication-send-status').textContent = 'A previous queue attempt needs verification. Retry the same message before editing or starting another.';
+        byId('prospect-copy').addEventListener('click', async () => {
+            try {
+                if (!draft.body.trim()) throw new Error('Write a message to copy first.');
+                await navigator.clipboard.writeText(draft.body);
+                byId('communication-send-status').textContent = 'Copied. Paste it into Messenger when you are ready. Nothing was sent or marked as contacted.';
+            } catch (error) { report(error); }
+        });
+        byId('prospect-discard').addEventListener('click', async () => {
+            if (local.busy || !window.confirm('Discard this unsent draft? If a queue attempt exists, its status will be checked first. An email already queued cannot be cancelled here.')) return;
+            local.busy = true;
+            try {
+                if (draft.attempt && (await getDoc(doc(db, 'communication_outbox', draft.attempt.messageId))).exists()) {
+                    outreachDrafts.delete(userId); composeId = '';
+                    window.location.hash = `#inbox/${draft.attempt.threadId}`;
+                    showToast('This email was already queued. Review its delivery status.'); return;
+                }
+                outreachDrafts.delete(userId); composeId = '';
+                window.location.hash = `#people/${userId}`;
+            } catch { report(new Error('Queue status could not be checked. Your draft is kept. Retry when the connection is restored.')); }
+            finally { local.busy = false; }
+        });
+        document.title = 'Start a conversation | Operations';
+        byId('prospect-compose-back').focus({ preventScroll: true });
+        window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+
+    async function sendProspect() {
+        if (local.busy || !composeId || !auth.currentUser) return;
+        const userId = composeId, draft = outreachDrafts.get(userId);
+        const request = draft.attempt || { ...validateProspectDraft(draft), threadId: `comm_${crypto.randomUUID()}`, messageId: crypto.randomUUID(), actor: auth.currentUser.uid };
+        draft.attempt = request;
+        local.busy = true;
+        byId('prospect-send').disabled = true;
+        byId('prospect-subject').readOnly = true; byId('prospect-body').readOnly = true;
+        byId('communication-send-status').textContent = 'Queuing email...';
+        try {
+            await runTransaction(db, async transaction => {
+                const threadRef = doc(db, 'communication_threads', request.threadId);
+                const messageRef = doc(db, 'communication_threads', request.threadId, 'messages', request.messageId);
+                const outboxRef = doc(db, 'communication_outbox', request.messageId);
+                const config = await transaction.get(doc(db, 'communication_config', 'runtime'));
+                const account = await transaction.get(doc(db, 'users', userId));
+                const metadata = await transaction.get(doc(db, 'strong8k_private', userId));
+                const profile = await transaction.get(doc(db, 'strong8k_profiles', userId));
+                const legacyId = account.data()?.legacy_account_id;
+                const legacyProfile = legacyId ? await transaction.get(doc(db, 'strong8k_profiles', legacyId)) : null;
+                const legacyMetadata = legacyId ? await transaction.get(doc(db, 'strong8k_private', legacyId)) : null;
+                const thread = await transaction.get(threadRef), message = await transaction.get(messageRef), outbox = await transaction.get(outboxRef);
+                if (thread.exists() || message.exists() || outbox.exists()) {
+                    if (!thread.exists() || !message.exists() || !outbox.exists() || thread.data().account_id !== userId || thread.data().participant_email !== request.email || thread.data().subject !== request.subject || message.data().body !== request.body || outbox.data().thread_id !== request.threadId || outbox.data().body !== request.body || outbox.data().to_email !== request.email || outbox.data().created_by !== request.actor) throw new Error('The previous email needs manual review. Open the inbox before trying again.');
+                    return;
+                }
+                if (!config.exists() || !config.data().enabled || !config.data().sending_enabled) throw new Error('Email sending is paused. Your draft is kept; retry when sending is enabled.');
+                if (!account.exists() || account.data().deleted || normalizeEmail(account.data().email) !== request.email) throw new Error('The saved email changed or the profile was archived. Return to the profile and reopen this draft before sending.');
+                if (deriveProspectState(profile.data() || {}, metadata.data() || {}, legacyProfile ? [legacyProfile.data()] : [], legacyMetadata ? [legacyMetadata.data()] : []).status !== 'prospect') throw new Error('This person is no longer a confirmed prospect. Review their profile before contacting them.');
+                const now = new Date().toISOString();
+                transaction.set(threadRef, { account_id: userId, participant_email: request.email, subject: request.subject, category: 'setup', source: 'admin_portal', status: 'open', preview: safePreview(request.body), created_by: request.actor, created_at: now, updated_at: now, last_message_at: now, last_inbound_id: '', last_read_inbound_id: '' });
+                transaction.set(messageRef, { direction: 'outbound', source: 'admin_portal', body: request.body, to_email: request.email, sender_email: 'info@goelliot.vip', created_by: request.actor, created_at: now, updated_at: now, status: 'queued' });
+                transaction.set(outboxRef, { thread_id: request.threadId, body: request.body, to_email: request.email, created_by: request.actor, created_at: now, updated_at: now, status: 'queued', attempts: 0 });
+            });
+            outreachDrafts.delete(userId); composeId = '';
+            showToast('Email queued. Delivery status appears in the conversation.');
+            window.location.hash = `#inbox/${request.threadId}`;
+        } catch (error) {
+            byId('communication-send-status').textContent = `${error.message} Nothing is resent automatically. Use Verify / retry queue to check the same request.`;
+        } finally {
+            local.busy = false;
+            if (byId('prospect-send')) { byId('prospect-send').disabled = false; byId('prospect-send').textContent = 'Verify / retry queue'; }
+        }
     }
 
     function renderHeader() {
@@ -303,5 +431,5 @@ export function createCommunicationsWorkspace({ db, auth, state, enabled, showTo
         if (byId('communication-send-status')) byId('communication-send-status').textContent = text;
         showToast(text, 'error');
     }
-    return { bind, start, stop, route, beforeRouteChange, items };
+    return { bind, start, stop, route, beforeRouteChange, items, composeProspect };
 }

@@ -27,6 +27,7 @@ import {
     updateDoc,
     where
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { deriveProspectState, hasCompleteLicense, licenseHistoryPatch, prospectClassificationPatch } from './prospect-model.mjs?v=20261104-prospects';
 
 const PROFILE_ROUTE = /^#people\/([^/]+)$/;
 const SUPPORT_KINDS = {
@@ -48,6 +49,7 @@ export function createUserEditor({
     syncPoolMembers,
     appIds,
     deviceInfoWebhookUrl,
+    startProspectConversation = async () => { throw new Error('Conversation composer is not available.'); },
     beforeRouteChange = async () => true,
     onDashboardRoute = () => {}
 }) {
@@ -88,6 +90,8 @@ export function createUserEditor({
         byId('user-workspace-back')?.addEventListener('click', navigateToPeople);
         byId('user-autosave-retry')?.addEventListener('click', retryFailedSave);
         byId('archive-user-btn')?.addEventListener('click', archiveActiveUser);
+        byId('user-prospect-classify')?.addEventListener('click', () => classifyProspect(local.activeUserId));
+        byId('user-prospect-start')?.addEventListener('click', () => startConversation(local.activeUserId));
         byId('add-license-btn')?.addEventListener('click', openNewLicenseForm);
         byId('check-all-licenses-btn')?.addEventListener('click', () => checkAllLicenses());
         byId('strong8k-check-all-status')?.addEventListener('click', handleProfileCheckClick);
@@ -274,6 +278,112 @@ export function createUserEditor({
         byId('strong8k-setup-notes').value = profile.setup_notes || '';
         byId('strong8k-internal-notes').value = local.privateNotes || '';
         renderMembershipStrip(user.id);
+        renderProspectLabel();
+    }
+
+    function prospectState(userId) {
+        const user = state.users.find(item => item.id === userId);
+        const legacyId = user?.legacy_account_id;
+        return deriveProspectState(state.strong8kProfiles[userId], state.strong8kPrivate?.[userId],
+            legacyId ? [state.strong8kProfiles[legacyId]] : [],
+            legacyId ? [state.strong8kPrivate?.[legacyId]] : []);
+    }
+
+    function renderProspectLabel() {
+        const node = byId('user-prospect-label');
+        if (!node || !local.activeUserId) return;
+        const classification = prospectState(local.activeUserId);
+        node.textContent = classification.status === 'prospect' ? 'Prospect'
+            : classification.status === 'customer' ? 'Customer'
+                : classification.status === 'setup' ? 'License setup incomplete'
+                    : classification.historySeen ? 'Prior license history recorded'
+                        : classification.suggested ? 'Prospect suggested · confirm before labelling' : 'License history unknown';
+        byId('user-prospect-classify').hidden = !classification.canClassify || classification.status === 'prospect';
+        byId('user-prospect-start').hidden = classification.status !== 'prospect';
+    }
+
+    let prospectActionPending = false;
+
+    async function runProspectAction(userId, action) {
+        if (!userId || prospectActionPending) return;
+        prospectActionPending = true;
+        const buttons = [byId('user-prospect-classify'), byId('user-prospect-start')];
+        buttons.forEach(button => { if (button) button.disabled = true; });
+        try {
+            await flushAutosaves();
+            if (local.autosave.failed) throw new Error('Retry the unsaved profile changes before continuing.');
+            await action();
+        } catch (error) {
+            showToast(error.message || 'The prospect action could not be completed. Please retry.', 'error');
+        } finally {
+            prospectActionPending = false;
+            buttons.forEach(button => { if (button) button.disabled = false; });
+        }
+    }
+
+    async function classifyProspect(userId) {
+        return runProspectAction(userId, async () => {
+            const classification = prospectState(userId);
+            if (!classification.canClassify) throw new Error('Saved license history prevents prospect classification.');
+            const explanation = classification.historyKnown
+                ? 'The admin record says no prior license has been recorded.'
+                : 'Legacy license history is unknown. An empty license list does not prove this person never had a license. Confirm only after reviewing their history and deciding they are a prospect, not a former customer.';
+            if (!window.confirm(`${explanation}\n\nLabel this person as a Prospect? This changes admin-only metadata. It grants no access, buys nothing, and sends no message.`)) return;
+            const user = state.users.find(item => item.id === userId);
+            await enqueueSave(`prospect:${userId}`, () => runTransaction(db, async transaction => {
+                const ids = [...new Set([userId, user?.legacy_account_id].filter(Boolean))];
+                const profiles = [];
+                const records = [];
+                for (const id of ids) {
+                    const profile = await transaction.get(doc(db, 'strong8k_profiles', id));
+                    const record = await transaction.get(doc(db, 'strong8k_private', id));
+                    profiles.push(profile.exists() ? profile.data() : {});
+                    records.push(record.exists() ? record.data() : {});
+                }
+                const patch = prospectClassificationPatch(profiles[0], records[0], {
+                    confirmedUnknown: !classification.historyKnown, at: new Date().toISOString(), by: auth.currentUser?.uid || '',
+                    legacyProfiles: profiles.slice(1), legacyMetadata: records.slice(1)
+                });
+                transaction.set(doc(db, 'strong8k_private', userId), patch, { merge: true });
+            }));
+            await reloadAdminData();
+            renderProspectLabel();
+            showToast('Prospect label saved. No message sent.');
+        });
+    }
+
+    async function startConversation(userId) {
+        return runProspectAction(userId, async () => {
+            await reloadAdminData();
+            if (prospectState(userId).status !== 'prospect') throw new Error('Confirm the Prospect label in the profile before starting a prospect conversation.');
+            await startProspectConversation(userId);
+        });
+    }
+
+    // Read private history before any writes; commit the sentinel with the license.
+    async function runLicenseTransaction(userId, writer) {
+        let committedMetadata;
+        const result = await runTransaction(db, async transaction => {
+            committedMetadata = undefined;
+            const privateRef = doc(db, 'strong8k_private', userId);
+            const privateSnapshot = await transaction.get(privateRef);
+            const metadata = privateSnapshot.exists() ? privateSnapshot.data() : {};
+            return writer(transaction, (profileSnapshot, licenses) => {
+                const before = profileSnapshot.exists() && Array.isArray(profileSnapshot.data().licenses)
+                    ? profileSnapshot.data().licenses : [];
+                const patch = licenseHistoryPatch(before, licenses, metadata, {
+                    at: new Date().toISOString(), by: auth.currentUser?.uid || ''
+                });
+                if (Object.keys(patch).length) transaction.set(privateRef, patch, { merge: true });
+                committedMetadata = { ...metadata, ...patch };
+            });
+        });
+        if (committedMetadata) {
+            state.strong8kPrivate ||= {};
+            state.strong8kPrivate[userId] = committedMetadata;
+            renderProspectLabel();
+        }
+        return result;
     }
 
     function renderMembershipStrip(userId) {
@@ -298,7 +408,7 @@ export function createUserEditor({
 
     async function ensureStableLicenseIds(userId, profile) {
         let resolvedLicenses = profile.licenses.map(license => ({ ...license }));
-        await runTransaction(db, async transaction => {
+        await runLicenseTransaction(userId, async (transaction, saveHistory) => {
             const profileRef = doc(db, 'strong8k_profiles', userId);
             const snapshot = await transaction.get(profileRef);
             const savedLicenses = snapshot.exists() && Array.isArray(snapshot.data().licenses)
@@ -307,6 +417,7 @@ export function createUserEditor({
             resolvedLicenses = savedLicenses.map(license => ({ ...license, id: license.id || crypto.randomUUID() }));
             const needsWrite = !snapshot.exists() || savedLicenses.some(license => !license.id);
             if (needsWrite && resolvedLicenses.length) {
+                saveHistory(snapshot, resolvedLicenses);
                 transaction.set(profileRef, {
                     licenses: resolvedLicenses,
                     updated_at: new Date().toISOString()
@@ -543,6 +654,7 @@ export function createUserEditor({
     }
 
     function renderLicenses() {
+        renderProspectLabel();
         const container = byId('user-license-list');
         const licenses = state.currentLicenses || [];
         renderProfileCheckSummary();
@@ -781,6 +893,9 @@ export function createUserEditor({
     }
 
     function licensePresentation(license = {}) {
+        if (!hasCompleteLicense(license)) {
+            return { label: 'Setup incomplete', className: 'bg-rose-100 text-rose-800', accent: '#e11d48' };
+        }
         const status = String(license.status || '').trim().toLowerCase();
         const expiryValue = String(license.expiry_date || '').slice(0, 10);
         const expiry = /^\d{4}-\d{2}-\d{2}$/.test(expiryValue) ? new Date(`${expiryValue}T00:00:00`) : null;
@@ -1113,7 +1228,7 @@ export function createUserEditor({
         renderLicenses();
 
         try {
-            const result = await runTransaction(db, async transaction => {
+            const result = await runLicenseTransaction(local.activeUserId, async (transaction, saveHistory) => {
                 const profileRef = doc(db, 'strong8k_profiles', local.activeUserId);
                 const snapshot = await transaction.get(profileRef);
                 if (!snapshot.exists()) throw new Error('The Strong8K profile no longer exists.');
@@ -1142,6 +1257,7 @@ export function createUserEditor({
                 licenses[index] = nextLicense;
                 const update = { licenses, updated_at: new Date().toISOString() };
                 if (selected.has('domain_8k')) update.domain_8k = check.provider.domain_8k;
+                saveHistory(snapshot, licenses);
                 transaction.set(profileRef, update, { merge: true });
                 return { licenses, nextLicense, domain: update.domain_8k || profile.domain_8k };
             });
@@ -1180,7 +1296,7 @@ export function createUserEditor({
         if (!window.confirm(`Use ${proposal.domain} as the shared domain and rebuild URLs for every license on this profile?`)) return;
         await flushAutosaves();
         try {
-            const result = await runTransaction(db, async transaction => {
+            const result = await runLicenseTransaction(local.activeUserId, async (transaction, saveHistory) => {
                 const profileRef = doc(db, 'strong8k_profiles', local.activeUserId);
                 const snapshot = await transaction.get(profileRef);
                 if (!snapshot.exists()) throw new Error('The Strong8K profile no longer exists.');
@@ -1199,6 +1315,7 @@ export function createUserEditor({
                     }
                 });
                 licenses.forEach(license => Object.assign(license, buildStrong8kUrls(proposal.domain, license.username_8k, license.password_8k)));
+                saveHistory(snapshot, licenses);
                 transaction.set(profileRef, {
                     domain_8k: proposal.domain,
                     licenses,
@@ -1304,20 +1421,22 @@ export function createUserEditor({
             !String(license.password_8k || '').trim() ? 'license password' : '',
             !String(license.expiry_date || '').trim() ? 'expiry' : ''
         ].filter(Boolean);
-        return missing.length ? `Required: ${missing.join(', ')}.` : '';
+        return missing.length ? `Required: ${missing.join(', ')}.`
+            : hasCompleteLicense(license) ? '' : 'Use a valid expiry date.';
     }
 
     async function patchLicense(userId, licenseId, patch) {
         if (!Object.keys(patch).length) return;
-        await runTransaction(db, async transaction => {
+        await runLicenseTransaction(userId, async (transaction, saveHistory) => {
             const profileRef = doc(db, 'strong8k_profiles', userId);
             const snapshot = await transaction.get(profileRef);
             const licenses = snapshot.exists() && Array.isArray(snapshot.data().licenses)
-                ? snapshot.data().licenses
+                ? snapshot.data().licenses.map(license => ({ ...license }))
                 : [];
             const index = licenses.findIndex(license => license.id === licenseId);
             if (index < 0) throw new Error('The license no longer exists. Reload the profile and try again.');
             licenses[index] = { ...licenses[index], ...patch };
+            saveHistory(snapshot, licenses);
             transaction.set(profileRef, { licenses, updated_at: new Date().toISOString() }, { merge: true });
         });
     }
@@ -1370,13 +1489,14 @@ export function createUserEditor({
 
         const userId = local.activeUserId;
         try {
-            await runTransaction(db, async transaction => {
+            await runLicenseTransaction(userId, async (transaction, saveHistory) => {
                 const profileRef = doc(db, 'strong8k_profiles', userId);
                 const snapshot = await transaction.get(profileRef);
                 const licenses = snapshot.exists() && Array.isArray(snapshot.data().licenses)
                     ? [...snapshot.data().licenses]
                     : [];
                 licenses.push(license);
+                saveHistory(snapshot, licenses);
                 transaction.set(profileRef, { licenses, updated_at: new Date().toISOString() }, { merge: true });
             });
             state.currentLicenses.push(license);
@@ -1399,12 +1519,13 @@ export function createUserEditor({
         if (!window.confirm(`Remove ${license.label || license.username_8k || 'this license'} from the customer profile? This does not cancel it with Strong8K.`)) return;
         const userId = local.activeUserId;
         try {
-            await runTransaction(db, async transaction => {
+            await runLicenseTransaction(userId, async (transaction, saveHistory) => {
                 const profileRef = doc(db, 'strong8k_profiles', userId);
                 const snapshot = await transaction.get(profileRef);
                 const licenses = snapshot.exists() && Array.isArray(snapshot.data().licenses)
                     ? snapshot.data().licenses.filter(item => item.id !== licenseId)
                     : [];
+                saveHistory(snapshot, licenses);
                 transaction.set(profileRef, { licenses, updated_at: new Date().toISOString() }, { merge: true });
             });
             state.currentLicenses = state.currentLicenses.filter(item => item.id !== licenseId);
@@ -1791,6 +1912,8 @@ export function createUserEditor({
     return {
         bind,
         handleDataLoaded,
-        open
+        open,
+        classifyProspect,
+        startProspectConversation: startConversation
     };
 }

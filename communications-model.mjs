@@ -3,6 +3,21 @@ export const THREAD_STATES = ['open', 'waiting_on_customer', 'resolved', 'needs_
 export const MESSAGE_CATEGORIES = ['support', 'setup', 'renewal', 'other'];
 export const SENDER_ADDRESS = 'info@goelliot.vip';
 
+export function prospectStarter(user) {
+    const firstName = cleanText(user?.full_name, 100).trim().split(/\s+/)[0] || 'there';
+    return {
+        subject: 'A hand getting set up',
+        body: `Hi ${firstName}, glad you're here! If you'd like a hand getting set up, reply with what you're hoping to do and which device you'll be using. We can work out what makes sense together.\n\nElliot`
+    };
+}
+
+export function validateProspectDraft({ email, subject, body }) {
+    const recipient = normalizeEmail(email);
+    if (!recipient || recipient === SENDER_ADDRESS || /^info\+[^@]+@goelliot\.vip$/.test(recipient)) throw new Error('Add a valid personal email to this profile before sending. You can still copy the message for Messenger.');
+    const input = validateSupportInput({ subject, body, clientRequestId: 'prospect_draft_validation', category: 'setup' });
+    return { email: recipient, subject: input.subject, body: input.body };
+}
+
 export function cleanText(value, limit = 48000) {
     return String(value ?? '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').slice(0, limit);
 }
