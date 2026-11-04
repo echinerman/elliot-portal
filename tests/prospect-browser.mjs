@@ -57,10 +57,29 @@ try {
     await page.waitForFunction(() => document.getElementById('communication-send-status').textContent.includes('email changed'));
     assert.equal(await outboxCount(), 0);
     await openCompose();
-    await page.evaluate(() => { window.fixtureData.get('strong8k_private/prospect-fixture-01').prospect_status = 'customer'; });
+    await page.evaluate(() => { window.fixtureData.get('users/prospect-fixture-01').deleted = true; });
     await page.locator('#prospect-send').click();
-    await page.waitForFunction(() => document.getElementById('communication-send-status').textContent.includes('no longer a confirmed prospect'));
+    await page.waitForFunction(() => document.getElementById('communication-send-status').textContent.includes('profile was archived'));
     assert.equal(await outboxCount(), 0);
+    await page.goto('http://127.0.0.1:4329/admin.html?fixture=customer#inbox/compose/fixture-admin');
+    await page.locator('#prospect-body').waitFor();
+    assert.match(await page.locator('#prospect-body').inputValue(), /anything I can help you with/);
+    assert.doesNotMatch(await page.locator('.comm-identity').innerText(), /Prospect/);
+    await page.screenshot({ path: '.impeccable/review/conversation-customer-desktop.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => document.getElementById('admin-room-rail').getBoundingClientRect().right <= 0);
+    await page.screenshot({ path: '.impeccable/review/conversation-customer-mobile.png', fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator('#prospect-send').click();
+    await page.locator('#communication-reply').waitFor();
+    assert.equal(await outboxCount(), 1, 'existing customers can start a conversation');
+    await page.goto('http://127.0.0.1:4329/admin.html?fixture=unclassified#inbox/compose/prospect-fixture-02');
+    await page.locator('#prospect-body').waitFor();
+    assert.doesNotMatch(await page.locator('.comm-identity').innerText(), /Prospect/);
+    await page.locator('#prospect-send').click();
+    await page.locator('#communication-reply').waitFor();
+    assert.equal(await outboxCount(), 1, 'unclassified people can start a conversation without changing classification');
+    assert.equal(await page.evaluate(() => window.fixtureData.has('strong8k_private/prospect-fixture-02')), false);
     await openCompose();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForFunction(() => document.getElementById('admin-room-rail').getBoundingClientRect().right <= 0);
@@ -68,5 +87,5 @@ try {
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: '.impeccable/review/prospect-compose-mobile.png', fullPage: true });
     assert.deepEqual(errors, []);
-    console.log('PASS: prospect draft, copy-only, navigation retention, atomic queue/retry, paused sending, stale recipient, conversion guard, and mobile layout. Synthetic only.');
+    console.log('PASS: conversations for prospects, customers and unclassified profiles; copy-only, navigation retention, atomic queue/retry, paused sending, stale recipient, archive guard and mobile layout. Synthetic only.');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

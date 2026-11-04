@@ -299,7 +299,7 @@ export function createUserEditor({
                     : classification.historySeen ? 'Prior license history recorded'
                         : classification.suggested ? 'Prospect suggested · confirm before labelling' : 'License history unknown';
         byId('user-prospect-classify').hidden = !classification.canClassify || classification.status === 'prospect';
-        byId('user-prospect-start').hidden = classification.status !== 'prospect';
+        byId('user-prospect-start').hidden = false;
     }
 
     let prospectActionPending = false;
@@ -355,7 +355,7 @@ export function createUserEditor({
     async function startConversation(userId) {
         return runProspectAction(userId, async () => {
             await reloadAdminData();
-            if (prospectState(userId).status !== 'prospect') throw new Error('Confirm the Prospect label in the profile before starting a prospect conversation.');
+            if (!state.users.some(user => user.id === userId && !user.deleted)) throw new Error('This profile is no longer available.');
             await startProspectConversation(userId);
         });
     }

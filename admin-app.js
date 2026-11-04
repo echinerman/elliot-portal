@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js?v=20261103-inbox-live';
-import { createCommunicationsWorkspace } from './communications-ui.js?v=20261104-prospects';
+import { createCommunicationsWorkspace } from './communications-ui.js?v=20261104-conversations';
 import {
     APP_DEFINITIONS,
     APP_IDS,
@@ -36,7 +36,7 @@ import {
     sortStandings,
     suggestPayouts
 } from './playoff-logic.js?v=20261027-user-workspace';
-import { createUserEditor } from './user-editor.js?v=20261104-prospects';
+import { createUserEditor } from './user-editor.js?v=20261104-conversations';
 import { deriveProspectState, hasCompleteLicense } from './prospect-model.mjs?v=20261104-prospects';
 import {
     formatStrong8kDuration,
@@ -532,7 +532,7 @@ function renderOperationsInbox() {
                 <div class="ops-title">${escapeHtml(item.title)}</div>
                 <div class="ops-copy">${escapeHtml(item.summary)}</div>
             </div>
-            <div class="ops-row-actions">${item.category === 'prospect' ? `<button type="button" class="ops-action" data-start-prospect="${escapeAttribute(item.userId)}">Start conversation</button>` : ''}<button type="button" class="ops-action" data-ops-expand="${index}" aria-expanded="false">Review</button></div>
+            <div class="ops-row-actions">${item.userId ? `<button type="button" class="ops-action" data-start-prospect="${escapeAttribute(item.userId)}">Start conversation</button>` : ''}<button type="button" class="ops-action" data-ops-expand="${index}" aria-expanded="false">Review</button></div>
             <div class="ops-detail">
                 <p>${escapeHtml(item.detail)}</p>
                 ${item.threadId
@@ -763,7 +763,7 @@ function renderUsers(filter = byId('user-search')?.value || '') {
             </td>
             <td class="px-4 py-4 text-slate-500">${escapeHtml(user.default_app_id || 'Auto')}</td>
             <td class="px-4 py-4 text-right">
-                ${prospect.status === 'prospect' ? `<button type="button" class="user-profile-button" data-start-prospect="${escapeAttribute(user.id)}">Start conversation</button>` : ''}
+                <button type="button" class="user-profile-button" data-start-prospect="${escapeAttribute(user.id)}">Start conversation</button>
                 <button type="button" class="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-950" data-edit-user="${user.id}">
                     Edit
                 </button>

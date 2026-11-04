@@ -33,7 +33,7 @@ Constraints: Preserve Firebase Auth, Firestore data shapes and rules, the existi
 
 Job: Elliot distinguishes prospective customers from incomplete customer setups and manually starts a personal conversation. This is an admin-only Operate flow, not a sales CRM.
 
-Outcome: Confirm Prospect classification, review a personal email draft from info@goelliot.vip, then explicitly send or copy for Messenger. Copy is not evidence of contact. Delivery status stays in the existing conversation workspace.
+Outcome: Prospect classification stays separate from messaging. Start conversation is available for every non-archived person from People, the profile, and linked Action Inbox rows. Review a personal email draft from info@goelliot.vip, then explicitly send or copy for Messenger. Copy is not evidence of contact. Delivery status stays in the existing conversation workspace. Prospects receive the setup starter; other people receive a neutral greeting without being labelled Prospect.
 
 Structure: Preserve the room rail and flat ledger. Confirmed prospects have quiet neutral rows and a People filter, never rose setup-failure styling. A profile section holds the label and actions; the existing inbox workspace hosts the full-width compose flow with profile context.
 

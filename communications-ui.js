@@ -178,18 +178,20 @@ export function createCommunicationsWorkspace({ db, auth, state, enabled, showTo
         document.querySelectorAll('[data-admin-dashboard]').forEach(section => section.classList.add('hidden'));
         byId('admin-page-header').classList.add('hidden'); byId('user-workspace').classList.add('hidden'); root.classList.remove('hidden');
         const user = state.users.find(item => item.id === userId);
-        if (!user) { root.innerHTML = '<p class="comm-empty">Profile not found. <a href="#inbox">Back to inbox</a></p>'; return; }
+        if (!user || user.deleted) { root.innerHTML = '<p class="comm-empty">Profile not found. <a href="#inbox">Back to inbox</a></p>'; return; }
         const legacyId = user.legacy_account_id;
-        if (deriveProspectState(state.strong8kProfiles[userId], state.strong8kPrivate?.[userId],
-            legacyId ? [state.strong8kProfiles[legacyId]] : [], legacyId ? [state.strong8kPrivate?.[legacyId]] : []).status !== 'prospect') {
-            root.innerHTML = `<p class="comm-empty">This person is not a confirmed prospect. <a href="#people/${e(userId)}">Review their profile and classification</a> before starting a conversation.</p>`;
-            return;
+        const classification = deriveProspectState(state.strong8kProfiles[userId], state.strong8kPrivate?.[userId],
+            legacyId ? [state.strong8kProfiles[legacyId]] : [], legacyId ? [state.strong8kPrivate?.[legacyId]] : []).status;
+        const starter = prospectStarter(user);
+        if (classification !== 'prospect') {
+            starter.subject = 'A quick hello';
+            starter.body = `Hi ${String(user.full_name || '').trim().split(/\s+/)[0] || 'there'}, is there anything I can help you with?\n\nElliot`;
         }
-        if (!outreachDrafts.has(userId)) outreachDrafts.set(userId, { ...prospectStarter(user), email: normalizeEmail(user.email), attempt: null });
+        if (!outreachDrafts.has(userId)) outreachDrafts.set(userId, { ...starter, email: normalizeEmail(user.email), attempt: null });
         const draft = outreachDrafts.get(userId);
         if (!draft.attempt) draft.email = normalizeEmail(user.email);
         const existing = local.threads.filter(thread => thread.account_id === userId).sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))[0];
-        root.innerHTML = `<header class="comm-header"><a id="prospect-compose-back" class="user-profile-button" href="#people/${e(userId)}">Back to profile</a><div class="comm-identity"><h1>Start a conversation</h1><p>${e(user.full_name || user.email)} · Prospect</p></div></header>
+        root.innerHTML = `<header class="comm-header"><a id="prospect-compose-back" class="user-profile-button" href="#people/${e(userId)}">Back to profile</a><div class="comm-identity"><h1>Start a conversation</h1><p>${e(user.full_name || user.email)} · ${classification === 'prospect' ? 'Prospect' : classification === 'customer' ? 'Customer' : 'Profile'}</p></div></header>
             <div class="comm-columns"><form id="prospect-compose-form" class="comm-composer">
             <p class="comm-meta">From: info@goelliot.vip<br>To: ${e(draft.email || 'No valid email saved')}. Replies return to your inbox.</p>
             ${existing ? `<p class="comm-warning">There is already a conversation with this person. <a class="user-profile-button" href="#inbox/${e(existing.id)}">Open existing conversation</a></p>` : ''}
@@ -245,11 +247,6 @@ export function createCommunicationsWorkspace({ db, auth, state, enabled, showTo
                 const outboxRef = doc(db, 'communication_outbox', request.messageId);
                 const config = await transaction.get(doc(db, 'communication_config', 'runtime'));
                 const account = await transaction.get(doc(db, 'users', userId));
-                const metadata = await transaction.get(doc(db, 'strong8k_private', userId));
-                const profile = await transaction.get(doc(db, 'strong8k_profiles', userId));
-                const legacyId = account.data()?.legacy_account_id;
-                const legacyProfile = legacyId ? await transaction.get(doc(db, 'strong8k_profiles', legacyId)) : null;
-                const legacyMetadata = legacyId ? await transaction.get(doc(db, 'strong8k_private', legacyId)) : null;
                 const thread = await transaction.get(threadRef), message = await transaction.get(messageRef), outbox = await transaction.get(outboxRef);
                 if (thread.exists() || message.exists() || outbox.exists()) {
                     if (!thread.exists() || !message.exists() || !outbox.exists() || thread.data().account_id !== userId || thread.data().participant_email !== request.email || thread.data().subject !== request.subject || message.data().body !== request.body || outbox.data().thread_id !== request.threadId || outbox.data().body !== request.body || outbox.data().to_email !== request.email || outbox.data().created_by !== request.actor) throw new Error('The previous email needs manual review. Open the inbox before trying again.');
@@ -257,7 +254,6 @@ export function createCommunicationsWorkspace({ db, auth, state, enabled, showTo
                 }
                 if (!config.exists() || !config.data().enabled || !config.data().sending_enabled) throw new Error('Email sending is paused. Your draft is kept; retry when sending is enabled.');
                 if (!account.exists() || account.data().deleted || normalizeEmail(account.data().email) !== request.email) throw new Error('The saved email changed or the profile was archived. Return to the profile and reopen this draft before sending.');
-                if (deriveProspectState(profile.data() || {}, metadata.data() || {}, legacyProfile ? [legacyProfile.data()] : [], legacyMetadata ? [legacyMetadata.data()] : []).status !== 'prospect') throw new Error('This person is no longer a confirmed prospect. Review their profile before contacting them.');
                 const now = new Date().toISOString();
                 transaction.set(threadRef, { account_id: userId, participant_email: request.email, subject: request.subject, category: 'setup', source: 'admin_portal', status: 'open', preview: safePreview(request.body), created_by: request.actor, created_at: now, updated_at: now, last_message_at: now, last_inbound_id: '', last_read_inbound_id: '' });
                 transaction.set(messageRef, { direction: 'outbound', source: 'admin_portal', body: request.body, to_email: request.email, sender_email: 'info@goelliot.vip', created_by: request.actor, created_at: now, updated_at: now, status: 'queued' });

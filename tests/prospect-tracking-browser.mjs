@@ -28,6 +28,7 @@ const screenshot = name => page.screenshot({ path: `.impeccable/review/prospect-
 try {
     await page.goto(root);
     await page.locator('[data-edit-user="prospect-fixture-01"]').waitFor();
+    assert.equal(await page.locator('#users-table-body [data-start-prospect]').count(), 4, 'every person has Start conversation');
     await page.evaluate(() => document.fonts.ready);
     await page.locator('[data-ops-filter="prospect"]').click();
     assert.match(await page.locator('#operations-inbox-list').innerText(), /Alex Example/);
@@ -67,6 +68,7 @@ try {
 
     await openProfile('prospect-fixture-02');
     await waitLabel('License history unknown');
+    assert.equal(await page.locator('#user-prospect-start').isVisible(), true, 'unclassified profile can start a conversation');
     acceptConfirmation = false;
     await page.locator('#user-prospect-classify').click();
     assert.match(confirmations.at(-1), /unknown.*does not prove/s);
@@ -91,7 +93,7 @@ try {
     const converted = await page.evaluate(() => window.fixtureData.get('strong8k_private/prospect-fixture-02'));
     assert.equal(converted.prospect_status, 'customer');
     assert.equal(converted.license_history_seen, true);
-    assert.equal(await page.locator('#user-prospect-start').isVisible(), false);
+    assert.equal(await page.locator('#user-prospect-start').isVisible(), true);
     await page.locator('[data-license-remove]').click();
     await page.waitForFunction(() => window.fixtureData.get('strong8k_profiles/prospect-fixture-02').licenses.length === 0);
     await waitLabel('Customer');
